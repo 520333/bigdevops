@@ -1,0 +1,76 @@
+package config
+
+import (
+	"os"
+	"time"
+
+	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
+	"gorm.io/driver/mysql"
+)
+
+type ServerConfig struct {
+	HttpAddr         string           `yaml:"http_addr"`
+	MysqlC           *mysql.Config    `yaml:"mysql"` //
+	LogLevel         string           `yaml:"log_level"`
+	LogFilePath      string           `yaml:"log_file_path"`
+	SuperRoleName    string           `yaml:"super_role_name"`
+	PublicCloudSyncC *PublicCloudSync `yaml:"public_cloud_sync"`
+	JWTC             *JWT             `yaml:"jwt"`
+	Logger           *zap.Logger      `yaml:"-"`
+}
+
+type PublicCloudSync struct {
+	RunIntervalSeconds int         `yaml:"run_interval_seconds"`
+	AliCloud           []*AliCloud `yaml:"ali_cloud"`
+	AwsCloud           []*AwsCloud `yaml:"aws_cloud"`
+}
+type AliCloud struct {
+	Enable          bool   `yaml:"enable"`
+	AccountName     string `yaml:"account_name"`
+	RegionId        string `yaml:"region_id"`
+	AccessKeyId     string `yaml:"access_key_id"`
+	AccessKeySecret string `yaml:"access_key_secret"`
+}
+
+// AwsCloud 👉 新增 AWS 的配置结构体
+type AwsCloud struct {
+	Enable          bool   `yaml:"enable"`
+	AccountName     string `yaml:"account_name"`
+	RegionId        string `yaml:"region_id"`
+	AccessKeyId     string `yaml:"access_key_id"`
+	SecretAccessKey string `yaml:"secret_access_key"` // 注意：AWS 习惯称之为 Secret Access Key
+}
+
+// LoadServer 根据io read 读取配置文件后的字符串解析yaml
+func LoadServer(filename string) (*ServerConfig, error) {
+	cfg := &ServerConfig{}
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	err = yaml.Unmarshal(content, cfg)
+	if err != nil {
+		return nil, err
+	}
+	exd, err := time.ParseDuration(cfg.JWTC.ExpiresTime)
+	if err != nil {
+		return nil, err
+	}
+	bud, err := time.ParseDuration(cfg.JWTC.BufferTime)
+	if err != nil {
+		return nil, err
+	}
+	cfg.JWTC.ExpiresDuration = exd
+	cfg.JWTC.BufferDuration = bud
+	return cfg, err
+}
+
+type JWT struct {
+	SigningKey      string        `yaml:"signing_key" json:"signing_key"`   // 签名
+	ExpiresTime     string        `yaml:"expires_time" json:"expires-time"` // 过期时间
+	ExpiresDuration time.Duration `yaml:"-"`
+	BufferTime      string        `yaml:"buffer_time" json:"buffer-time"` // 缓冲时间
+	BufferDuration  time.Duration `yaml:"-"`                              // 缓冲时间
+	Issuer          string        `yaml:"issuer" json:"issuer"`           // 签发者
+}

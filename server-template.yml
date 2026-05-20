@@ -1,0 +1,64 @@
+http_addr: 0.0.0.0:8080
+log_level: debug
+log_file_path: json.log
+
+jwt:
+  signing_key: dawn
+  expires_time: 3h # 过期时间
+  buffer_time: 2h # 缓冲时间 在此期间刷新页面自动刷新token
+  issuer: dawn # 签发者
+
+# CREATE DATABASE IF NOT EXISTS bigdevops default charset utf8 COLLATE utf8_general_ci;
+# GRANT all privileges on *.* to root@'%' identified by '123456' with grant option;
+# flush privileges;
+# DROP DATABASE bigdevops;CREATE DATABASE IF NOT EXISTS bigdevops default charset utf8 COLLATE utf8_general_ci;
+
+mysql:
+  dsn: "root:123456@tcp(192.168.50.100:3306)/bigdevops?charset=utf8mb4&parseTime=True&loc=Local"
+
+# 超管角色名称
+super_role_name: super
+
+
+
+public_cloud_sync:
+  # 从公有云同步到本地间隔 单位秒
+  run_interval_seconds: 3600
+  ali_cloud:
+    ### 个人
+    - region_id: "cn-hangzhou"
+      access_key_id: "xxx"
+      access_key_secret: "xxx"
+      enable: true
+      account_name: "个人"
+    ### 海淘
+    - region_id: "us-west-1"
+      access_key_id: "xxx"
+      access_key_secret: "xxx"
+      enable: true   # enable不写默认不同步
+      account_name: "海淘"
+
+  aws_cloud:
+    - region_id: "ap-east-1"
+      access_key_id: "xxx"
+      secret_access_key: "xxx"
+      enable: true
+      account_name: "花花卡"
+
+    - region_id: "ap-south-1"
+      access_key_id: "xxx"
+      secret_access_key: "xxx"
+      enable: true
+      account_name: "印度"
+
+    - region_id: "ap-southeast-1"
+      access_key_id: "xxx"
+      secret_access_key: "xxx"
+      enable: true
+      account_name: "印度"
+
+    - region_id: "ap-east-1"
+      access_key_id: "xxx"
+      secret_access_key: "xxx"
+      enable: true
+      account_name: "印度"
