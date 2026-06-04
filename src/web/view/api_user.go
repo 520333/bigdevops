@@ -84,9 +84,6 @@ func getUserAfterLogin(c *gin.Context) {
 	common.OkWithDetailed(dbUser, "ok", c)
 }
 
-//	func getPermCode(c *gin.Context) {
-//		common.OkWithDetailed([]string{"2000", "4000", "6000"}, "ok", c)
-//	}
 func getPermCode(c *gin.Context) {
 	// 1. 从 JWT 或上下文获取当前登录用户的角色
 	userNameInter, exists := c.Get(common.GIN_CTX_JWT_USER_NAME)
@@ -144,6 +141,7 @@ func getPermCode(c *gin.Context) {
 	// 4. 返回合并去重后的真实权限码
 	common.OkWithDetailed(permCodes, "ok", c)
 }
+
 func createAccount(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)

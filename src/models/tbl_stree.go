@@ -21,6 +21,7 @@ type StreeNode struct {
 	OpsAdmins                []*User           `json:"ops_admins" gorm:"many2many:ops_admins;comment:运维负责人列表"`
 	BindEcss                 []*ResourceEcs    `json:"bind_ecss,omitempty" gorm:"many2many:bind_ecss;"`
 	BindElbs                 []*ResourceElb    `json:"bind_elbs,omitempty" gorm:"many2many:bind_elbs;comment:绑定的服务树节点"`
+	BindRds                  []*ResourceRds    `json:"bind_rdss,omitempty" gorm:"many2many:bind_rdss;comment:绑定的服务树节点"`
 	EcsNum                   int               `json:"ecsNum" gorm:"-"`
 	NodeNum                  int               `json:"nodeNum" gorm:"-"`     // 子节点数量
 	LeafNodeNum              int               `json:"leafNodeNum" gorm:"-"` // 叶子节点数量
@@ -31,7 +32,28 @@ type StreeNode struct {
 	GroupByZoneId            []*EchartsOneItem `json:"groupByZoneId,omitempty" gorm:"-"`
 	GroupByOSNameOrderKeys   []string          `json:"groupByOSNameOrderKeys,omitempty" gorm:"-"`
 	GroupByOSNameOrderValues []int             `json:"groupByOSNameOrderValues,omitempty" gorm:"-"`
-	OpsAdminUsers            []string          `json:"ops_admin_users" gorm:"-"`
+
+	// elb  统计字段 (不存入数据库，仅供前端展示)
+	ElbNum                        int               `json:"elbNum" gorm:"-"`
+	ElbBandWidthTotal             int               `json:"elbBandWidthTotal" gorm:"-"`
+	GroupByVendorElb              []*EchartsOneItem `json:"groupByVendorElb,omitempty" gorm:"-"`
+	GroupByZoneIdElb              []*EchartsOneItem `json:"groupByZoneIdElb,omitempty" gorm:"-"`
+	GroupByLoadBalancerTypeKeys   []string          `json:"groupByLoadBalancerTypeKeys,omitempty" gorm:"-"`
+	GroupByLoadBalancerTypeValues []int             `json:"groupByLoadBalancerTypeValues,omitempty" gorm:"-"`
+
+	// rds 统计字段 (不存入数据库，仅供前端展示)
+	RdsNum                 int               `json:"rdsNum" gorm:"-"`
+	GroupByVendorRds       []*EchartsOneItem `json:"groupByVendorRds,omitempty" gorm:"-"`
+	GroupByRdsEngineKeys   []string          `json:"groupByRdsEngineKeys,omitempty" gorm:"-"`
+	GroupByRdsEngineValues []int             `json:"groupByRdsEngineValues,omitempty" gorm:"-"`
+
+	// dns 统计字段 (不存入数据库，仅供前端展示)
+	DnsNum               int               `json:"dnsNum" gorm:"-"`
+	GroupByVendorDns     []*EchartsOneItem `json:"groupByVendorDns,omitempty" gorm:"-"`
+	GroupByDnsTypeKeys   []string          `json:"groupByDnsTypeKeys,omitempty" gorm:"-"`
+	GroupByDnsTypeValues []int             `json:"groupByDnsTypeValues,omitempty" gorm:"-"`
+
+	OpsAdminUsers []string `json:"ops_admin_users" gorm:"-"`
 
 	Children []*StreeNode `json:"children" gorm:"-"`
 	Key      uint         `json:"key" gorm:"-"`
@@ -60,6 +82,9 @@ func (obj *StreeNode) FillFrontAllData() {
 	obj.FillFrontResource()
 	//obj.SetEcsNum()
 	obj.BindEcsData()
+	obj.BindElbData()
+	obj.BindRdsData()
+	obj.BindDnsData()
 }
 
 func (obj *StreeNode) SetEcsNum() {
@@ -332,19 +357,245 @@ func (obj *StreeNode) BindEcsData() {
 	return
 }
 
+func (obj *StreeNode) BindElbData() {
+	allNum := 0
+	groupByVendor := make(map[string]int)
+	groupByLoadBalancerType := make(map[string]int)
+	groupByZoneId := make(map[string]int)
+
+	allNodes := []*StreeNode{obj}
+
+	childrens, err := GetAllLeafNodes(int(obj.ID))
+	if err != nil {
+		return
+	}
+
+	if childrens != nil {
+		allNodes = append(allNodes, childrens...)
+	}
+
+	allResourceIdsMap := map[uint]struct{}{}
+
+	// 🌟 新增：专门用两个变量分开统计目录和叶子
+	dirCount := 0
+	leafCount := 0
+
+	for _, node := range allNodes {
+		// 🌟 核心修复：排除当前节点自身，分别统计目录和叶子
+		if node.ID != obj.ID {
+			if node.IsLeaf {
+				leafCount++
+			} else {
+				dirCount++
+			}
+		}
+
+		if node.BindElbs == nil {
+			continue
+		}
+
+		for _, elbObj := range node.BindElbs {
+			// 资源去重统计
+			if _, exists := allResourceIdsMap[elbObj.ID]; !exists {
+				groupByVendor[elbObj.Vendor]++
+				groupByLoadBalancerType[elbObj.LoadBalancerType]++
+				groupByZoneId[elbObj.ZoneId]++
+				allResourceIdsMap[elbObj.ID] = struct{}{}
+			}
+		}
+	}
+
+	allNum = len(allResourceIdsMap)
+	obj.ElbNum = allNum
+
+	// ----- 下面的图表数据组装逻辑保持不变 -----
+	arrGroupByVendor := make([]*EchartsOneItem, 0)
+	arrGroupByZoneId := make([]*EchartsOneItem, 0)
+
+	for name, value := range groupByVendor {
+		arrGroupByVendor = append(arrGroupByVendor, &EchartsOneItem{
+			Name:  name,
+			Value: value,
+		})
+	}
+	for name, value := range groupByZoneId {
+		arrGroupByZoneId = append(arrGroupByZoneId, &EchartsOneItem{
+			Name:  name,
+			Value: value,
+		})
+	}
+
+	var elbTypeKeys []string
+	var elbTypeValues []int
+	for name := range groupByLoadBalancerType {
+		elbTypeKeys = append(elbTypeKeys, name)
+	}
+	sort.Strings(elbTypeKeys)
+
+	for _, name := range elbTypeKeys {
+		elbTypeValues = append(elbTypeValues, groupByLoadBalancerType[name])
+	}
+
+	obj.GroupByVendorElb = arrGroupByVendor
+	obj.GroupByZoneIdElb = arrGroupByZoneId
+	obj.GroupByLoadBalancerTypeKeys = elbTypeKeys
+	obj.GroupByLoadBalancerTypeValues = elbTypeValues
+
+	return
+}
+
+func (obj *StreeNode) BindRdsData() {
+	allNum := 0
+	groupByVendor := make(map[string]int)
+	groupByEngine := make(map[string]int)
+
+	allNodes := []*StreeNode{obj}
+
+	childrens, err := GetAllLeafNodes(int(obj.ID))
+	if err != nil {
+		return
+	}
+
+	if childrens != nil {
+		allNodes = append(allNodes, childrens...)
+	}
+
+	allResourceIdsMap := map[uint]struct{}{}
+
+	for _, node := range allNodes {
+		// ⚠️ 注意：这里如果你之前没加 Preload("BindRds")，需要在获取树节点时加上，否则 node.BindRds 会是 nil
+		if node.BindRds == nil {
+			continue
+		}
+
+		for _, rdsObj := range node.BindRds {
+			// 资源去重统计 (防止同一个 RDS 挂在子节点，又被父节点统计一次)
+			if _, exists := allResourceIdsMap[rdsObj.ID]; !exists {
+				groupByVendor[rdsObj.Vendor]++
+				// 有些引擎名字可能带版本号，如果你只想统计大类，可以在这里做字符串截取，这里直接用原始引擎名
+				groupByEngine[rdsObj.Engine]++
+				allResourceIdsMap[rdsObj.ID] = struct{}{}
+			}
+		}
+	}
+
+	allNum = len(allResourceIdsMap)
+	obj.RdsNum = allNum
+
+	// ----- 图表数据组装 -----
+	arrGroupByVendor := make([]*EchartsOneItem, 0)
+	for name, value := range groupByVendor {
+		arrGroupByVendor = append(arrGroupByVendor, &EchartsOneItem{
+			Name:  name,
+			Value: value,
+		})
+	}
+
+	var engineKeys []string
+	var engineValues []int
+	for name := range groupByEngine {
+		engineKeys = append(engineKeys, name)
+	}
+	sort.Strings(engineKeys)
+
+	for _, name := range engineKeys {
+		engineValues = append(engineValues, groupByEngine[name])
+	}
+
+	obj.GroupByVendorRds = arrGroupByVendor
+	obj.GroupByRdsEngineKeys = engineKeys
+	obj.GroupByRdsEngineValues = engineValues
+
+	return
+}
+
+func (obj *StreeNode) BindDnsData() {
+	allNodes := []*StreeNode{obj}
+
+	childrens, err := GetAllLeafNodes(int(obj.ID))
+	if err == nil && childrens != nil {
+		allNodes = append(allNodes, childrens...)
+	}
+
+	// 1. 提取所有关联的 ECS 和 ELB 的真实 ID
+	var ecsInstanceIds []string
+	var elbInstanceIds []string
+
+	for _, node := range allNodes {
+		for _, ecs := range node.BindEcss {
+			if ecs.InstanceId != "" {
+				ecsInstanceIds = append(ecsInstanceIds, ecs.InstanceId)
+			}
+		}
+		for _, elb := range node.BindElbs {
+			if elb.LoadBalancerId != "" {
+				elbInstanceIds = append(elbInstanceIds, elb.LoadBalancerId)
+			}
+		}
+	}
+
+	// 2. 如果没有任何底层资源，DNS 必然为 0
+	if len(ecsInstanceIds) == 0 && len(elbInstanceIds) == 0 {
+		obj.DnsNum = 0
+		return
+	}
+
+	// 3. 去数据库里一次性查出关联的 DNS
+	var dnsList []ResourceDns
+	Db.Where("ecs_instance_id IN ? OR associated_instance_id IN ?", ecsInstanceIds, elbInstanceIds).Find(&dnsList)
+
+	obj.DnsNum = len(dnsList)
+	if obj.DnsNum == 0 {
+		return
+	}
+
+	// 4. 开始分类统计
+	groupByVendor := make(map[string]int)
+	groupByType := make(map[string]int)
+
+	for _, dns := range dnsList {
+		groupByVendor[dns.Vendor]++
+		groupByType[dns.Type]++
+	}
+
+	// 5. 格式化为前端 Echarts 需要的数据结构
+	arrGroupByVendor := make([]*EchartsOneItem, 0)
+	for name, value := range groupByVendor {
+		arrGroupByVendor = append(arrGroupByVendor, &EchartsOneItem{
+			Name:  name,
+			Value: value,
+		})
+	}
+	obj.GroupByVendorDns = arrGroupByVendor
+
+	var typeKeys []string
+	var typeValues []int
+	// 保证图表顺序稳定
+	for name := range groupByType {
+		typeKeys = append(typeKeys, name)
+	}
+	sort.Strings(typeKeys)
+	for _, name := range typeKeys {
+		typeValues = append(typeValues, groupByType[name])
+	}
+
+	obj.GroupByDnsTypeKeys = typeKeys
+	obj.GroupByDnsTypeValues = typeValues
+}
+
 func GetStreeNodeAll() (sn []*StreeNode, err error) {
 	err = Db.Find(&sn).Error
 	return
 }
 
 func GetStreeNodeByLevel(level int) (sn []*StreeNode, err error) {
-	err = Db.Where("level = ?", level).Preload("OpsAdmins").Preload("BindEcss").Find(&sn).Error
+	err = Db.Where("level = ?", level).Preload("OpsAdmins").Preload("BindEcss").Preload("BindElbs").Preload("BindRds").Find(&sn).Error
 	return
 }
 
 func GetStreeNodeById(id int) (*StreeNode, error) {
 	var dbStreeNode StreeNode
-	err := Db.Where("id = ? ", id).Preload("OpsAdmins").Preload("BindEcss").First(&dbStreeNode).Error
+	err := Db.Where("id = ? ", id).Preload("OpsAdmins").Preload("BindEcss").Preload("BindElbs").Preload("BindRds").First(&dbStreeNode).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, fmt.Errorf("StreeNode不存在")
@@ -355,7 +606,7 @@ func GetStreeNodeById(id int) (*StreeNode, error) {
 }
 
 func GetStreeNodesByPId(pid int) (dbObjs []*StreeNode, err error) {
-	err = Db.Where("pid = ? ", pid).Preload("OpsAdmins").Preload("BindEcss").Find(&dbObjs).Error
+	err = Db.Where("pid = ? ", pid).Preload("OpsAdmins").Preload("BindEcss").Preload("BindElbs").Preload("BindRds").Find(&dbObjs).Error
 	return
 }
 

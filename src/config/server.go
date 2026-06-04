@@ -24,7 +24,11 @@ type PublicCloudSync struct {
 	RunIntervalSeconds int         `yaml:"run_interval_seconds"`
 	AliCloud           []*AliCloud `yaml:"ali_cloud"`
 	AwsCloud           []*AwsCloud `yaml:"aws_cloud"`
+
+	GodaddyDns *GodaddyDns `yaml:"godaddy_dns"`
+	DynadotDns *DynadotDns `yaml:"dynadot_dns"`
 }
+
 type AliCloud struct {
 	Enable          bool   `yaml:"enable"`
 	AccountName     string `yaml:"account_name"`
@@ -40,6 +44,20 @@ type AwsCloud struct {
 	RegionId        string `yaml:"region_id"`
 	AccessKeyId     string `yaml:"access_key_id"`
 	SecretAccessKey string `yaml:"secret_access_key"` // 注意：AWS 习惯称之为 Secret Access Key
+}
+
+// 域名供应商
+type GodaddyDns struct {
+	Enable          bool     `yaml:"enable"`
+	AccessKeyId     string   `yaml:"access_key_id"`
+	AccessKeySecret string   `yaml:"access_key_secret"`
+	Domains         []string `yaml:"domains"` // 支持多个域名同步
+}
+
+type DynadotDns struct {
+	Enable  bool     `yaml:"enable"`
+	ApiKey  string   `yaml:"api_key"`
+	Domains []string `yaml:"domains"`
 }
 
 // LoadServer 根据io read 读取配置文件后的字符串解析yaml

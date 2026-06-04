@@ -3,6 +3,7 @@ package models
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -37,19 +38,19 @@ type ResourceElb struct {
 	BindNodes []*StreeNode `json:"bind_nodes,omitempty" gorm:"many2many:bind_elbs;comment:绑定的服务树节点"`
 }
 
-func (rh *ResourceElb) GenHash() string {
+func (obj *ResourceElb) GenHash() string {
 	h := md5.New()
 
 	// Corrected format string and simplified array formatting
 	hashStr := fmt.Sprintf("%s_%s_%d_%s_%s_%s_%v_%v",
-		rh.LoadBalancerId,
-		rh.LoadBalancerType,
-		rh.BandwidthCapacity,
-		rh.LoadBalancerName,
-		rh.Status,
-		rh.AccountName,
-		rh.PublicIpAddresses,
-		rh.PrivateIpAddress,
+		obj.LoadBalancerId,
+		obj.LoadBalancerType,
+		obj.BandwidthCapacity,
+		obj.LoadBalancerName,
+		obj.Status,
+		obj.AccountName,
+		obj.PublicIpAddresses,
+		obj.PrivateIpAddress,
 	)
 
 	h.Write([]byte(hashStr))
@@ -88,8 +89,9 @@ func (obj *ResourceElb) UpdateBindNodes(nodes []*StreeNode) error {
 
 }
 
-func GetResourceLbAll() (re []*ResourceElb, err error) {
-	err = Db.Find(&re).Preload("bind_nodes").Error
+func GetResourceELbAll() (re []*ResourceElb, err error) {
+	// 💡 修复：1. 必须使用结构体字段名 BindNodes  2. Preload 最好放在 Find 前面
+	err = Db.Preload("BindNodes").Find(&re).Error
 	return
 }
 
@@ -98,23 +100,40 @@ func GetResourceLbByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*Re
 	return
 
 }
-func GetResourceLbById(id string) (*ResourceElb, error) {
+
+//func GetResourceELBById(id string) (*ResourceElb, error) {
+//	var dbResourceLb ResourceElb
+//	err := Db.Where("load_balancer_id = ? ", id).Preload("BindNodes").First(&dbResourceLb).Error
+//	if err != nil {
+//		if err == gorm.ErrRecordNotFound {
+//			return nil, fmt.Errorf("ResourceLb不存在")
+//		}
+//		return nil, fmt.Errorf("数据库错误%v", err)
+//	}
+//	return &dbResourceLb, nil
+//}
+
+func GetResourceELBById(id string) (*ResourceElb, error) {
 	var dbResourceLb ResourceElb
-	err := Db.Where("load_balancer_id = ? ", id).Preload("BindNodes").First(&dbResourceLb).Error
+
+	// 💡 修复：将 load_balancer_id = ? 改为 id = ?
+	err := Db.Where("id = ? ", id).Preload("BindNodes").First(&dbResourceLb).Error
+
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("ResourceLb不存在")
 		}
 		return nil, fmt.Errorf("数据库错误%v", err)
 	}
 	return &dbResourceLb, nil
 }
+
 func GetResourceLbByInstanceId(instanceId string) (*ResourceElb, error) {
 	var dbResourceLb ResourceElb
 	// 注意这里改成了 load_balancer_id
-	err := Db.Where("load_balancer_id = ? ", instanceId).Preload("StreeNodes").First(&dbResourceLb).Error
+	err := Db.Where("load_balancer_id = ? ", instanceId).Preload("BindNodes").First(&dbResourceLb).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("ResourceLb不存在")
 		}
 		return nil, fmt.Errorf("数据库错误%v", err)
@@ -134,4 +153,13 @@ func GetResourceLbUidAndHash() (map[string]string, error) {
 	}
 	return m, nil
 
+}
+func GetResourceElbByDnsName(dnsName string) (*ResourceElb, error) {
+	var elb ResourceElb
+	// 使用精确匹配，因为 ELB 的 dns_name 是唯一的
+	err := Db.Where("dns_name = ?", dnsName).First(&elb).Error
+	if err != nil {
+		return nil, err
+	}
+	return &elb, nil
 }

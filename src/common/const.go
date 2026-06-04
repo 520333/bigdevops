@@ -8,8 +8,9 @@ const (
 	COMMON_STATUS_ENABLE  = "1"
 	COMMON_STATUS_DISABLE = "0"
 	RESOURCE_TYPE_ECS     = "ecs"
-	RESOURCE_TYPE_LB      = "lb"
+	RESOURCE_TYPE_ELB     = "elb"
 	RESOURCE_TYPE_RDS     = "rds"
+	RESOURCE_TYPE_DNS     = "dns"
 )
 
 var COMMON_SHOW_MAP = map[string]bool{

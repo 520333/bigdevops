@@ -65,9 +65,21 @@ func ConfigRouter(r *gin.Engine) {
 		sTreeApiGroup.DELETE("/deleteStreeNode/:id", deleteStreeNode)
 		sTreeApiGroup.GET("/getChildrenStreeNodes/:pid", getChildrenStreeNodes)
 
+		// ECS
 		sTreeApiGroup.GET("/getResourceEcsUnbindList", getResourceEcsUnbindList)
 		sTreeApiGroup.POST("/bindEcsToStreeNode", bindEcsToStreeNode)
 		sTreeApiGroup.POST("/unBindEcsToStreeNode", unBindEcsToStreeNode)
+
+		// ELB
+		sTreeApiGroup.GET("/getResourceElbUnbindList", getResourceElbUnbindList)
+		sTreeApiGroup.POST("/bindElbToStreeNode", bindElbToStreeNode)
+		sTreeApiGroup.POST("/unBindElbToStreeNode", unBindElbToStreeNode)
+
+		// RDS
+		sTreeApiGroup.GET("/getResourceRdsUnbindList", getResourceRdsUnbindList)
+		sTreeApiGroup.POST("/bindRdsToStreeNode", bindRdsToStreeNode)
+		sTreeApiGroup.POST("/unBindRdsToStreeNode", unBindRdsToStreeNode)
+
 		sTreeApiGroup.GET("/fetchResourceByNode", fetchResourceByNode)
 	}
 

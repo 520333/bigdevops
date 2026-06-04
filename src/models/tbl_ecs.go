@@ -3,6 +3,7 @@ package models
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -71,19 +72,19 @@ type ResourceEcs struct {
 	//InternetChargeType              string `json:"InternetChargeType,omitempty"`
 }
 
-func (rh *ResourceEcs) GenHash() string {
+func (obj *ResourceEcs) GenHash() string {
 	h := md5.New()
 	hashStr := fmt.Sprintf("%d_%d_%s_%s_%s_%s_%s_%s_%s_%s",
-		rh.Cpu,
-		rh.Memory,
-		rh.Status,
-		rh.InstanceName,
-		rh.InstanceType,
-		rh.AccountName,
-		fmt.Sprintf("%v", rh.PublicIpAddresses), // 加上公网IP
-		fmt.Sprintf("%v", rh.PrivateIpAddress),  // 加上内网IP
-		fmt.Sprintf("%v", rh.NetworkInterfaces),
-		fmt.Sprintf("%v", rh.DiskIds),
+		obj.Cpu,
+		obj.Memory,
+		obj.Status,
+		obj.InstanceName,
+		obj.InstanceType,
+		obj.AccountName,
+		fmt.Sprintf("%v", obj.PublicIpAddresses), // 加上公网IP
+		fmt.Sprintf("%v", obj.PrivateIpAddress),  // 加上内网IP
+		fmt.Sprintf("%v", obj.NetworkInterfaces),
+		fmt.Sprintf("%v", obj.DiskIds),
 	)
 	h.Write([]byte(hashStr))
 	//h.Write([]byte(strconv.Itoa(rh.Cpu)))
@@ -125,7 +126,7 @@ func (obj *ResourceEcs) UpdateBindNodes(nodes []*StreeNode) error {
 }
 
 func GetResourceEcsAll() (re []*ResourceEcs, err error) {
-	err = Db.Find(&re).Preload("bind_nodes").Error
+	err = Db.Find(&re).Preload("BindNodes").Error
 	return
 }
 
@@ -138,7 +139,7 @@ func GetResourceEcsById(id int) (*ResourceEcs, error) {
 	var dbResourceEcs ResourceEcs
 	err := Db.Where("id = ? ", id).Preload("BindNodes").First(&dbResourceEcs).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("ResourceEcs不存在")
 		}
 		return nil, fmt.Errorf("数据库错误%v", err)
@@ -149,7 +150,7 @@ func GetResourceEcsByInstanceId(instanceId string) (*ResourceEcs, error) {
 	var dbResourceEcs ResourceEcs
 	err := Db.Where("instance_id = ? ", instanceId).Preload("BindNodes").First(&dbResourceEcs).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("ResourceEcs不存在")
 		}
 		return nil, fmt.Errorf("数据库错误%v", err)
@@ -169,4 +170,15 @@ func GetResourceEcsUidAndHash() (map[string]string, error) {
 	}
 	return m, nil
 
+}
+
+func GetResourceEcsByIp(ip string) (*ResourceEcs, error) {
+	var ecs ResourceEcs
+	// 使用 LIKE 匹配，确保不管 IP 是单独存在还是在列表中都能被查到
+	// 同时也搜索私网 IP 和公网 IP
+	err := Db.Where("public_ip_addresses LIKE ? OR private_ip_address LIKE ?", "%"+ip+"%", "%"+ip+"%").First(&ecs).Error
+	if err != nil {
+		return nil, err
+	}
+	return &ecs, nil
 }

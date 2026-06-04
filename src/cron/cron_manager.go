@@ -9,8 +9,9 @@ import (
 type CronManager struct {
 	Sc                  *config.ServerConfig
 	EcsLastSyncFinished bool // =true代表上次已经同步完了
-	RdsLastSyncFinished bool
 	ElbLastSyncFinished bool
+	RdsLastSyncFinished bool
+	DnsLastSyncFinished bool
 	sync.RWMutex
 }
 
@@ -38,6 +39,34 @@ func (cm *CronManager) GetElbSynced() bool {
 	return cm.ElbLastSyncFinished
 }
 
+func (cm *CronManager) SetRdsSynced(fin bool) {
+	cm.Lock()
+	defer cm.Unlock()
+	cm.RdsLastSyncFinished = fin
+}
+
+func (cm *CronManager) GetRdsSynced() bool {
+	cm.RLock()
+	defer cm.RUnlock()
+	return cm.RdsLastSyncFinished
+}
+
+func (cm *CronManager) SetDnsSynced(fin bool) {
+	cm.Lock()
+	defer cm.Unlock()
+	cm.DnsLastSyncFinished = fin
+}
+
+func (cm *CronManager) GetDnsSynced() bool {
+	cm.RLock()
+	defer cm.RUnlock()
+	return cm.DnsLastSyncFinished
+}
+
 func NewCronManager(sc *config.ServerConfig) *CronManager {
-	return &CronManager{Sc: sc, EcsLastSyncFinished: true, ElbLastSyncFinished: true}
+	return &CronManager{Sc: sc,
+		EcsLastSyncFinished: true,
+		ElbLastSyncFinished: true,
+		RdsLastSyncFinished: true,
+		DnsLastSyncFinished: true}
 }
