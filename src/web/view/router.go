@@ -46,6 +46,7 @@ func ConfigRouter(r *gin.Engine) {
 		systemApiGroup.DELETE("/deleteAccount/:id", deleteAccount)
 		systemApiGroup.GET("/getAccountList", getAccountList)
 		systemApiGroup.POST("/changePassword", changePassword)
+		systemApiGroup.GET("/getAllUserAndRoles", getAllUserAndRoles)
 
 		// 菜单路由
 		systemApiGroup.GET("/getApiList", getApiList)
@@ -81,6 +82,14 @@ func ConfigRouter(r *gin.Engine) {
 		sTreeApiGroup.POST("/unBindRdsToStreeNode", unBindRdsToStreeNode)
 
 		sTreeApiGroup.GET("/fetchResourceByNode", fetchResourceByNode)
+	}
+
+	workOrDerApiGroup := afterLoginApiGroup.Group("/workOrder")
+	{
+		workOrDerApiGroup.GET("/getProcessList", getProcessList)
+		workOrDerApiGroup.POST("/createProcess", createProcess)
+		workOrDerApiGroup.POST("/updateProcess", updateProcess)
+		workOrDerApiGroup.DELETE("/deleteProcess/:id", deleteProcess)
 	}
 
 }

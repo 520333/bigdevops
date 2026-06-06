@@ -343,6 +343,48 @@ func changePassword(c *gin.Context) {
 	common.OkWithMessage("密码修改成功 ", c)
 }
 
+type DefineUserOrGroup struct {
+	Label string `json:"label"`
+	Value string `json:"value"`
+}
+
+func getAllUserAndRoles(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+	// 数据库中拿到所有的menu列表
+	users, err := models.GetUserAll()
+	if err != nil {
+		sc.Logger.Error("去数据库中拿所有用户错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有用户错误：%v", err.Error()), c)
+		return
+	}
+	roles, err := models.GetRoleAll()
+	if err != nil {
+		sc.Logger.Error("去数据库中拿所有角色错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有角色错误：%v", err.Error()), c)
+		return
+	}
+	var res []DefineUserOrGroup
+	for _, user := range users {
+		user := user
+		key := fmt.Sprintf("%s@%s", "用户", user.Username)
+		one := DefineUserOrGroup{
+			Label: key,
+			Value: key,
+		}
+		res = append(res, one)
+	}
+	for _, role := range roles {
+		role := role
+		key := fmt.Sprintf("%s@%s", "组", role.RoleName)
+		one := DefineUserOrGroup{
+			Label: key,
+			Value: key,
+		}
+		res = append(res, one)
+	}
+	common.OkWithDetailed(res, "ok", c)
+}
+
 //type CreateUserReq struct {
 //	UserName string   `json:"userName" validate:"required"`
 //	Password string   `json:"password" validate:"required"`
