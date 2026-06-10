@@ -94,6 +94,8 @@ func MigrateTable() error {
 		&ResourceDns{},
 		&Process{},
 		&FlowNode{},
+		&FormDesign{},
+		&WorkOrderTemplate{},
 	)
 }
 
@@ -277,14 +279,36 @@ func MockUserRegister(sc *config.ServerConfig) {
 		},
 		{
 			Name:      "ProcessManagement",
-			Title:     "流程管理",
-			Icon:      "ant-design:branches-outlined",
+			Title:     "审批流程管理",
+			Icon:      "ant-design:apartment-outlined",
 			Type:      "1",
 			Show:      "1",
 			OrderNo:   21,
 			Component: "workorder/process/index",
 			Pid:       11,
 			Path:      "process",
+		},
+		{
+			Name:      "FormManagement",
+			Title:     "表单设计管理",
+			Icon:      "ant-design:form-outlined",
+			Type:      "1",
+			Show:      "1",
+			OrderNo:   22,
+			Component: "workorder/formDesign/index",
+			Pid:       11,
+			Path:      "formDesign",
+		},
+		{
+			Name:      "WorkOrderTemplateManagement",
+			Title:     "工单模板管理",
+			Icon:      "ant-design:layout-outlined",
+			Type:      "1",
+			Show:      "1",
+			OrderNo:   23,
+			Component: "workorder/template/index",
+			Pid:       11,
+			Path:      "workOrderTemplate",
 		},
 	}
 	apis := []*Api{

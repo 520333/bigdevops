@@ -193,6 +193,22 @@ func deleteProcess(c *gin.Context) {
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
+	dbTemplate, err := models.GetWorkOrderTemplateByProcessId(intVar)
+
+	// 1. 如果有 err 并且不是“未找到记录”的错误，说明数据库崩了
+	if err != nil && err.Error() != "WorkOrderTemplate不存在" { // 这里的字符串取决于你 Get 方法里的定义
+		sc.Logger.Error("检查流程关联模板时发生数据库错误", zap.Error(err))
+		common.FailWithMessage("检查模板关联失败", c)
+		return
+	}
+
+	// 2. 如果成功查到了模板，说明被占用了，明确拒绝并返回自定义提示（绝对不能用 err.Error()）
+	if dbTemplate != nil && dbTemplate.ID > 0 {
+		errMsg := fmt.Sprintf("该审批流程已被工单模板【%s】绑定，禁止直接删除！", dbTemplate.Name)
+		sc.Logger.Warn(errMsg, zap.Any("流程ID", id))
+		common.FailWithMessage(errMsg, c)
+		return
+	}
 	err = dbRole.DeleteOne()
 	if err != nil {
 		sc.Logger.Error("删除流程错误", zap.Any("流程", id), zap.Error(err))

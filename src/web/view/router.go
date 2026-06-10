@@ -84,12 +84,22 @@ func ConfigRouter(r *gin.Engine) {
 		sTreeApiGroup.GET("/fetchResourceByNode", fetchResourceByNode)
 	}
 
-	workOrDerApiGroup := afterLoginApiGroup.Group("/workOrder")
+	workOrDerApiGroup := afterLoginApiGroup.Group("/workorder")
 	{
 		workOrDerApiGroup.GET("/getProcessList", getProcessList)
 		workOrDerApiGroup.POST("/createProcess", createProcess)
 		workOrDerApiGroup.POST("/updateProcess", updateProcess)
 		workOrDerApiGroup.DELETE("/deleteProcess/:id", deleteProcess)
+
+		workOrDerApiGroup.GET("/getFormDesignList", getFormDesignList)
+		workOrDerApiGroup.POST("/createFormDesign", createFormDesign)
+		workOrDerApiGroup.POST("/updateFormDesign", updateFormDesign)
+		workOrDerApiGroup.DELETE("/deleteFormDesign/:id", deleteFormDesign)
+
+		workOrDerApiGroup.GET("/getWorkOrderTemplateList", getWorkOrderTemplateList)
+		workOrDerApiGroup.POST("/createWorkOrderTemplate", createWorkOrderTemplate)
+		workOrDerApiGroup.POST("/updateWorkOrderTemplate", updateWorkOrderTemplate)
+		workOrDerApiGroup.DELETE("/deleteWorkOrderTemplate/:id", deleteWorkOrderTemplate)
 	}
 
 }

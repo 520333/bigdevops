@@ -23,7 +23,8 @@ type User struct {
 	Roles    []*Role      `json:"roles" gorm:"many2many:user_roles"`
 	OpsNodes []*StreeNode `json:"ops_nodes" gorm:"many2many:ops_admins;comment:人员服务树节点"`
 
-	Processes []Process
+	Processes   []Process
+	FormDesigns []FormDesign
 
 	RolesFront []string `json:"rolesFront" gorm:"-"`
 }

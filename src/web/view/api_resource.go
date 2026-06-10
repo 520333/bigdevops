@@ -37,7 +37,6 @@ func fetchResourceByNode(c *gin.Context) {
 	limit = pageSize
 	if currentPage > 1 {
 		offset = (currentPage - 1) * limit
-
 	}
 
 	if nodeId == "" || resourceType == "" {
