@@ -13,7 +13,41 @@ const (
 	RESOURCE_TYPE_DNS     = "dns"
 )
 
-var COMMON_SHOW_MAP = map[string]bool{
-	"1": true,
-	"0": false,
-}
+var (
+	COMMON_SHOW_MAP = map[string]bool{
+		"1": true,
+		"0": false,
+	}
+	FLOW_TYPE_APPROVAL = "Approval"
+	FLOW_TYPE_ACTION   = "Action"
+	//FLOW_TYPE_MAP      = map[string]string{
+	//	FLOW_TYPE_APPROVAL: "审批节点",
+	//	FLOW_TYPE_ACTION:   "执行节点",
+	//	"Start":            "开始节点",
+	//	"Stop":             "结束节点",
+	//}
+
+	FLOW_TYPE_MAP = map[string]string{
+		"起始节点": "起始节点",
+		"审批节点": "审批节点",
+		"执行节点": "执行节点",
+		"结束节点": "结束节点",
+	}
+
+	ApprovalActionPass   = "pass"
+	ApprovalActionReject = "reject"
+	ApprovalActionMap    = map[string]string{
+		ApprovalActionPass:   "",
+		ApprovalActionReject: "",
+	}
+
+	WORKORDER_INSTANCE_QUERYMODE_MINE     = "mine"
+	WORKORDER_INSTANCE_QUERYMODE_ALL      = "all"
+	WORKORDER_INSTANCE_QUERYMODE_APPROVAL = FLOW_TYPE_APPROVAL
+	WORKORDER_INSTANCE_QUERYMODE_ACTION   = FLOW_TYPE_ACTION
+
+	WORKORDER_INSTANCE_PENDINGAPPROVAL = "pendingApproval"
+	WORKORDER_INSTANCE_APPROVAL_REJECT = "approvalReject"
+	WORKORDER_INSTANCE_PENDING_ACTION  = "pendingAction"
+	WORKORDER_INSTANCE_FINISHED        = "finished"
+)

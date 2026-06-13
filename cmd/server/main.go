@@ -100,7 +100,15 @@ func main() {
 		}
 		return err
 	})
-
+	// 工单自动执行模块
+	//group.Go(func() error {
+	//	logger.Info("计划任务--工单自动执行模块--启动")
+	//	err := cm.AuthOrderManager(ctxAll)
+	//	if err != nil {
+	//		logger.Error("计划任务--工单自动执行模块--报错", zap.Error(err))
+	//	}
+	//	return err
+	//})
 	group.Go(func() error {
 		errChan := make(chan error, 1)
 		go func() {

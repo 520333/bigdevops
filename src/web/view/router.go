@@ -100,6 +100,17 @@ func ConfigRouter(r *gin.Engine) {
 		workOrDerApiGroup.POST("/createWorkOrderTemplate", createWorkOrderTemplate)
 		workOrDerApiGroup.POST("/updateWorkOrderTemplate", updateWorkOrderTemplate)
 		workOrDerApiGroup.DELETE("/deleteWorkOrderTemplate/:id", deleteWorkOrderTemplate)
+		workOrDerApiGroup.GET("/getWorkOrderTemplateDetail/:id", getWorkOrderTemplateDetail)
+
+		workOrDerApiGroup.GET("/getWorkOrderInstanceList", getWorkOrderInstanceList)
+		workOrDerApiGroup.POST("/createWorkOrderInstance", createWorkOrderInstance)
+		workOrDerApiGroup.POST("/updateWorkOrderInstance", updateWorkOrderInstance)
+		workOrDerApiGroup.DELETE("/deleteWorkOrderInstance/:id", deleteWorkOrderInstance)
+		workOrDerApiGroup.POST("/approvalWorkOrderInstance/:id", approvalWorkOrderInstance)
+		workOrDerApiGroup.POST("/actionWorkOrderInstance/:id", actionWorkOrderInstance)
+		workOrDerApiGroup.GET("/getWorkOrderInstanceDetail/:id", getWorkOrderInstanceDetail)
+		workOrDerApiGroup.POST("/commentWorkOrderInstance/:id", commentWorkOrderInstance)
+
 	}
 
 }

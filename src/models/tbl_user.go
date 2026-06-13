@@ -13,7 +13,7 @@ type User struct {
 	Model
 	UserId   int    `json:"userId" gorm:"comment:用户id"`
 	Username string `json:"userName" gorm:"type:varchar(100);uniqueIndex;comment:用户登录名"`
-	Password string `json:"password" gorm:"comment:用户登录密码"`
+	Password string `json:"-" gorm:"comment:用户登录密码"`
 	RealName string `json:"realName" gorm:"comment:用户昵称"`
 	//Avatar   string  `json:"avatar" gorm:"comment:头像"`
 	Desc     string `json:"desc" gorm:"comment:用户描述"`
@@ -21,12 +21,12 @@ type User struct {
 	Enable   int    `json:"enable" gorm:"default:1;comment:用户是否被冻结 1正常 2冻结"`
 	//Roles    []*Role `json:"roles" gorm:"many2many:user_roles"`
 	Roles    []*Role      `json:"roles" gorm:"many2many:user_roles"`
-	OpsNodes []*StreeNode `json:"ops_nodes" gorm:"many2many:ops_admins;comment:人员服务树节点"`
+	OpsNodes []*StreeNode `json:"ops_nodes,omitempty" gorm:"many2many:ops_admins;comment:人员服务树节点"`
 
-	Processes   []Process
-	FormDesigns []FormDesign
+	Processes   []WorkOrderProcess
+	FormDesigns []WorkOrderFormDesign
 
-	RolesFront []string `json:"rolesFront" gorm:"-"`
+	RolesFront []string `json:"rolesFront,omitempty" gorm:"-"`
 }
 
 func CheckUserPassword(ru *UserLoginRequest) (*User, error) {

@@ -8,8 +8,8 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// FormDesign 工作审批流
-type FormDesign struct {
+// WorkOrderFormDesign 工作审批流
+type WorkOrderFormDesign struct {
 	Model
 	Name           string `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:表单设计名称"`
 	UserID         uint
@@ -19,40 +19,40 @@ type FormDesign struct {
 	CreateUserName string `json:"createUserName" gorm:"-"`
 }
 
-func (obj *FormDesign) Create() error {
+func (obj *WorkOrderFormDesign) Create() error {
 	return Db.Create(obj).Error
 }
 
-func (obj *FormDesign) DeleteOne() error {
+func (obj *WorkOrderFormDesign) DeleteOne() error {
 	return Db.Select(clause.Associations).Unscoped().Delete(obj).Error
 }
 
-func (obj *FormDesign) CreateOne() error {
+func (obj *WorkOrderFormDesign) CreateOne() error {
 	return Db.Create(obj).Error
 }
 
-func (obj *FormDesign) UpdateOne() error {
+func (obj *WorkOrderFormDesign) UpdateOne() error {
 	return Db.Where("id = ?", obj.ID).Updates(obj).Error
 }
-func GetFormDesignById(id int) (*FormDesign, error) {
-	var dbFormDesign FormDesign
-	err := Db.Where("id = ? ", id).First(&dbFormDesign).Error
+func GetFormDesignById(id int) (*WorkOrderFormDesign, error) {
+	var dbWorkOrderFormDesign WorkOrderFormDesign
+	err := Db.Where("id = ? ", id).First(&dbWorkOrderFormDesign).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("FormDesign不存在")
+			return nil, fmt.Errorf("WorkOrderFormDesign不存在")
 		}
 		return nil, fmt.Errorf("数据库错误%v", err)
 	}
-	return &dbFormDesign, nil
+	return &dbWorkOrderFormDesign, nil
 }
 
-func GetFormDesignAll() (ps []*FormDesign, err error) {
+func GetFormDesignAll() (ps []*WorkOrderFormDesign, err error) {
 	err = Db.Find(&ps).Error
 	return
 }
 
-func (obj *FormDesign) FillFrontAllData() {
+func (obj *WorkOrderFormDesign) FillFrontAllData() {
 	dbUser, _ := GetUserById(int(obj.UserID))
 	if dbUser != nil {
 		obj.CreateUserName = fmt.Sprintf("%s(%s)", dbUser.Username, dbUser.RealName)
@@ -60,7 +60,7 @@ func (obj *FormDesign) FillFrontAllData() {
 	obj.Key = fmt.Sprintf("%d", obj.ID)
 }
 
-func GetFormDesignByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*FormDesign, err error) {
+func GetFormDesignByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*WorkOrderFormDesign, err error) {
 	err = Db.Where("id in ?", ids).Limit(limit).Offset(offset).Find(&objs).Error
 	return
 

@@ -14,7 +14,7 @@ import (
 
 func createProcess(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	var reqObj models.Process
+	var reqObj models.WorkOrderProcess
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
 		sc.Logger.Error("解析新增流程请求失败", zap.Any("流程", reqObj), zap.Error(err))
@@ -47,66 +47,45 @@ func createProcess(c *gin.Context) {
 
 func getProcessList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	// 数据库中拿到所有的menu列表
-	objs, err := models.GetProcessAll()
+
+	// 1. 获取分页参数和查询参数
+	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	name := c.Query("name") // 获取前端传来的流程名称
+	searchCreateUserName := c.Query("createUserName")
+	offset := (currentPage - 1) * pageSize
+
+	// 2. 使用带名称过滤的统计方法
+	total, err := models.GetProcessCountByNameAndCreator(name, searchCreateUserName)
 	if err != nil {
-		sc.Logger.Error("去数据库中拿所有的流程错误", zap.Error(err))
-		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的流程错误：%v", err.Error()), c)
+		sc.Logger.Error("查询流程总数失败", zap.Error(err))
+		common.ReqBadFailWithMessage("查询失败", c)
 		return
 	}
 
-	for _, obj := range objs {
-		obj := obj
+	if total == 0 {
+		common.OkWithDetailed(gin.H{"items": []*models.WorkOrderProcess{}, "total": 0}, "ok", c)
+		return
+	}
+
+	// 3. 使用带名称过滤的分页方法
+	pagedObjs, err := models.GetProcessListByNameAndCreator(name, searchCreateUserName, pageSize, offset)
+	if err != nil {
+		sc.Logger.Error("分页获取流程数据失败", zap.Error(err))
+		common.ReqBadFailWithMessage("查询失败", c)
+		return
+	}
+
+	for _, obj := range pagedObjs {
 		obj.FillFrontAllData()
 	}
 
-	common.OkWithDetailed(objs, "ok", c)
+	common.OkWithDetailed(gin.H{"items": pagedObjs, "total": total}, "ok", c)
 }
 
-//	func updateProcess(c *gin.Context) {
-//		sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-//		var reqObj models.Process
-//		err := c.ShouldBindJSON(&reqObj)
-//		if err != nil {
-//			sc.Logger.Error("解析新增流程请求失败", zap.Any("流程", reqObj), zap.Error(err))
-//			common.FailWithMessage(err.Error(), c)
-//			return
-//		}
-//
-//		err = validate.Struct(&reqObj)
-//		if err != nil {
-//			if errors, ok := err.(validator.ValidationErrors); ok {
-//				common.ReqBadFailWithDetailed(errors.Translate(trans), "请求出错", c)
-//				return
-//			}
-//		}
-//
-//		dbObj, err := models.GetProcessById(int(reqObj.ID))
-//		if err != nil {
-//			sc.Logger.Error("根据id找流程错误", zap.Any("流程", reqObj), zap.Error(err))
-//			common.FailWithMessage(err.Error(), c)
-//			return
-//		}
-//
-//		err = reqObj.UpdateOne()
-//		if err != nil {
-//			sc.Logger.Error("更新流程错误", zap.Any("流程", reqObj), zap.Error(err))
-//			common.FailWithMessage(err.Error(), c)
-//			return
-//		}
-//
-//		err = reqObj.UpdateFlowNodes(reqObj.FlowNodes)
-//		if err != nil {
-//			sc.Logger.Error("更新流程审批节点错误", zap.Any("审批节点", dbObj), zap.Error(err))
-//			common.FailWithMessage(err.Error(), c)
-//			return
-//		}
-//
-//		common.OkWithMessage("更新成功", c)
-//	}
 func updateProcess(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	var reqObj models.Process
+	var reqObj models.WorkOrderProcess
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
 		sc.Logger.Error("解析更新流程请求失败", zap.Any("流程", reqObj), zap.Error(err))

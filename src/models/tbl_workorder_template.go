@@ -16,6 +16,9 @@ type WorkOrderTemplate struct {
 	FormDesignID uint
 	ProcessID    uint
 
+	Process    *WorkOrderProcess    `json:"process,omitempty" gorm:"-"`
+	FormDesign *WorkOrderFormDesign `json:"formDesign,omitempty" gorm:"-"`
+
 	Key            string `json:"key" gorm:"-"` // 前端表格使用
 	CreateUserName string `json:"createUserName" gorm:"-"`
 
@@ -64,12 +67,16 @@ func (obj *WorkOrderTemplate) FillFrontAllData() {
 	}
 
 	dbProcess, _ := GetProcessById(int(obj.ProcessID))
-	if dbUser != nil {
+
+	if dbProcess != nil {
+		dbProcess.FillFrontAllData()
 		obj.ProcessName = dbProcess.Name
+		obj.Process = dbProcess
 	}
 
 	dbFormDesign, _ := GetFormDesignById(int(obj.FormDesignID))
-	if dbUser != nil {
+	obj.FormDesign = dbFormDesign
+	if dbFormDesign != nil {
 		obj.FormDesignName = dbFormDesign.Name
 	}
 

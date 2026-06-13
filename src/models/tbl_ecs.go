@@ -71,6 +71,13 @@ type ResourceEcs struct {
 	//InternetMaxBandwidthIn          int64  `json:"InternetMaxBandwidthIn,omitempty"`
 	//InternetChargeType              string `json:"InternetChargeType,omitempty"`
 }
+type EcsBuyWorkOrder struct {
+	Vendor       string `json:"vendor"`
+	Num          int    `json:"num"`
+	BindNode     string `json:"bindNode"`
+	InstanceType string `json:"instance_type"`
+	HostNames    string `json:"hostnames"`
+}
 
 func (obj *ResourceEcs) GenHash() string {
 	h := md5.New()

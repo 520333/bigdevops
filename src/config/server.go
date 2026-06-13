@@ -10,14 +10,22 @@ import (
 )
 
 type ServerConfig struct {
-	HttpAddr         string           `yaml:"http_addr"`
-	MysqlC           *mysql.Config    `yaml:"mysql"` //
-	LogLevel         string           `yaml:"log_level"`
-	LogFilePath      string           `yaml:"log_file_path"`
-	SuperRoleName    string           `yaml:"super_role_name"`
-	PublicCloudSyncC *PublicCloudSync `yaml:"public_cloud_sync"`
-	JWTC             *JWT             `yaml:"jwt"`
-	Logger           *zap.Logger      `yaml:"-"`
+	HttpAddr             string               `yaml:"http_addr"`
+	MysqlC               *mysql.Config        `yaml:"mysql"` //
+	LogLevel             string               `yaml:"log_level"`
+	LogFilePath          string               `yaml:"log_file_path"`
+	SuperRoleName        string               `yaml:"super_role_name"`
+	PublicCloudSyncC     *PublicCloudSync     `yaml:"public_cloud_sync"`
+	JWTC                 *JWT                 `yaml:"jwt"`
+	WorkOrderAutoActionC *WorkOrderAutoAction `yaml:"work_order_auto_action"`
+	Logger               *zap.Logger          `yaml:"-"`
+}
+type WorkOrderAutoAction struct {
+	ServiceAccount         string `yaml:"service_account"` // 服务账号名称
+	RunIntervalSeconds     int    `yaml:"run_interval_seconds"`
+	BatchNum               int    `yaml:"batch_num"`
+	AutoTemplateNameBuyEcs string `yaml:"auto_template_name_buy_ecs"`
+	AutoTemplateNameRmEcs  string `yaml:"auto_template_name_rm_ecs"`
 }
 
 type PublicCloudSync struct {

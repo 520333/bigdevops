@@ -92,10 +92,11 @@ func MigrateTable() error {
 		&ResourceElb{},
 		&ResourceRds{},
 		&ResourceDns{},
-		&Process{},
-		&FlowNode{},
-		&FormDesign{},
+		&WorkOrderProcess{},
+		&WorkOrderFlowNode{},
+		&WorkOrderFormDesign{},
 		&WorkOrderTemplate{},
+		&WorkOrderInstance{},
 	)
 }
 
@@ -308,8 +309,50 @@ func MockUserRegister(sc *config.ServerConfig) {
 			OrderNo:   23,
 			Component: "workorder/template/index",
 			Pid:       11,
-			Path:      "workOrderTemplate",
+			Path:      "template",
 		},
+		{
+			Name:      "WorkOrderTicket",
+			Title:     "工单申请",
+			Icon:      "ant-design:profile-outlined",
+			Type:      "1",
+			Show:      "1",
+			OrderNo:   24,
+			Component: "workorder/ticket/index",
+			Pid:       11,
+			Path:      "ticket",
+		},
+		{
+			Name:      "WorkOrderCreate",
+			Title:     "工单填写",
+			Icon:      "ant-design:form-outlined",
+			Type:      "1",
+			Show:      "0",
+			OrderNo:   25,
+			Component: "workorder/ticket/create",
+			Pid:       11,
+			Path:      "create",
+		},
+		{
+			Name:      "WorkOrderSearch",
+			Title:     "我的工单",
+			Icon:      "ant-design:profile-outlined",
+			Type:      "1",
+			Show:      "1",
+			Component: "workorder/ticket/search", // 对应你的列表页
+			Pid:       11,
+			Path:      "search",
+		},
+		//{
+		//	Name:      "WorkOrderDetail",
+		//	Title:     "工单详情",
+		//	Icon:      "ant-design:profile-outlined",
+		//	Type:      "1",
+		//	Show:      "0",
+		//	Component: "workorder/detail/index", // 对应你的列表页
+		//	Pid:       11,
+		//	Path:      "detail",
+		//},
 	}
 	apis := []*Api{
 		{
@@ -480,14 +523,34 @@ func MockUserRegister(sc *config.ServerConfig) {
 			},
 		},
 	}
+	u3 := User{
+		Username: sc.WorkOrderAutoActionC.ServiceAccount,
+		Password: "123456",
+		RealName: "自动工单执行机器人",
+		Desc:     "",
+		HomePath: "/system/role",
+		Enable:   1,
+		Roles: []*Role{
+			{
+				RoleName:  "集群超级管理员",
+				RoleValue: "bot_super",
+				Menus:     menus,
+			},
+		},
+	}
 
 	u1.Password = common.BcryptHash(u1.Password)
 	u2.Password = common.BcryptHash(u2.Password)
+	u3.Password = common.BcryptHash(u3.Password)
 	if err := Db.Create(&u1).Error; err != nil {
 		sc.Logger.Error("模拟用户注册失败", zap.Any("错误", err.Error()))
 		//return
 	}
 	if err := Db.Create(&u2).Error; err != nil {
+		sc.Logger.Error("模拟用户注册失败", zap.Any("错误", err.Error()))
+		//return
+	}
+	if err := Db.Create(&u3).Error; err != nil {
 		sc.Logger.Error("模拟用户注册失败", zap.Any("错误", err.Error()))
 		//return
 	}
@@ -594,4 +657,118 @@ func MockUserRegister(sc *config.ServerConfig) {
 		//Db.Updates(node)           // 更新 NodePath 到数据库
 	}
 
+	// ==========================================
+	// 🌟 开始 Mock 工单系统核心数据 (表单、流程、模板)
+	// ==========================================
+
+	// 1. Mock 动态表单 (FormDesign)
+	forms := []*WorkOrderFormDesign{
+		{
+			Name:   "基础资源申请表单",
+			UserID: u1.ID,
+			// 模拟 Vben Admin Form 的 JSON 配置结构
+			FormConfig: `{"schemas":[{"field":"resourceName","label":"资源名称","component":"Input","required":true},{"field":"reason","label":"申请原因","component":"InputTextArea","required":true}]}`,
+		},
+		{
+			Name:       "权限开通申请表单",
+			UserID:     u1.ID,
+			FormConfig: `{"schemas":[{"field":"systemName","label":"系统名称","component":"Input","required":true},{"field":"roleName","label":"需要开通的角色","component":"Input","required":true},{"field":"expireTime","label":"过期时间","component":"DatePicker","required":false}]}`,
+		},
+	}
+
+	for _, form := range forms {
+		// 注意：根据你 model 里的定义，如果 CreateOne 没有处理好 ID 回填，
+		// 这里直接用 Db.Create(&form) 可以确保自增 ID 准确挂载回 struct 上
+		if err := Db.Create(form).Error; err != nil {
+			sc.Logger.Error("Mock FormDesign 失败", zap.Error(err))
+		}
+	}
+
+	// 2. Mock 审批流程 (Process)
+	processes := []*WorkOrderProcess{
+		{
+			Name:   "基础直线审批",
+			UserID: u1.ID,
+			FlowNodes: []WorkOrderFlowNode{
+				{Type: "起始节点", DefineUserOrGroup: "test"},
+				{Type: "审批节点", DefineUserOrGroup: "admin"}, // 直接指定用户
+				{Type: "结束节点", DefineUserOrGroup: "test"},
+			},
+		},
+		{
+			Name:   "带执行的标准流程",
+			UserID: u1.ID,
+			FlowNodes: []WorkOrderFlowNode{
+				{Type: "起始节点", DefineUserOrGroup: "test"},
+				{Type: "审批节点", DefineUserOrGroup: "组@超级管理员"}, // 指定由超级管理员组审批
+				{Type: "执行节点", DefineUserOrGroup: "admin"},
+				{Type: "结束节点", DefineUserOrGroup: "bot_super"},
+			},
+		},
+	}
+
+	for _, p := range processes {
+		// 如果 p.CreateOne() 有完善的级联创建逻辑也可以用 p.CreateOne()
+		if err := Db.Create(p).Error; err != nil {
+			sc.Logger.Error("Mock Process 失败", zap.Error(err))
+		}
+	}
+
+	// 3. Mock 工单模板 (WorkOrderTemplate) -> 将表单和流程绑定
+	templates := []*WorkOrderTemplate{
+		{
+			Name:         "【测试】通用资源申请",
+			UserID:       u1.ID,
+			FormDesignID: forms[0].ID,     // 绑定第一个表单
+			ProcessID:    processes[0].ID, // 绑定第一个流程
+		},
+		{
+			Name:         "【生产】核心系统权限申请",
+			UserID:       u1.ID,
+			FormDesignID: forms[1].ID,     // 绑定第二个表单
+			ProcessID:    processes[1].ID, // 绑定第二个流程
+		},
+	}
+
+	for _, tmpl := range templates {
+		if err := Db.Create(tmpl).Error; err != nil {
+			sc.Logger.Error("Mock WorkOrderTemplate 失败", zap.Error(err))
+		}
+	}
+
+	sc.Logger.Info("工单系统 (表单、流程、模板) Mock 数据初始化完成 🚀")
+
+	// ==========================================
+	// 🤖 补充 Mock: 自动执行专属工单数据
+	// ==========================================
+
+	// 1. 自动执行表单
+	autoForm := &WorkOrderFormDesign{
+		Name:       "自动购买ECS资源表单",
+		UserID:     u1.ID,
+		FormConfig: `{"schemas":[{"field":"HostNames","label":"主机名(多行换行)","component":"InputTextArea","required":true}]}`,
+	}
+	Db.Create(autoForm)
+
+	// 2. 自动执行流程 (把执行节点指派给机器人)
+	autoProcess := &WorkOrderProcess{
+		Name:   "全自动ECS交付流程",
+		UserID: u1.ID,
+		FlowNodes: []WorkOrderFlowNode{
+			{Type: "起始节点", DefineUserOrGroup: "test"},
+			// 🚨 这里直接指派给机器人的 Username
+			{Type: "执行节点", DefineUserOrGroup: sc.WorkOrderAutoActionC.ServiceAccount},
+			{Type: "结束节点", DefineUserOrGroup: "test"},
+		},
+	}
+	Db.Create(autoProcess)
+
+	// 3. 自动执行模板 (模板名字必须与配置文件中的 AutoTemplateNameBuyEcs 完全一致)
+	autoTemplate := &WorkOrderTemplate{
+		Name:         sc.WorkOrderAutoActionC.AutoTemplateNameBuyEcs,
+		UserID:       u1.ID,
+		FormDesignID: autoForm.ID,
+		ProcessID:    autoProcess.ID,
+	}
+	Db.Create(autoTemplate)
 }

@@ -109,7 +109,7 @@ func getFormDesignList(c *gin.Context) {
 	// 如果过滤后没有数据，直接返回空列表
 	if len(allIds) == 0 {
 		common.OkWithDetailed(gin.H{
-			"items": []models.FormDesign{},
+			"items": []models.WorkOrderFormDesign{},
 			"total": 0,
 		}, "ok", c)
 		return
@@ -134,7 +134,7 @@ func getFormDesignList(c *gin.Context) {
 }
 func createFormDesign(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	var reqObj models.FormDesign
+	var reqObj models.WorkOrderFormDesign
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
 		sc.Logger.Error("解析新增表单设计请求失败", zap.Any("表单设计", reqObj), zap.Error(err))
@@ -167,7 +167,7 @@ func createFormDesign(c *gin.Context) {
 
 func updateFormDesign(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	var reqObj models.FormDesign
+	var reqObj models.WorkOrderFormDesign
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
 		sc.Logger.Error("解析新增表单设计请求失败", zap.Any("表单设计", reqObj), zap.Error(err))

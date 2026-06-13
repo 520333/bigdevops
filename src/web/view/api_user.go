@@ -175,6 +175,7 @@ func createAccount(c *gin.Context) {
 
 	//hashPwd := common.BcryptHash(reqUser.Password)
 	reqUser.Password = common.BcryptHash(reqUser.Password)
+	reqUser.HomePath = "/system/role"
 	err = reqUser.CreateOne()
 	if err != nil {
 		sc.Logger.Error("创建用户错误", zap.Any("菜单", reqUser), zap.Error(err))
@@ -346,42 +347,83 @@ func changePassword(c *gin.Context) {
 type DefineUserOrGroup struct {
 	Label string `json:"label"`
 	Value string `json:"value"`
+	Type  string `json:"type"`
 }
+
+//func getAllUserAndRoles(c *gin.Context) {
+//	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+//	// 数据库中拿到所有的menu列表
+//	users, err := models.GetUserAll()
+//	if err != nil {
+//		sc.Logger.Error("去数据库中拿所有用户错误", zap.Error(err))
+//		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有用户错误：%v", err.Error()), c)
+//		return
+//	}
+//	roles, err := models.GetRoleAll()
+//	if err != nil {
+//		sc.Logger.Error("去数据库中拿所有角色错误", zap.Error(err))
+//		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有角色错误：%v", err.Error()), c)
+//		return
+//	}
+//	var res []DefineUserOrGroup
+//	for _, user := range users {
+//		user := user
+//		key := user.Username
+//		//key := fmt.Sprintf("%s@%s", "用户", user.Username)
+//		one := DefineUserOrGroup{
+//			Label: key,
+//			Value: key,
+//		}
+//		res = append(res, one)
+//	}
+//	for _, role := range roles {
+//		role := role
+//		key := role.RoleName
+//		one := DefineUserOrGroup{
+//			Label: key,
+//			Value: key,
+//		}
+//		res = append(res, one)
+//	}
+//	common.OkWithDetailed(res, "ok", c)
+//}
 
 func getAllUserAndRoles(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	// 数据库中拿到所有的menu列表
 	users, err := models.GetUserAll()
 	if err != nil {
 		sc.Logger.Error("去数据库中拿所有用户错误", zap.Error(err))
-		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有用户错误：%v", err.Error()), c)
+		common.ReqBadFailWithMessage("获取用户失败", c)
 		return
 	}
 	roles, err := models.GetRoleAll()
 	if err != nil {
-		sc.Logger.Error("去数据库中拿所有角色错误", zap.Error(err))
-		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有角色错误：%v", err.Error()), c)
+		common.ReqBadFailWithMessage("获取角色失败", c)
 		return
 	}
+
 	var res []DefineUserOrGroup
+
+	// 组装用户
 	for _, user := range users {
-		user := user
-		key := fmt.Sprintf("%s@%s", "用户", user.Username)
-		one := DefineUserOrGroup{
-			Label: key,
-			Value: key,
-		}
-		res = append(res, one)
+		res = append(res, DefineUserOrGroup{
+			Label: user.Username,
+			Value: user.Username, // 纯用户名，后端识别 User
+			Type:  "user",        // 明确标注为用户
+		})
 	}
+
+	// 组装角色 (即组)
 	for _, role := range roles {
-		role := role
-		key := fmt.Sprintf("%s@%s", "组", role.RoleName)
-		one := DefineUserOrGroup{
-			Label: key,
-			Value: key,
-		}
-		res = append(res, one)
+		// 使用你喜欢的格式：组@角色值
+		key := fmt.Sprintf("组@%s", role.RoleName)
+		res = append(res, DefineUserOrGroup{
+			Label: role.RoleName,
+			Value: key,     // 带有“组@”前缀，后端识别 Group
+			Type:  "group", // 明确标注为组
+		})
 	}
+
 	common.OkWithDetailed(res, "ok", c)
 }
 
