@@ -163,3 +163,12 @@ func GetResourceElbByDnsName(dnsName string) (*ResourceElb, error) {
 	}
 	return &elb, nil
 }
+func GetResourceElbByIp(ip string) (*ResourceElb, error) {
+	var elb ResourceElb
+	// ELB 表中对应的字段也是 PublicIpAddresses 和 PrivateIpAddress
+	err := Db.Where("public_ip_addresses LIKE ? OR private_ip_address LIKE ?", "%"+ip+"%", "%"+ip+"%").First(&elb).Error
+	if err != nil {
+		return nil, err
+	}
+	return &elb, nil
+}

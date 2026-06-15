@@ -26,10 +26,35 @@ func (cm *CronManager) SyncCloudResourceManager(ctx context.Context) error {
 
 func (cm *CronManager) RunSyncCloudResource(ctx context.Context) {
 	cm.Sc.Logger.Info("同步公有云资源中....")
-	go cm.RunSyncCloudResourceEcs(ctx)
-	go cm.RunSyncCloudResourceElb(ctx)
-	go cm.RunSyncCloudResourceRds(ctx)
-	go cm.RunSyncCloudResourceDns(ctx)
+	//go cm.RunSyncCloudResourceEcs(ctx)
+	//go cm.RunSyncCloudResourceElb(ctx)
+	//go cm.RunSyncCloudResourceRds(ctx)
+	//go cm.RunSyncCloudResourceDns(ctx)
+
+	// 1. 使用 WaitGroup 等待所有的“底层基础设施”同步完
+	var wg sync.WaitGroup
+	wg.Add(3)
+
+	go func() {
+		defer wg.Done()
+		cm.RunSyncCloudResourceEcs(ctx)
+	}()
+	go func() {
+		defer wg.Done()
+		cm.RunSyncCloudResourceElb(ctx)
+	}()
+	go func() {
+		defer wg.Done()
+		cm.RunSyncCloudResourceRds(ctx)
+	}()
+
+	// 阻塞等待：不等到这三个底层资源（ECS、ELB、RDS）落盘，绝不往下走
+	wg.Wait()
+
+	cm.Sc.Logger.Info("底层基础设施 (ECS/ELB/RDS) 同步完毕，开始同步上层应用层资源 (DNS)...")
+
+	// 2. 此时数据库里已经有最新的 ECS 和 ELB IP 了，再跑 DNS，绝对能 100% 匹配上！
+	cm.RunSyncCloudResourceDns(ctx)
 }
 
 func MockDescribeInstancesResponse(allEcs *sync.Map) {

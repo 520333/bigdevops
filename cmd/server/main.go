@@ -91,7 +91,7 @@ func main() {
 		}
 
 	})
-	// 这里添加任务
+	// TODO 这里添加任务
 	group.Go(func() error {
 		logger.Info("计划任务--同步公有云--启动")
 		err := cm.SyncCloudResourceManager(ctxAll)

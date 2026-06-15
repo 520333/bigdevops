@@ -127,15 +127,25 @@ func (cm *CronManager) RunSyncCloudResourceRds(ctx context.Context) {
 		}
 	}
 
+	//cm.Sc.Logger.Info("同步RDS结果打印",
+	//	zap.Int("公有云总数", len(localUidSet)),
+	//	zap.Int("本地数据库", len(dbUidHashM)),
+	//	zap.Int("新增尝试", toAddNum), zap.Int("新增成功", suAddNum),
+	//	zap.Int("更新尝试", toModNum), zap.Int("更新成功", suModNum),
+	//	zap.Int("删除尝试", toDelNum), zap.Int("删除成功", suDelNum),
+	//	zap.Float64("耗时(s)", time.Since(start).Seconds()),
+	//)
 	cm.Sc.Logger.Info("同步RDS结果打印",
-		zap.Int("公有云总数", len(localUidSet)),
-		zap.Int("本地数据库", len(dbUidHashM)),
-		zap.Int("新增尝试", toAddNum), zap.Int("新增成功", suAddNum),
-		zap.Int("更新尝试", toModNum), zap.Int("更新成功", suModNum),
-		zap.Int("删除尝试", toDelNum), zap.Int("删除成功", suDelNum),
-		zap.Float64("耗时(s)", time.Since(start).Seconds()),
+		zap.Any("公有云总数", len(localUidSet)),
+		zap.Any("本地数据库", len(dbUidHashM)),
+		zap.Any("toAddNum", toAddNum),
+		zap.Any("toModNum", toModNum),
+		zap.Any("toDelNum", toDelNum),
+		zap.Any("suAddNum", suAddNum),
+		zap.Any("suModNum", suModNum),
+		zap.Any("suDelNum", suDelNum),
+		zap.Any("timeTook", time.Since(start).Seconds()),
 	)
-
 	cm.SetRdsSynced(true)
 }
 

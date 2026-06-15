@@ -147,7 +147,7 @@ func (cm *CronManager) RunSyncCloudResourceElb(ctx context.Context) {
 	}
 
 	tookSeconds := time.Since(start).Seconds()
-	cm.Sc.Logger.Info("同步elb结果打印",
+	cm.Sc.Logger.Info("同步ELB结果打印",
 		zap.Int("公有云总数", len(localUidSet)),
 		zap.Int("本地数据库", len(dbUidHashM)),
 		zap.Int("toAddNum", toAddNum),
@@ -226,7 +226,7 @@ func (cm *CronManager) ConvertNlbCloudAli(lb nlb.LoadbalancerInfo, account strin
 
 // RunSyncOneCloudElbAli 阿里云负载均衡同步主逻辑
 func (cm *CronManager) RunSyncOneCloudElbAli(alic *config.AliCloud, allElb *sync.Map) {
-	cm.Sc.Logger.Info("elb 同步阿里云开始", zap.String("region", alic.RegionId), zap.String("account", alic.AccountName))
+	cm.Sc.Logger.Info("ELB 同步阿里云开始", zap.String("region", alic.RegionId), zap.String("account", alic.AccountName))
 
 	// 1. 获取真实 Account ID
 	stsClient, _ := sts.NewClientWithAccessKey(alic.RegionId, alic.AccessKeyId, alic.AccessKeySecret)
@@ -369,7 +369,7 @@ func (cm *CronManager) ConvertElbCloudAwsV2(lb awsElbv2Types.LoadBalancer, accou
 
 // RunSyncOneCloudElbAws AWS 负载均衡同步逻辑
 func (cm *CronManager) RunSyncOneCloudElbAws(ctx context.Context, awsConf *config.AwsCloud, allElb *sync.Map) {
-	cm.Sc.Logger.Info("elb 同步AWS开始", zap.String("region", awsConf.RegionId), zap.String("account", awsConf.AccountName))
+	cm.Sc.Logger.Info("ELB 同步AWS开始", zap.String("region", awsConf.RegionId), zap.String("account", awsConf.AccountName))
 
 	// 1. 初始化 AWS 基础配置
 	cfg, err := awsConfig.LoadDefaultConfig(ctx,

@@ -57,7 +57,7 @@ func bindRdsToStreeNode(c *gin.Context) {
 	// 2. 遍历 Rds id 数组找到 Rds 对象并更新绑定关系
 	for _, ridStr := range reqBind.ResourceIds {
 		rid, _ := strconv.Atoi(ridStr)
-		// 注意：根据你之前 tbl_rds.go 的定义，GetResourceRdsById 的参数可能是 string 也可能是 int。这里参考 ELB 传入 string
+		// 注意：根据你之前 tbl_resource_rds.go 的定义，GetResourceRdsById 的参数可能是 string 也可能是 int。这里参考 ELB 传入 string
 		dbResource, err := models.GetResourceRdsById(strconv.Itoa(rid))
 
 		if err != nil {

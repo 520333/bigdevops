@@ -162,7 +162,7 @@ func (cm *CronManager) RunSyncCloudResourceEcs(ctx context.Context) {
 		suDelNum++
 	}
 	tookSeconds := time.Since(start).Seconds()
-	cm.Sc.Logger.Info("同步ecs结果打印",
+	cm.Sc.Logger.Info("同步ECS结果打印",
 		zap.Any("公有云总数", len(localUidSet)),
 		zap.Any("本地数据库", len(dbUidHashM)),
 		zap.Any("toAddNum", toAddNum),
@@ -303,9 +303,8 @@ func (cm *CronManager) ConvertEcsCloudAli(ins ecs.Instance, eniEipMap map[string
 	return dbIns
 	//return nil
 }
-
 func (cm *CronManager) RunSyncOneCloudEcsAli(alic *config.AliCloud, allEcs *sync.Map) {
-	cm.Sc.Logger.Info("ecs 同步阿里云开始",
+	cm.Sc.Logger.Info("ECS 同步阿里云开始",
 		zap.Any("地区", alic.RegionId),
 		zap.Any("账号", alic.AccountName),
 	)
@@ -383,7 +382,7 @@ func (cm *CronManager) RunSyncOneCloudEcsAli(alic *config.AliCloud, allEcs *sync
 	resp, err := client.DescribeInstances(request)
 
 	if err != nil {
-		cm.Sc.Logger.Error("ecs DescribeInstances错误:",
+		cm.Sc.Logger.Error("ECS DescribeInstances错误:",
 			zap.Error(err),
 			zap.Any("RegionId", alic.RegionId),
 			zap.Any("AccessKeyId", alic.AccessKeyId),
@@ -391,11 +390,10 @@ func (cm *CronManager) RunSyncOneCloudEcsAli(alic *config.AliCloud, allEcs *sync
 		)
 		return
 	}
-	cm.Sc.Logger.Info("ecs DescribeInstances 数量",
-		zap.Int("ecs", resp.TotalCount),
+	cm.Sc.Logger.Info("ECS DescribeInstances 数量",
+		zap.Int("ECS", resp.TotalCount),
 		zap.Any("RegionId", alic.RegionId),
-		//zap.Any("AccessKeyId", alic.AccessKeyId),
-		//zap.Any("AccessKeySecret", alic.AccessKeySecret),
+		zap.String("accountId", realAccountId),
 	)
 	cloudIns := resp.Instances
 	//for _, ins := range cloudIns.Instance {
@@ -544,6 +542,10 @@ func (cm *CronManager) ConvertEc2CloudAws(ins types.Instance, diskMap map[string
 	return dbIns
 }
 func (cm *CronManager) RunSyncOneCloudEc2Aws(ctx context.Context, awsConf *config.AwsCloud, allEcs *sync.Map) {
+	cm.Sc.Logger.Info("EC2 同步AWS开始",
+		zap.Any("地区", awsConf.RegionId),
+		zap.Any("账号", awsConf.AccountName),
+	)
 	// 1. 初始化 AWS Client
 	cfg, err := awsConfig.LoadDefaultConfig(ctx,
 		awsConfig.WithRegion(awsConf.RegionId),
@@ -592,7 +594,7 @@ func (cm *CronManager) RunSyncOneCloudEc2Aws(ctx context.Context, awsConf *confi
 	for insPaginator.HasMorePages() {
 		insPage, err := insPaginator.NextPage(ctx)
 		if err != nil {
-			cm.Sc.Logger.Error("AWS DescribeInstances 错误:", zap.Any("账号", awsConf.AccountName), zap.Error(err))
+			cm.Sc.Logger.Error("EC2 DescribeInstances 错误:", zap.Any("账号", awsConf.AccountName), zap.Error(err))
 			return
 		}
 		// AWS 的实例藏在 Reservations 里
@@ -603,7 +605,7 @@ func (cm *CronManager) RunSyncOneCloudEc2Aws(ctx context.Context, awsConf *confi
 			}
 		}
 	}
-	cm.Sc.Logger.Info("AWS DescribeInstances 数量", zap.Int("ec2", len(rawInstances)), zap.String("Region", awsConf.RegionId))
+	cm.Sc.Logger.Info("EC2 DescribeInstances 数量", zap.Int("EC2", len(rawInstances)), zap.String("Region", awsConf.RegionId), zap.String("account", awsConf.AccountName))
 
 	// ================== 【查询规格对应的 CPU 和内存】 ==================
 	// 避免查询全量规格，只查当前拥有的规格

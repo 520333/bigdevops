@@ -8,10 +8,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gammazero/workerpool"
 	"github.com/go-resty/resty/v2"
 	"go.uber.org/zap"
 )
 
+// GodaddyRecord 对应 GoDaddy API 返回的记录结构
+type GodaddyRecord struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+	Data string `json:"data"`
+	TTL  int    `json:"ttl"`
+}
+
+// RunSyncCloudResourceDns DNS 同步主入口
 func (cm *CronManager) RunSyncCloudResourceDns(ctx context.Context) {
 	cm.Sc.Logger.Info("DNS 同步任务开始....")
 	if cm.Sc.PublicCloudSyncC == nil {
@@ -27,10 +37,9 @@ func (cm *CronManager) RunSyncCloudResourceDns(ctx context.Context) {
 			zap.Bool("GoDaddyEnabled", godaddy.Enable),
 			zap.Int("DomainsCount", len(godaddy.Domains)))
 	}
+
 	cm.SetDnsSynced(false)      // 标记开始
 	defer cm.SetDnsSynced(true) // 确保无论如何最后都会置回 true
-
-	cm.Sc.Logger.Info("DNS 同步任务开始....")
 
 	// 1. 获取本地数据库所有 DNS 的 Hash 映射
 	dbUidHashM, err := models.GetResourceDnsUidAndHash()
@@ -40,59 +49,119 @@ func (cm *CronManager) RunSyncCloudResourceDns(ctx context.Context) {
 	}
 
 	allDns := &sync.Map{}
-	var wg sync.WaitGroup
 
-	// 2. 并发同步 GoDaddy
+	// 初始化 workerpool，并发数设为 5 (可根据实际情况调整)
+	wp := workerpool.New(5)
+
+	// 2. 提交 GoDaddy 同步任务（按单个域名粒度投递）
 	if cm.Sc.PublicCloudSyncC.GodaddyDns != nil && cm.Sc.PublicCloudSyncC.GodaddyDns.Enable {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			cm.RunSyncOneDnsGodaddy(allDns)
-		}()
+		for _, domain := range cm.Sc.PublicCloudSyncC.GodaddyDns.Domains {
+			domain := domain // 避免闭包变量捕获问题
+			wp.Submit(func() {
+				cm.RunSyncOneDomainGodaddy(domain, allDns)
+			})
+		}
 	}
 
-	// 3. 并发同步 Dynadot
+	// 3. 提交 Dynadot 同步任务（按单个域名粒度投递）
 	if cm.Sc.PublicCloudSyncC.DynadotDns != nil && cm.Sc.PublicCloudSyncC.DynadotDns.Enable {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			cm.RunSyncOneDnsDynadot(allDns)
-		}()
+		for _, domain := range cm.Sc.PublicCloudSyncC.DynadotDns.Domains {
+			domain := domain // 避免闭包变量捕获问题
+			wp.Submit(func() {
+				cm.RunSyncOneDomainDynadot(domain, allDns)
+			})
+		}
 	}
 
-	wg.Wait()
+	// 阻塞等待所有域名的 API 抓取任务完成
+	wp.StopWait()
 
-	// 4. 增量对比与入库逻辑 (与你的 ECS/ELB 同步逻辑完全一致)
-	cm.SyncDnsToDb(allDns, dbUidHashM)
-
+	// 4. 增量对比与入库逻辑
+	cm.RunSyncCloudResourceDnsToDb(allDns, dbUidHashM)
 }
 
-func (cm *CronManager) SyncDnsToDb(allDns *sync.Map, dbUidHashM map[string]string) {
+// RunSyncOneDomainGodaddy 同步单个 GoDaddy 域名记录
+func (cm *CronManager) RunSyncOneDomainGodaddy(domain string, allDns *sync.Map) {
+	config := cm.Sc.PublicCloudSyncC.GodaddyDns
+	client := resty.New()
+	var records []GodaddyRecord
+
+	// 1. 调用 GoDaddy API
+	resp, err := client.R().
+		SetHeader("Authorization", fmt.Sprintf("sso-key %s:%s", config.AccessKeyId, config.AccessKeySecret)).
+		SetResult(&records).
+		Get(fmt.Sprintf("https://api.godaddy.com/v1/domains/%s/records", domain))
+
+	if err != nil || resp.IsError() {
+		cm.Sc.Logger.Error("同步 GoDaddy 记录失败", zap.String("domain", domain), zap.Error(err))
+		return
+	}
+
+	// 2. 转换并存入全量 Map
+	for _, rec := range records {
+		dnsObj := &models.ResourceDns{
+			Vendor: "godaddy",
+			Domain: domain,
+			Name:   rec.Name,
+			Type:   rec.Type,
+			Value:  rec.Data,
+			TTL:    rec.TTL,
+		}
+		dnsObj.Hash = dnsObj.GenHash()
+
+		// 注意：此处不查库，统一推迟到入库对比阶段，防止并发打挂数据库
+		uid := fmt.Sprintf("%s-%s-%s", dnsObj.Domain, dnsObj.Name, dnsObj.Type)
+		allDns.Store(uid, dnsObj)
+	}
+}
+
+// RunSyncOneDomainDynadot 同步单个 Dynadot 域名记录
+func (cm *CronManager) RunSyncOneDomainDynadot(domain string, allDns *sync.Map) {
+	// config := cm.Sc.PublicCloudSyncC.DynadotDns
+	// TODO: 实现 Dynadot API 的具体调用逻辑
+
+	// 示例解析数据
+	dnsObj := &models.ResourceDns{
+		Vendor: "dynadot",
+		Domain: domain,
+		// ... 填充 Name, Type, Value, TTL
+	}
+	dnsObj.Hash = dnsObj.GenHash()
+
+	uid := fmt.Sprintf("%s-%s-%s", dnsObj.Domain, dnsObj.Name, dnsObj.Type)
+	allDns.Store(uid, dnsObj)
+}
+
+// RunSyncCloudResourceDnsToDb 处理全量数据与本地数据的比对并执行数据库操作
+func (cm *CronManager) RunSyncCloudResourceDnsToDb(allDns *sync.Map, dbUidHashM map[string]string) {
 	start := time.Now()
 	toAddSet := make([]*models.ResourceDns, 0)
 	toModSet := make([]*models.ResourceDns, 0)
 	var toDelUids []string
 	localUidSet := make(map[string]struct{})
+
 	var toAddNum, toModNum, toDelNum int
 	var suAddNum, suModNum, suDelNum int
 
-	// 1. 遍历远端
+	// 1. 遍历远端抓取到的数据，计算新增和更新
 	allDns.Range(func(k, v interface{}) bool {
 		uid := k.(string)
 		dnsObj := v.(*models.ResourceDns)
 		localUidSet[uid] = struct{}{}
 		dbHash, ok := dbUidHashM[uid]
 		if !ok {
+			// 本地不存在，需新增
 			toAddSet = append(toAddSet, dnsObj)
 			toAddNum++
 		} else if dbHash != dnsObj.Hash {
+			// Hash 不一致，需更新
 			toModSet = append(toModSet, dnsObj)
 			toModNum++
 		}
 		return true
 	})
 
-	// 2. 遍历本地找出要删除的
+	// 2. 遍历本地数据，计算需要删除的冗余数据
 	for uid := range dbUidHashM {
 		if _, ok := localUidSet[uid]; !ok {
 			toDelUids = append(toDelUids, uid)
@@ -100,131 +169,126 @@ func (cm *CronManager) SyncDnsToDb(allDns *sync.Map, dbUidHashM map[string]strin
 		}
 	}
 
-	// 3. 执行变更 (入库)
+	// 3. 执行数据库变更 (按序: 新增 -> 更新 -> 删除)
 	for _, obj := range toAddSet {
+		// 入库前关联计算
 		cm.associateDnsWithAsset(obj)
 		if err := obj.CreateOne(); err == nil {
 			suAddNum++
 		}
 	}
+
 	for _, obj := range toModSet {
 		old, _ := models.GetResourceDnsByUid(obj.Domain, obj.Name, obj.Type)
 		if old != nil {
 			obj.ID = old.ID
+			// 更新前关联计算
 			cm.associateDnsWithAsset(obj)
 			if err := obj.UpdateOne(); err == nil {
 				suModNum++
 			}
 		}
 	}
+
 	for _, uid := range toDelUids {
 		parts := strings.Split(uid, "-")
 		if len(parts) == 3 {
 			old, _ := models.GetResourceDnsByUid(parts[0], parts[1], parts[2])
-			if old != nil && old.DeleteOne() == nil {
-				suDelNum++
+			if old != nil {
+				if err := old.DeleteOne(); err == nil {
+					suDelNum++
+				}
 			}
 		}
 	}
+
+	// ====================================================================
+	// 👇 核心补丁：存量未关联 DNS 的强行补偿逻辑 (破除 Hash 没变导致不关联的死角)
+	// ====================================================================
+	var unlinkedDnsList []models.ResourceDns
+	// 捞出所有目前还没关联上底层资产的 DNS
+	models.Db.Where("associated_instance_id = '' OR associated_instance_id IS NULL").Find(&unlinkedDnsList)
+
+	compensationNum := 0
+	for _, unlinked := range unlinkedDnsList {
+		dnsPtr := &unlinked
+		cm.associateDnsWithAsset(dnsPtr)
+
+		// 如果这次兜底匹配到了资产，直接执行更新！
+		if dnsPtr.AssociatedInstanceId != "" {
+			if err := dnsPtr.UpdateOne(); err == nil {
+				compensationNum++
+				cm.Sc.Logger.Info("DNS 存量记录终于匹配上资产了！",
+					zap.String("domain", dnsPtr.Domain),
+					zap.String("name", dnsPtr.Name),
+					zap.String("type", dnsPtr.Type),
+					zap.String("value", dnsPtr.Value),
+					zap.String("associated_id", dnsPtr.AssociatedInstanceId),
+				)
+			}
+		}
+	}
+	// ====================================================================
+
 	tookSeconds := time.Since(start).Seconds()
-	cm.Sc.Logger.Info("同步dns结果打印",
-		zap.Any("公有云总数", len(localUidSet)),
-		zap.Any("本地数据库", len(dbUidHashM)),
-		zap.Any("toAddNum", toAddNum),
-		zap.Any("toModNum", toModNum),
-		zap.Any("toDelNum", toDelNum),
-		zap.Any("suAddNum", suAddNum),
-		zap.Any("suModNum", suModNum),
-		zap.Any("suDelNum", suDelNum),
-		zap.Any("timeTook", tookSeconds),
+	cm.Sc.Logger.Info("同步 DNS 结果打印",
+		zap.Int("远端抓取总数", len(localUidSet)),
+		zap.Int("本地数据库总数", len(dbUidHashM)),
+		zap.Int("toAddNum", toAddNum),
+		zap.Int("toModNum", toModNum),
+		zap.Int("toDelNum", toDelNum),
+		zap.Int("suAddNum", suAddNum),
+		zap.Int("suModNum", suModNum),
+		zap.Int("suDelNum", suDelNum),
+		zap.Int("强行补偿关联数", compensationNum),
+		zap.Float64("timeTook", tookSeconds),
 	)
-
-}
-func (cm *CronManager) RunSyncOneDnsDynadot(allDns *sync.Map) {
-	config := cm.Sc.PublicCloudSyncC.DynadotDns
-	for _, domain := range config.Domains {
-		// ... 调用 Dynadot API
-		// 解析数据并转换为 *models.ResourceDns
-		dnsObj := &models.ResourceDns{
-			Vendor: "dynadot",
-			Domain: domain,
-			// ... 填充 Name, Type, Value, TTL
-		}
-		dnsObj.Hash = dnsObj.GenHash()
-
-		// 自动资产关联 (通过 IP 匹配到 ECS)
-		// cm.associateDnsWithAsset(dnsObj)
-
-		uid := fmt.Sprintf("%s-%s-%s", dnsObj.Domain, dnsObj.Name, dnsObj.Type)
-		allDns.Store(uid, dnsObj)
-	}
 }
 
-type GodaddyRecord struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-	Data string `json:"data"`
-	TTL  int    `json:"ttl"`
-}
-
-func (cm *CronManager) RunSyncOneDnsGodaddy(allDns *sync.Map) {
-	config := cm.Sc.PublicCloudSyncC.GodaddyDns
-	client := resty.New()
-
-	for _, domain := range config.Domains {
-		var records []GodaddyRecord
-
-		// 1. 调用 GoDaddy API
-		resp, err := client.R().
-			SetHeader("Authorization", fmt.Sprintf("sso-key %s:%s", config.AccessKeyId, config.AccessKeySecret)).
-			SetResult(&records).
-			Get(fmt.Sprintf("https://api.godaddy.com/v1/domains/%s/records", domain))
-
-		if err != nil || resp.IsError() {
-			cm.Sc.Logger.Error("同步 GoDaddy 记录失败", zap.String("domain", domain), zap.Error(err))
-			continue
-		}
-
-		// 2. 转换并存入 allDns
-		for _, rec := range records {
-			// 过滤掉部分不需要的系统记录（可选）
-			dnsObj := &models.ResourceDns{
-				Vendor: "godaddy",
-				Domain: domain,
-				Name:   rec.Name,
-				Type:   rec.Type,
-				Value:  rec.Data,
-				TTL:    rec.TTL,
-			}
-			dnsObj.Hash = dnsObj.GenHash()
-
-			// 自动关联 ECS (如果 Value 是 IP)
-			cm.associateDnsWithAsset(dnsObj)
-
-			uid := fmt.Sprintf("%s-%s-%s", dnsObj.Domain, dnsObj.Name, dnsObj.Type)
-			allDns.Store(uid, dnsObj)
-		}
-	}
-}
-
+// associateDnsWithAsset 增强版：将 DNS 记录全方位关联到现有的 ECS/ELB/RDS 资产
 func (cm *CronManager) associateDnsWithAsset(dns *models.ResourceDns) {
-	// 1. 尝试匹配 ECS (通过 IP 匹配)
+	if dns.Value == "" {
+		return
+	}
+
+	// ====== 1. 处理 A 记录 (IP地址) ======
 	if dns.Type == "A" {
+		// 1.1 先去 ECS 里找 (涵盖 ECS 的公网/私网 IP)
 		ecs, err := models.GetResourceEcsByIp(dns.Value)
 		if err == nil && ecs != nil {
 			dns.AssociatedInstanceId = ecs.InstanceId
-			dns.EcsInstanceId = ecs.InstanceId
+			dns.EcsInstanceId = ecs.InstanceId // 兼容旧字段
+			return
+		}
+
+		// 1.2 如果 ECS 没找到，去 ELB 找 (涵盖内部 ELB 的私网 VIP)
+		elb, err := models.GetResourceElbByIp(dns.Value)
+		if err == nil && elb != nil {
+			dns.AssociatedInstanceId = elb.LoadBalancerId
+			return
+		}
+
+		// 1.3 如果 ELB 也没找到，去 RDS 找 (涵盖数据库直接通过 IP 解析的情况)
+		rds, err := models.GetResourceRdsByHostOrIp(dns.Value)
+		if err == nil && rds != nil {
+			dns.AssociatedInstanceId = rds.DBInstanceId
 			return
 		}
 	}
 
-	// 2. 尝试匹配 ELB (通过 CNAME 匹配 dns_name)
-	// 如果是 CNAME，value 往往是 ELB 的域名
+	// ====== 2. 处理 CNAME 记录 (域名别名) ======
 	if dns.Type == "CNAME" {
+		// 2.1 去 ELB 里找 dns_name
 		elb, err := models.GetResourceElbByDnsName(dns.Value)
 		if err == nil && elb != nil {
 			dns.AssociatedInstanceId = elb.LoadBalancerId
-			// 如果你的 elb 表没有 ecs_instance_id，这里可以留空或关联其他字段
+			return
+		}
+
+		// 2.2 去 RDS 里找 host 连接地址 (公有云 RDS 绝大多数提供的是 CNAME 域名)
+		rds, err := models.GetResourceRdsByHostOrIp(dns.Value)
+		if err == nil && rds != nil {
+			dns.AssociatedInstanceId = rds.DBInstanceId
 			return
 		}
 	}

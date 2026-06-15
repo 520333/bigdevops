@@ -101,48 +101,12 @@ func MigrateTable() error {
 }
 
 func MockUserRegister(sc *config.ServerConfig) {
-	//ecss := []*ResourceEcs{
-	//	{
-	//		InstanceId:        " i-rj9fona9oz6au9sju2wi",
-	//		InstanceName:      "launch-advisor-20260415",
-	//		InstanceType:      "",
-	//		VpcId:             "",
-	//		OSType:            "",
-	//		ZoneId:            "",
-	//		Status:            "",
-	//		Cpu:               0,
-	//		Memory:            0,
-	//		OSName:            "",
-	//		Description:       "",
-	//		ImageId:           "",
-	//		HostName:          "",
-	//		SecurityGroupIds:  StringArray{"安全组1", "安全组2"},
-	//		PrivateIpAddress:  nil,
-	//		PublicIpAddresses: nil,
-	//		NetworkInterfaces: nil,
-	//		DiskIds:           nil,
-	//	},
-	//}
-	//for _, ecs := range ecss {
-	//	ecs := ecs
-	//	err := ecs.CreateOne()
-	//	if err != nil {
-	//		sc.Logger.Error("创建ecs错误", zap.Error(err))
-	//	}
-	//
-	//}
-	// 查询
-	//ecs, err := GetResourceEcsAll()
-	//for _, ecs := range ecss {
-	//	ecs := ecs
-	//	if err != nil {
-	//		sc.Logger.Error("主机", zap.Any("主机名", ecs.InstanceId),
-	//			zap.Any("", ecs.InstanceName),
-	//		)
-	//	}
-	//
-	//}
-
+	var count int64
+	err := Db.Model(&User{}).Where("username = ?", "admin").Count(&count).Error
+	if err == nil && count > 0 {
+		sc.Logger.Info("检测到数据库已完成初始化，跳过 Mock 数据注入 🛡️")
+		return // 💡 直接返回，不执行后面的任何 Create 代码
+	}
 	menus := []*Menu{
 		{
 			Name:      "System",
@@ -490,7 +454,7 @@ func MockUserRegister(sc *config.ServerConfig) {
 	}
 	u1 := User{
 		Username: "admin",
-		Password: "tingbao89..",
+		Password: common.BcryptHash("tingbao89.."),
 		RealName: "超管",
 		//Avatar:   "",
 		Desc:     "",
@@ -509,6 +473,7 @@ func MockUserRegister(sc *config.ServerConfig) {
 			//},
 		},
 	}
+
 	u2 := User{
 		Username: "test",
 		Password: "123456",
@@ -539,9 +504,9 @@ func MockUserRegister(sc *config.ServerConfig) {
 		},
 	}
 
-	u1.Password = common.BcryptHash(u1.Password)
-	u2.Password = common.BcryptHash(u2.Password)
-	u3.Password = common.BcryptHash(u3.Password)
+	//u1.Password = common.BcryptHash(u1.Password)
+	//u2.Password = common.BcryptHash(u2.Password)
+	//u3.Password = common.BcryptHash(u3.Password)
 	if err := Db.Create(&u1).Error; err != nil {
 		sc.Logger.Error("模拟用户注册失败", zap.Any("错误", err.Error()))
 		//return
@@ -559,7 +524,7 @@ func MockUserRegister(sc *config.ServerConfig) {
 	// 查询一下 super这个roles
 	dbRole, _ := GetRoleByRoleValue("super")
 	dbRole.Apis = apis
-	err := dbRole.UpdateApis(apis)
+	err = dbRole.UpdateApis(apis)
 	sc.Logger.Info("更新api结果", zap.Any("err", err))
 
 	sc.Logger.Info("模拟用户注册成功")

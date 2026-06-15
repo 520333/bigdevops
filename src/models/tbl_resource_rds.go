@@ -132,3 +132,13 @@ func GetResourceRdsUidAndHash() (map[string]string, error) {
 	}
 	return m, nil
 }
+
+func GetResourceRdsByHostOrIp(val string) (*ResourceRds, error) {
+	var rds ResourceRds
+	// RDS 的地址存在 Host 字段里
+	err := Db.Where("host LIKE ?", "%"+val+"%").First(&rds).Error
+	if err != nil {
+		return nil, err
+	}
+	return &rds, nil
+}
