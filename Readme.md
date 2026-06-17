@@ -35,3 +35,6 @@ go get k8s.io/apimachinery/pkg/util/wait
 # aws
 
 ```
+## agent grpc相关
+cd src/proto
+protoc --go_out=. --go-grpc_out=. *.proto

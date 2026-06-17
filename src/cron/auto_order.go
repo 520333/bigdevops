@@ -114,7 +114,7 @@ func (cm *CronManager) RunAutoOrderOneByEcs(pendingOrder *models.WorkOrderInstan
 			Cpu:               2,
 			Memory:            8,
 			OSName:            "Ubuntu 22.04 64位",
-			VmType:            "1",
+			VmType:            1,
 			PrivateIpAddress:  models.StringArray{fmt.Sprintf("172.16.100.%d", 10+index)},
 			PublicIpAddresses: models.StringArray{fmt.Sprintf("47.100.20.%d", 10+index)},
 			CreationTime:      &now,

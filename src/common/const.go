@@ -11,6 +11,10 @@ const (
 	RESOURCE_TYPE_ELB     = "elb"
 	RESOURCE_TYPE_RDS     = "rds"
 	RESOURCE_TYPE_DNS     = "dns"
+
+	AGENT_VAR_ENV     = "VAR_ENV"
+	AGENT_VERSION     = "1.0"
+	ERR_ECS_NOT_FOUND = "ResourceEcs不存在"
 )
 
 var (

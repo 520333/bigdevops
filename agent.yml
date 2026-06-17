@@ -1,0 +1,13 @@
+# rpc服务器地址
+rpc_server_addr: localhost:8083
+rpc_call_timeout_seconds: 5
+
+http_addr: 0.0.0.0:8082
+log_level: INFO
+log_file_path: agent.log
+
+# 信息上报配置
+info_collect:
+  run_interval_seconds: 30  # 上报频率
+  enable: true
+

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"bigdevops/src/common"
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
@@ -25,7 +26,7 @@ type ResourceEcs struct {
 	BindNodes []*StreeNode `json:"bind_nodes,omitempty" gorm:"many2many:bind_ecss;"`
 	// 常见字段
 	VpcId  string `json:"VpcId,omitempty" gorm:"comment:专有网络VPC ID"`
-	VmType string `json:"VmType" gorm:"default:1;comment:资源种类: 1=云虚拟机, 2=物理机, 3=容器"`
+	VmType int    `json:"VmType" gorm:"default:1;comment:资源种类: 1=云虚拟机, 2=物理机, 3=容器"`
 	OSType string `json:"OSType,omitempty" gorm:"comment:操作系统类型"`
 	//ZoneId      string `json:"ZoneId,omitempty" gorm:"comment:实例可用区"`
 	Status      string `json:"Status,omitempty" gorm:"comment:实例状态。取值范围：Pending创建中| Running运行中 |Starting启动中 |Stopping停止中|Stopped已停止。"`
@@ -50,26 +51,6 @@ type ResourceEcs struct {
 	ExpiredTime     *time.Time `json:"ExpiredTime,omitempty" gorm:"comment:过期时间。以 ISO 8601 为标准，并使用 UTC+0 时间，格式为 yyyy-MM-ddTHH:mmZ"`
 	AutoReleaseTime *time.Time `json:"AutoReleaseTime,omitempty"`
 	LastInvokedTime *time.Time `json:"LastInvokedTime,omitempty"`
-
-	//DeviceAvailable                 bool   `json:"DeviceAvailable,omitempty"`
-	//InstanceNetworkType             string `json:"InstanceNetworkType,omitempty"`
-	//RegistrationTime                string `json:"RegistrationTime,omitempty"`
-	//LocalStorageAmount              int    `json:"LocalStorageAmount,omitempty"`
-	//NetworkType                     string `json:"NetworkType,omitempty"`
-	//IntranetIp                      string `json:"IntranetIp,omitempty"`
-	//IsSpot                          bool   `json:"IsSpot,omitempty"`
-	//InstanceChargeType              string `json:"InstanceChargeType,omitempty"`
-	//MachineId                       string `json:"MachineId,omitempty"`
-	//PrivatePoolOptionsId            string `json:"PrivatePoolOptionsId,omitempty"`
-	//ClusterId                       string `json:"ClusterId,omitempty"`
-	//PrivatePoolOptionsMatchCriteria string `json:"PrivatePoolOptionsMatchCriteria,omitempty"`
-	//DeploymentSetGroupNo            string `json:"DeploymentSetGroupNo,omitempty"`
-	//CreditSpecification             string `json:"CreditSpecification,omitempty"`
-	//GPUAmount                       int    `json:"GPUAmount,omitempty"`
-	//Connected                       bool   `json:"Connected,omitempty"`
-	//InvocationCount                 int64  `json:"InvocationCount,omitempty"`
-	//InternetMaxBandwidthIn          int64  `json:"InternetMaxBandwidthIn,omitempty"`
-	//InternetChargeType              string `json:"InternetChargeType,omitempty"`
 }
 type EcsBuyWorkOrder struct {
 	Vendor       string `json:"vendor"`
@@ -158,7 +139,7 @@ func GetResourceEcsByInstanceId(instanceId string) (*ResourceEcs, error) {
 	err := Db.Where("instance_id = ? ", instanceId).Preload("BindNodes").First(&dbResourceEcs).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("ResourceEcs不存在")
+			return nil, fmt.Errorf(common.ERR_ECS_NOT_FOUND)
 		}
 		return nil, fmt.Errorf("数据库错误%v", err)
 	}
@@ -167,7 +148,7 @@ func GetResourceEcsByInstanceId(instanceId string) (*ResourceEcs, error) {
 
 func GetResourceEcsUidAndHash() (map[string]string, error) {
 	var objs []*ResourceEcs
-	err := Db.Find(&objs).Error
+	err := Db.Where("vm_type = 1").Find(&objs).Error
 	if err != nil {
 		return nil, err
 	}

@@ -62,7 +62,7 @@ func MockDescribeInstancesResponse(allEcs *sync.Map) {
 	rand.Seed(time.Now().UnixNano())
 
 	randVendor := []string{"ali", "huawei", "tencent", "aws"}
-	randVmType := []string{"虚拟机", "物理机", "容器"}
+	randVmType := []int{1, 2, 3}
 	randVpcId := []string{"vpc-001", "vpc-002", "vpc-003"}
 	randEnv := []string{"dev", "stage", "press", "prod"}
 	randOs := []string{"windows", "linux", "aix"}
@@ -99,7 +99,7 @@ func MockDescribeInstancesResponse(allEcs *sync.Map) {
 
 		// ✅ 修复：全部改用对应数组的真实长度
 		ecsOne.Vendor = getStr(randVendor)
-		ecsOne.VmType = getStr(randVmType)
+		ecsOne.VmType = getInt(randVmType)
 		ecsOne.InstanceType = getStr(randInstanceType)
 		ecsOne.VpcId = getStr(randVpcId)
 		ecsOne.OSType = getStr(randOs)

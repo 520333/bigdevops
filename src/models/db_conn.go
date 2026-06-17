@@ -476,7 +476,7 @@ func MockUserRegister(sc *config.ServerConfig) {
 
 	u2 := User{
 		Username: "test",
-		Password: "123456",
+		Password: common.BcryptHash("123456"),
 		RealName: "测试",
 		Desc:     "",
 		HomePath: "/system/role",
@@ -490,7 +490,7 @@ func MockUserRegister(sc *config.ServerConfig) {
 	}
 	u3 := User{
 		Username: sc.WorkOrderAutoActionC.ServiceAccount,
-		Password: "123456",
+		Password: common.BcryptHash("123456"),
 		RealName: "自动工单执行机器人",
 		Desc:     "",
 		HomePath: "/system/role",

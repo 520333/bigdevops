@@ -275,7 +275,7 @@ func (cm *CronManager) ConvertEcsCloudAli(ins ecs.Instance, eniEipMap map[string
 		InstanceName: ins.InstanceName,
 		InstanceType: ins.InstanceType,
 		VpcId:        ins.VpcAttributes.VpcId,
-		VmType:       "1",
+		VmType:       1,
 		OSType:       ins.OSType,
 		//ZoneId:            ins.ZoneId,
 		Status:            ins.Status,
@@ -518,7 +518,7 @@ func (cm *CronManager) ConvertEc2CloudAws(ins types.Instance, diskMap map[string
 		InstanceName:      instanceName,
 		InstanceType:      insTypeStr,
 		HostName:          aws.ToString(ins.PrivateDnsName),
-		VmType:            "1",
+		VmType:            1,
 		VpcId:             aws.ToString(ins.VpcId),
 		Status:            string(ins.State.Name), // pending | running | stopping | stopped 等
 		OSType:            osType,                 // 存入 "linux"

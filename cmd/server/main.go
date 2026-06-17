@@ -5,6 +5,7 @@ import (
 	"bigdevops/src/config"
 	"bigdevops/src/cron"
 	"bigdevops/src/models"
+	"bigdevops/src/rpc"
 	"bigdevops/src/web"
 	"context"
 	"flag"
@@ -92,23 +93,37 @@ func main() {
 
 	})
 	// TODO 这里添加任务
-	group.Go(func() error {
-		logger.Info("计划任务--同步公有云--启动")
-		err := cm.SyncCloudResourceManager(ctxAll)
-		if err != nil {
-			logger.Error("计划任务--同步公有云--报错", zap.Error(err))
+	{
+		if sc.PublicCloudSyncC.Enable {
+			group.Go(func() error {
+				logger.Info("计划任务--同步公有云--启动")
+				err := cm.SyncCloudResourceManager(ctxAll)
+				if err != nil {
+					logger.Error("计划任务--同步公有云--报错", zap.Error(err))
+				}
+				return err
+			})
+		} else {
+			logger.Info("计划任务--同步公有云--关闭")
 		}
-		return err
-	})
+	}
 	// 工单自动执行模块
-	//group.Go(func() error {
-	//	logger.Info("计划任务--工单自动执行模块--启动")
-	//	err := cm.AuthOrderManager(ctxAll)
-	//	if err != nil {
-	//		logger.Error("计划任务--工单自动执行模块--报错", zap.Error(err))
-	//	}
-	//	return err
-	//})
+	{
+		if sc.WorkOrderAutoActionC.Enable {
+			group.Go(func() error {
+				logger.Info("计划任务--工单自动执行模块--启动")
+				err := cm.AuthOrderManager(ctxAll)
+				if err != nil {
+					logger.Error("计划任务--工单自动执行模块--报错", zap.Error(err))
+				}
+				return err
+			})
+		} else {
+			logger.Info("计划任务--工单自动执行模块--关闭")
+		}
+	}
+
+	// GIN-WEB
 	group.Go(func() error {
 		errChan := make(chan error, 1)
 		go func() {
@@ -124,7 +139,23 @@ func main() {
 			return nil
 		}
 	})
-	group.Wait()
+
+	// GRPC-SERVER
+	group.Go(func() error {
+		errChan := make(chan error, 1)
+		go func() {
+			errChan <- rpc.StartServerGrpc(sc)
+		}()
+		select {
+		case err := <-errChan:
+			logger.Error("[grpc报错]", zap.Error(err))
+			return err
+		case <-ctxAll.Done():
+			logger.Info("grpc收到其他任务退出信号")
+			return nil
+		}
+	})
+	_ = group.Wait()
 
 	//err = web.StartGin(sc)
 }

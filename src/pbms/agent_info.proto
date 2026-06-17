@@ -1,0 +1,26 @@
+syntax = "proto3";
+option go_package = "./;pbms";
+
+package info;
+
+message AgentInfoReportRequest {
+  string hostname = 1;
+  string ip  = 2;
+  string env = 3;
+  string osType = 4;
+  string osName = 5;
+  string sn = 6;
+  string agentVersion = 7;
+  int32 cpu = 8;
+  int32 mem = 9;
+  int32 disk = 10;
+}
+
+message AgentInfoReportResponse {
+  string status = 1;
+  string msg = 2;
+}
+
+service InfoReporter {
+  rpc AgentInfoReport(AgentInfoReportRequest) returns (AgentInfoReportResponse) {}
+}

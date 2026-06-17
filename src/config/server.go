@@ -18,10 +18,17 @@ type ServerConfig struct {
 	PublicCloudSyncC     *PublicCloudSync     `yaml:"public_cloud_sync"`
 	JWTC                 *JWT                 `yaml:"jwt"`
 	WorkOrderAutoActionC *WorkOrderAutoAction `yaml:"work_order_auto_action"`
+	GrpcServerConfig     *GrpcServerConfig    `yaml:"grpc_server_config"`
 	Logger               *zap.Logger          `yaml:"-"`
 }
+
+type GrpcServerConfig struct {
+	Addr string `yaml:"addr"`
+}
+
 type WorkOrderAutoAction struct {
 	ServiceAccount         string `yaml:"service_account"` // 服务账号名称
+	Enable                 bool   `yaml:"enable"`
 	RunIntervalSeconds     int    `yaml:"run_interval_seconds"`
 	BatchNum               int    `yaml:"batch_num"`
 	AutoTemplateNameBuyEcs string `yaml:"auto_template_name_buy_ecs"`
@@ -30,6 +37,7 @@ type WorkOrderAutoAction struct {
 
 type PublicCloudSync struct {
 	RunIntervalSeconds int         `yaml:"run_interval_seconds"`
+	Enable             bool        `yaml:"enable"`
 	AliCloud           []*AliCloud `yaml:"ali_cloud"`
 	AwsCloud           []*AwsCloud `yaml:"aws_cloud"`
 
