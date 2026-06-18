@@ -20,12 +20,11 @@ func StartServerGrpc(sc *config.ServerConfig) error {
 	if err != nil {
 		sc.Logger.Fatal("grpc server 监听失败", zap.Error(err))
 	}
-	//infoReportServer := &InfoReportServer{}
-	infoReportServer := &InfoReportServer{
-		SC: sc, // 🚀 补上这一行：将传入的 sc 配置对象注入到服务端实例中
-	}
+	infoReportServer := &InfoReportServer{SC: sc}
+	jobExecReport := &JobExecServer{SC: sc}
 	s := grpc.NewServer(grpc.KeepaliveEnforcementPolicy(kaep))
 	pbms.RegisterInfoReporterServer(s, infoReportServer)
+	pbms.RegisterJobExecServer(s, jobExecReport)
 	sc.Logger.Info("grpc server 启动", zap.Any("监听地址", lis.Addr()))
 	err = s.Serve(lis)
 	if err != nil {

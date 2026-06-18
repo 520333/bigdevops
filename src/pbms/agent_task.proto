@@ -1,0 +1,40 @@
+syntax = "proto3";
+option go_package = "./;pbms";
+
+package task;
+
+
+// 单一task结果
+message TaskResultOne {
+  int32 id = 1; //任务id
+  string status = 2;
+  string stdout = 3;
+  string stderr = 4;
+}
+
+// 任务下发
+message TaskAssignOne {
+  int32 id = 1;
+  string scriptContext = 2;
+  string account = 3;
+  string args = 4;
+  int32 execTimeoutSeconds = 5;
+  string action = 6;
+}
+
+// 结果上报
+message TaskReportRequest {
+  string hostname = 1;
+  string ip  = 2;
+  repeated TaskResultOne results = 3;
+}
+
+message TaskReportResponse {
+  repeated TaskAssignOne tasks = 1;
+  // server端已经落到数据库中的任务结果
+  repeated int32 ReceivedTaskIds = 2;
+}
+
+service JobExec {
+  rpc TaskReport(TaskReportRequest) returns (TaskReportResponse) {}
+}

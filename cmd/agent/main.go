@@ -3,6 +3,7 @@ package main
 import (
 	"bigdevops/src/agent"
 	"bigdevops/src/agent/cron"
+	"bigdevops/src/agent/job"
 	"bigdevops/src/common"
 	"bigdevops/src/config"
 	"bigdevops/src/web"
@@ -45,7 +46,9 @@ func main() {
 	logger.Info("解析主配置文件成功 logger初始化成功")
 	client := agent.NewGrpcClient(sc)
 
-	cm := cron.NewCronManager(client)
+	tm := job.NewTaskManager(sc)
+	//job.MockTaskRun(sc)
+	cm := cron.NewCronManager(client, tm)
 
 	// 初始化group
 	group, stopChan := esl.SetupStopSignalContext()
@@ -83,17 +86,35 @@ func main() {
 	{
 		if sc.InfoCollect.Enable {
 			group.Go(func() error {
-				logger.Info("计划任务--信息采集上报--启动")
+				logger.Info("计划任务-信息采集上报-启动")
 				err := cm.InfoReportManager(ctxAll)
 				if err != nil {
-					logger.Error("计划任务--信息采集上报--报错", zap.Error(err))
+					logger.Error("计划任务-信息采集上报-报错", zap.Error(err))
 				}
 				return err
 			})
 		} else {
-			logger.Info("计划任务--信息采集上报--关闭")
+			logger.Info("计划任务-信息采集上报-关闭")
 		}
 	}
+	{
+		if sc.JobExecC.Enable {
+			logger.Info("计划任务-任务执行-开启")
+			//_ = os.MkdirAll(sc.JobExecC.TaskDir, os.ModePerm)
+			//_ = os.Chmod(sc.JobExecC.TaskDir, 0777)
+			//job.MockTaskRun(sc)
 
+			group.Go(func() error {
+				logger.Info("计划任务-任务执行-启动")
+				err := cm.JobExecManager(ctxAll)
+				if err != nil {
+					logger.Error("计划任务-任务执行-报错", zap.Error(err))
+				}
+				return err
+			})
+		} else {
+			logger.Info("计划任务-任务执行-关闭")
+		}
+	}
 	_ = group.Wait()
 }

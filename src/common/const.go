@@ -15,6 +15,21 @@ const (
 	AGENT_VAR_ENV     = "VAR_ENV"
 	AGENT_VERSION     = "1.0"
 	ERR_ECS_NOT_FOUND = "ResourceEcs不存在"
+
+	// 任务本地状态
+	AGENT_TASK_STATUS_RUNNING = "running"
+	AGENT_TASK_STATUS_KILLED  = "killed"
+	AGENT_TASK_STATUS_SUCCESS = "success"
+	AGENT_TASK_STATUS_FAILED  = "failed"
+
+	// 任务执行动作
+	AGENT_TASK_ACTION_START = "start"
+	AGENT_TASK_ACTION_KILL  = "kill"
+	AGENT_TASK_ACTION_STOP  = "stop"
+
+	AGENT_TASK_EXEC_SHELL   = "shell"
+	AGENT_TASK_EXEC_PYTHON  = "python"
+	AGENT_TASK_EXEC_ANSIBLE = "ansible"
 )
 
 var (

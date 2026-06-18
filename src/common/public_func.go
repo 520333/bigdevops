@@ -78,3 +78,12 @@ func GetNodeInfo() *NodeInfo {
 
 	return info
 }
+
+func WriteFileWithString(filePath string, content string) error {
+	return os.WriteFile(filePath, []byte(content), 0644)
+}
+
+func ReadFile(path string) (string, error) {
+	res, err := os.ReadFile(path)
+	return string(res), err
+}

@@ -15,10 +15,10 @@ type AgentConfig struct {
 	LogFilePath           string `yaml:"log_file_path"`
 
 	InfoCollect *InfoCollect `yaml:"info_collect"`
-
-	HostName string      `yaml:"-"`
-	LocalIp  string      `yaml:"-"`
-	Logger   *zap.Logger `yaml:"-"`
+	JobExecC    *JobExec     `yaml:"job_exec"`
+	HostName    string       `yaml:"-"`
+	LocalIp     string       `yaml:"-"`
+	Logger      *zap.Logger  `yaml:"-"`
 }
 
 // LoadAgent 根据io read 读取配置文件后的字符串解析yaml
@@ -39,4 +39,13 @@ func LoadAgent(filename string) (*AgentConfig, error) {
 type InfoCollect struct {
 	RunIntervalSeconds int  `yaml:"run_interval_seconds"`
 	Enable             bool `yaml:"enable"`
+}
+
+type JobExec struct {
+	TaskDir            string `yaml:"task_dir"`
+	ExecTimeoutSeconds int    `yaml:"execTimeoutSeconds"`
+	RunIntervalSeconds int    `yaml:"run_interval_seconds"`
+	PythonBinPath      string `yaml:"python_bin_path"`
+	BashBinPath        string `yaml:"bash_bin_path"`
+	Enable             bool   `yaml:"enable"`
 }

@@ -11,3 +11,10 @@ info_collect:
   run_interval_seconds: 30  # 上报频率
   enable: true
 
+# 任务执行
+job_exec:
+  meta_dir: ./agent_job_exec
+  execTimeoutSeconds: 5
+  run_interval_seconds: 15
+  python_bin_path: /usr/bin/python3
+  bash_bin_path: /usr/bin/bash
