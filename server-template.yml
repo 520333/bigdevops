@@ -11,7 +11,7 @@ jwt:
 # CREATE DATABASE IF NOT EXISTS bigdevops default charset utf8 COLLATE utf8_general_ci;
 # GRANT all privileges on *.* to root@'%' identified by '123456' with grant option;
 # flush privileges;
-# DROP DATABASE bigdevops;CREATE DATABASE IF NOT EXISTS bigdevops default charset utf8 COLLATE utf8_general_ci;
+# DROP DATABASE IF EXISTS bigdevops; CREATE DATABASE IF NOT EXISTS bigdevops DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 mysql:
   dsn: "root:123456@tcp(192.168.50.100:3306)/bigdevops?charset=utf8mb4&parseTime=True&loc=Local"
