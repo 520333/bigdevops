@@ -20,6 +20,7 @@ message TaskAssignOne {
   string args = 4;
   int32 execTimeoutSeconds = 5;
   string action = 6;
+  string lang = 7;
 }
 
 // 结果上报

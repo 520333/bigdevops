@@ -29,7 +29,8 @@ func (s *InfoReportServer) AgentInfoReport(ctx context.Context, in *pbms.AgentIn
 	)
 
 	resp = &pbms.AgentInfoReportResponse{}
-	instanceId := in.GetSn()
+	instanceId := in.GetSn() // 这是 Agent 底层的真实 UUID
+	agentIp := in.GetIp()    // 这是 Agent 获取的真实内网 IP
 	if instanceId == "" {
 		resp.Status = "failed"
 		resp.Msg = "缺乏SN号"
@@ -37,7 +38,7 @@ func (s *InfoReportServer) AgentInfoReport(ctx context.Context, in *pbms.AgentIn
 	}
 
 	// 1. 查询数据库，明确它是新机器还是老机器
-	dbEcs, err := models.GetResourceEcsByInstanceId(instanceId)
+	dbEcs, err := models.GetResourceEcsBySnOrIP(instanceId, agentIp)
 	isNewRecord := false
 
 	if err != nil {
@@ -104,7 +105,7 @@ func (s *InfoReportServer) AgentInfoReport(ctx context.Context, in *pbms.AgentIn
 			return resp, nil
 		}
 		resp.Status = "success"
-		resp.Msg = "老机器信息更新成功"
+		resp.Msg = "机器信息合并/更新成功"
 	}
 
 	return resp, nil

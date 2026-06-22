@@ -60,6 +60,7 @@ func ConfigRouter(r *gin.Engine) {
 	sTreeApiGroup := afterLoginApiGroup.Group("/stree")
 	{
 		sTreeApiGroup.GET("/getStreeNodeList", getStreeNodeList)
+		sTreeApiGroup.GET("/getStreeNodeSelect", getStreeNodeSelect)
 		sTreeApiGroup.GET("/getTopStreeNodes", getTopStreeNodes)
 		sTreeApiGroup.POST("/createStreeNode", createStreeNode)
 		sTreeApiGroup.POST("/updateStreeNode", updateStreeNode)
@@ -70,6 +71,7 @@ func ConfigRouter(r *gin.Engine) {
 		sTreeApiGroup.GET("/getResourceEcsUnbindList", getResourceEcsUnbindList)
 		sTreeApiGroup.POST("/bindEcsToStreeNode", bindEcsToStreeNode)
 		sTreeApiGroup.POST("/unBindEcsToStreeNode", unBindEcsToStreeNode)
+		sTreeApiGroup.GET("getStreeNodeEcsList/:id", getStreeNodeEcsList)
 
 		// ELB
 		sTreeApiGroup.GET("/getResourceElbUnbindList", getResourceElbUnbindList)
@@ -113,6 +115,24 @@ func ConfigRouter(r *gin.Engine) {
 
 	}
 
+	jobExecApiGroup := afterLoginApiGroup.Group("/jobexec")
+	{
+		jobExecApiGroup.GET("/getJobExecScriptList", getJobExecScriptList)
+		jobExecApiGroup.GET("/getJobExecScriptSelect", getJobExecScriptSelect)
+		jobExecApiGroup.GET("/getJobExecScriptOne/:id", getJobExecScriptOne)
+		jobExecApiGroup.POST("/createJobExecScript", createJobExecScript)
+		jobExecApiGroup.POST("/updateJobExecScript", updateJobExecScript)
+		jobExecApiGroup.DELETE("/deleteJobExecScript/:id", deleteJobExecScript)
+		jobExecApiGroup.GET("/getJobExecScriptDetail/:id", getJobExecScriptDetail)
+
+		jobExecApiGroup.GET("/getJobExecTaskList", getJobExecTaskList)
+		jobExecApiGroup.POST("/createJobExecTask", createJobExecTask)
+		jobExecApiGroup.POST("/updateJobExecTask", updateJobExecTask)
+		jobExecApiGroup.DELETE("/deleteJobExecTask/:id", deleteJobExecTask)
+		jobExecApiGroup.GET("/getJobExecTaskOne/:id", getJobExecTaskOne)
+		jobExecApiGroup.POST("/actionJobExecTaskOne/:id", actionJobExecTaskOne)
+		jobExecApiGroup.GET("/getJobExecResultByJobId", getJobExecResultByJobId)
+	}
 }
 
 func getNowTs(c *gin.Context) {

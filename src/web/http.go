@@ -18,7 +18,7 @@ import (
 // view 路由放专门目录下
 func StartGin(sc *config.ServerConfig) error {
 	// 初始化引擎
-	//gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.ReleaseMode)
 	gin.DisableConsoleColor()
 	//r := gin.Default()
 	r := gin.New()

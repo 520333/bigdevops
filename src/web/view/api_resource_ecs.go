@@ -157,3 +157,43 @@ func unBindEcsToStreeNode(c *gin.Context) {
 	}
 	common.OkWithMessage("解绑成功", c)
 }
+
+// 根据树节点 ID，拉取当前节点及所有子节点下绑定的完整 ECS 列表
+func getStreeNodeEcsList(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+	id, _ := strconv.Atoi(c.Param("id"))
+
+	// 1. 查找当前节点
+	node, err := models.GetStreeNodeById(id)
+	if err != nil {
+		sc.Logger.Error("根据id找树节点错误", zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	// 2. 收集当前节点以及递归获取所有子孙节点
+	allNodes := []*models.StreeNode{node}
+	children, err := models.GetAllLeafNodes(int(node.ID))
+	if err == nil && children != nil {
+		allNodes = append(allNodes, children...)
+	}
+
+	// 3. 对所有绑定的 ECS 资源进行去重过滤
+	allEcsMap := map[uint]*models.ResourceEcs{}
+	for _, n := range allNodes {
+		if n.BindEcss == nil {
+			continue
+		}
+		for _, ecs := range n.BindEcss {
+			allEcsMap[ecs.ID] = ecs
+		}
+	}
+
+	// 4. 装载成切片返回
+	ecsList := []*models.ResourceEcs{}
+	for _, ecs := range allEcsMap {
+		ecsList = append(ecsList, ecs)
+	}
+
+	common.OkWithDetailed(ecsList, "ok", c)
+}

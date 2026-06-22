@@ -123,6 +123,7 @@ func GetResourceEcsByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*R
 	return
 
 }
+
 func GetResourceEcsById(id int) (*ResourceEcs, error) {
 	var dbResourceEcs ResourceEcs
 	err := Db.Where("id = ? ", id).Preload("BindNodes").First(&dbResourceEcs).Error
@@ -134,6 +135,7 @@ func GetResourceEcsById(id int) (*ResourceEcs, error) {
 	}
 	return &dbResourceEcs, nil
 }
+
 func GetResourceEcsByInstanceId(instanceId string) (*ResourceEcs, error) {
 	var dbResourceEcs ResourceEcs
 	err := Db.Where("instance_id = ? ", instanceId).Preload("BindNodes").First(&dbResourceEcs).Error
@@ -165,6 +167,21 @@ func GetResourceEcsByIp(ip string) (*ResourceEcs, error) {
 	// 使用 LIKE 匹配，确保不管 IP 是单独存在还是在列表中都能被查到
 	// 同时也搜索私网 IP 和公网 IP
 	err := Db.Where("public_ip_addresses LIKE ? OR private_ip_address LIKE ?", "%"+ip+"%", "%"+ip+"%").First(&ecs).Error
+	if err != nil {
+		return nil, err
+	}
+	return &ecs, nil
+}
+
+// GetResourceEcsBySnOrIP 多维度查询：先匹配 SN(InstanceId)，如果没有再匹配 IP
+func GetResourceEcsBySnOrIP(sn string, ip string) (*ResourceEcs, error) {
+	var ecs ResourceEcs
+
+	// 使用精准的等于号或者 LIKE 兼容格式
+	err := Db.Where("instance_id = ?", sn).
+		Or("private_ip_address LIKE ?", "%"+ip+"%"). // 兼容各种序列化格式
+		First(&ecs).Error
+
 	if err != nil {
 		return nil, err
 	}

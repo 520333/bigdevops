@@ -118,10 +118,10 @@ func (tm *TaskManager) AssignTask(resp *pbms.TaskReportResponse) {
 				//tm.LM[localT.Id] = localT
 				continue // 恢复到内存后即可跳过，无需重新执行
 			}
-			if t.Action == common.AGENT_TASK_ACTION_KILL || t.Action == common.AGENT_TASK_ACTION_STOP {
-				tm.Sc.Logger.Warn("收到陌生任务的Kill指令，已忽略", zap.Int32("taskId", t.Id))
-				continue
-			}
+			//if t.Action == common.AGENT_TASK_ACTION_KILL || t.Action == common.AGENT_TASK_ACTION_STOP {
+			//	tm.Sc.Logger.Warn("收到陌生任务的Kill指令，已忽略", zap.Int32("taskId", t.Id))
+			//	continue
+			//}
 			// 真正的全新任务，正常初始化
 			localT = &Task{
 				Id:                 int(t.Id),
@@ -129,6 +129,7 @@ func (tm *TaskManager) AssignTask(resp *pbms.TaskReportResponse) {
 				ScriptContext:      t.ScriptContext,
 				Args:               t.Args,
 				ExecTimeoutSeconds: int(t.ExecTimeoutSeconds),
+				ExecType:           t.Lang,
 				Sc:                 tm.Sc,
 			}
 			localT.SetTaskDir()

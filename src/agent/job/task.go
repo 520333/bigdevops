@@ -21,11 +21,12 @@ import (
 
 type Task struct {
 	sync.Mutex
-	Id                 int                 `json:"id"`       // 任务id
-	ExecType           string              `json:"execType"` // 脚本类型
-	Account            string              `json:"account"`  // 执行命令的账号: root devops ubuntu
-	Args               string              `json:"args"`     // 脚本执行参数
-	Status             string              `json:"status"`   // 执行状态
+	Id       int    `json:"id"`       // 任务id
+	ExecType string `json:"execType"` // 脚本类型
+	//ExecType           string              `json:"lang"`
+	Account            string              `json:"account"` // 执行命令的账号: root devops ubuntu
+	Args               string              `json:"args"`    // 脚本执行参数
+	Status             string              `json:"status"`  // 执行状态
 	StartTime          string              `json:"startTime"`
 	ExecTimeoutSeconds int                 `json:"execTimeoutSeconds"`
 	ScriptPath         string              `json:"scriptPath"`
@@ -192,45 +193,47 @@ func (t *Task) Prepare() (err error) {
 }
 
 // Kill 紧急kill
-//func (t *Task) Kill() {
-//	t.Sc.Logger.Info("任务准备kill", zap.Any("任务id", t.Id), zap.Any("进程id", t.Cmd.Process.Pid))
-//	syscall.Kill(-t.Cmd.Process.Pid, syscall.SIGKILL)
-//}
+func (t *Task) Kill() {
+	t.Sc.Logger.Info("任务准备kill", zap.Any("任务id", t.Id), zap.Any("进程id", t.Cmd.Process.Pid))
+	// 2. 标记任务状态为 killed
+	t.Status = common.AGENT_TASK_STATUS_KILLED
+	syscall.Kill(-t.Cmd.Process.Pid, syscall.SIGKILL)
+}
 
 // Kill 紧急kill (安全版)
-func (t *Task) Kill() {
-	t.Lock()
-	defer t.Unlock()
-
-	// 🚀 安全防线 1：只有状态依然是 running 时，才允许击杀
-	if t.Status != common.AGENT_TASK_STATUS_RUNNING {
-		t.Sc.Logger.Warn("任务未处于运行状态，无需kill", zap.Int("任务id", t.Id), zap.String("当前状态", t.Status))
-		return
-	}
-
-	// 🚀 安全防线 2：防空指针。如果 Cmd 为空，说明这是 Agent 重启后从磁盘恢复的死任务
-	if t.Cmd == nil || t.Cmd.Process == nil {
-		t.Sc.Logger.Warn("任务进程对象不存在(可能已重启)，无法执行强杀", zap.Int("任务id", t.Id))
-		// 既然找不到进程，就把它强制标记为 failed，防止它一直卡在 running 状态
-		t.Status = common.AGENT_TASK_STATUS_FAILED
-		return
-	}
-
-	t.Sc.Logger.Info("接收到手动 Kill 指令，准备强杀整个进程组", zap.Int("任务id", t.Id), zap.Int("进程组id", -t.Cmd.Process.Pid))
-
-	// 执行进程组强制击杀
-	err := syscall.Kill(-t.Cmd.Process.Pid, syscall.SIGKILL)
-	if err != nil {
-		// 屏蔽 "no such process" 报错，因为这说明进程自己已经跑完退出了
-		if strings.Contains(err.Error(), "no such process") {
-			t.Sc.Logger.Info("进程已自行结束，无需强杀", zap.Int("任务id", t.Id))
-		} else {
-			t.Sc.Logger.Error("进程组强杀失败", zap.Error(err), zap.Int("任务id", t.Id))
-		}
-	} else {
-		t.Sc.Logger.Info("进程组强杀信号发送成功", zap.Int("任务id", t.Id))
-	}
-}
+//func (t *Task) Kill() {
+//	t.Lock()
+//	defer t.Unlock()
+//
+//	// 🚀 安全防线 1：只有状态依然是 running 时，才允许击杀
+//	if t.Status != common.AGENT_TASK_STATUS_RUNNING {
+//		t.Sc.Logger.Warn("任务未处于运行状态，无需kill", zap.Int("任务id", t.Id), zap.String("当前状态", t.Status))
+//		return
+//	}
+//
+//	// 🚀 安全防线 2：防空指针。如果 Cmd 为空，说明这是 Agent 重启后从磁盘恢复的死任务
+//	if t.Cmd == nil || t.Cmd.Process == nil {
+//		t.Sc.Logger.Warn("任务进程对象不存在(可能已重启)，无法执行强杀", zap.Int("任务id", t.Id))
+//		// 既然找不到进程，就把它强制标记为 failed，防止它一直卡在 running 状态
+//		t.Status = common.AGENT_TASK_STATUS_FAILED
+//		return
+//	}
+//
+//	t.Sc.Logger.Info("接收到手动 Kill 指令，准备强杀整个进程组", zap.Int("任务id", t.Id), zap.Int("进程组id", -t.Cmd.Process.Pid))
+//
+//	// 执行进程组强制击杀
+//	err := syscall.Kill(-t.Cmd.Process.Pid, syscall.SIGKILL)
+//	if err != nil {
+//		// 屏蔽 "no such process" 报错，因为这说明进程自己已经跑完退出了
+//		if strings.Contains(err.Error(), "no such process") {
+//			t.Sc.Logger.Info("进程已自行结束，无需强杀", zap.Int("任务id", t.Id))
+//		} else {
+//			t.Sc.Logger.Error("进程组强杀失败", zap.Error(err), zap.Int("任务id", t.Id))
+//		}
+//	} else {
+//		t.Sc.Logger.Info("进程组强杀信号发送成功", zap.Int("任务id", t.Id))
+//	}
+//}
 
 // Start 直接context版本
 func (t *Task) Start() error {
@@ -242,9 +245,9 @@ func (t *Task) Start() error {
 	if t.ExecTimeoutSeconds == 0 {
 		t.ExecTimeoutSeconds = t.Sc.JobExecC.ExecTimeoutSeconds
 	}
-	if t.ExecTimeoutSeconds == 0 {
-		t.ExecTimeoutSeconds = 600
-	}
+	//if t.ExecTimeoutSeconds == 0 {
+	//	t.ExecTimeoutSeconds = 600
+	//}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(t.ExecTimeoutSeconds)*time.Second)
 

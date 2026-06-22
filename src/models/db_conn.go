@@ -3,6 +3,7 @@ package models
 import (
 	"bigdevops/src/common"
 	"bigdevops/src/config"
+	"encoding/json"
 	"fmt"
 
 	"github.com/casbin/casbin/v3"
@@ -17,8 +18,18 @@ import (
 )
 
 var (
-	Db             *gorm.DB
-	CasbinEnforcer *casbin.Enforcer
+	Db                        *gorm.DB
+	CasbinEnforcer            *casbin.Enforcer
+	mockScriptContentNoArgs   = `kubectl get node2`
+	mockScriptContentWithArgs = `kubectl get node $1`
+	mockScriptContentSleep    = `date
+echo hello
+sleep 100`
+	mockScriptContents = []string{
+		mockScriptContentWithArgs,
+		mockScriptContentNoArgs,
+		mockScriptContentSleep,
+	}
 )
 
 func InitDb(sc *config.ServerConfig) error {
@@ -97,6 +108,9 @@ func MigrateTable() error {
 		&WorkOrderFormDesign{},
 		&WorkOrderTemplate{},
 		&WorkOrderInstance{},
+		&JobScript{},
+		&JobTask{},
+		&JobResult{},
 	)
 }
 
@@ -209,17 +223,6 @@ func MockUserRegister(sc *config.ServerConfig) {
 			Path:      "/serviceTree",
 			Redirect:  "/serviceTree/service/index",
 		},
-		//{
-		//	Name:      "ServiceTreeIndex",
-		//	Title:     "服务树",
-		//	Icon:      "ant-design:cluster-outlined",
-		//	Type:      "1",
-		//	Show:      "1",
-		//	OrderNo:   19,
-		//	Component: "stree/stree/index",
-		//	Pid:       9,
-		//	Path:      "stree",
-		//},
 		{
 			Name:      "ServiceTreeIndexAsync",
 			Title:     "服务树",
@@ -231,6 +234,7 @@ func MockUserRegister(sc *config.ServerConfig) {
 			Pid:       9,
 			Path:      "streeAsync",
 		},
+
 		{
 			Name:      "WorkOrder",
 			Title:     "工单服务",
@@ -303,20 +307,45 @@ func MockUserRegister(sc *config.ServerConfig) {
 			Icon:      "ant-design:profile-outlined",
 			Type:      "1",
 			Show:      "1",
+			OrderNo:   26,
 			Component: "workorder/ticket/search", // 对应你的列表页
 			Pid:       11,
 			Path:      "search",
 		},
-		//{
-		//	Name:      "WorkOrderDetail",
-		//	Title:     "工单详情",
-		//	Icon:      "ant-design:profile-outlined",
-		//	Type:      "1",
-		//	Show:      "0",
-		//	Component: "workorder/detail/index", // 对应你的列表页
-		//	Pid:       11,
-		//	Path:      "detail",
-		//},
+
+		{
+			Name:      "JobExec",
+			Title:     "任务执行中心",
+			Icon:      "ant-design:reconciliation-outlined",
+			Type:      "0",
+			Show:      "1",
+			OrderNo:   30,
+			Component: "LAYOUT",
+			Path:      "/JobExec",
+			Redirect:  "/JobExec/task/index",
+		},
+		{
+			Name:      "JobExecScript",
+			Title:     "脚本管理",
+			Icon:      "ant-design:profile-outlined",
+			Type:      "1",
+			Show:      "1",
+			OrderNo:   31,
+			Component: "jobExec/script/index", // 对应你的列表页
+			Pid:       18,
+			Path:      "script",
+		},
+		{
+			Name:      "JobExecTask",
+			Title:     "任务管理",
+			Icon:      "ant-design:profile-outlined",
+			Type:      "1",
+			Show:      "1",
+			OrderNo:   32,
+			Component: "jobExec/task/index", // 对应你的列表页
+			Pid:       18,
+			Path:      "task",
+		},
 	}
 	apis := []*Api{
 		{
@@ -736,4 +765,32 @@ func MockUserRegister(sc *config.ServerConfig) {
 		ProcessID:    autoProcess.ID,
 	}
 	Db.Create(autoTemplate)
+
+	// 任务任务调度
+
+	//hosts := []string{"192.168.50.200", "192.168.50.201"}
+	num := 5
+	hosts := []string{"192.168.50.200"}
+	for i := 0; i < num; i++ {
+		hosts = append(hosts, fmt.Sprintf("192.168.50.20%d", i+1))
+	}
+	hostJson, _ := json.Marshal(hosts)
+	for i, c := range mockScriptContents {
+		job := JobTask{
+			Title:              fmt.Sprintf("测试的job%v", i),
+			Account:            "root",
+			Args:               "",
+			ScriptContent:      c,
+			ExecTimeoutSeconds: 60,
+			HostsRaw:           string(hostJson),
+			BatchSize:          i,
+			Action:             "",
+			OnErrorStrategy:    common.JOB_ONERROR_STRATEGY_PAUSE,
+			//Status:             common.JOB_STATUS_PENDING,
+			Status: common.JOB_STATUS_RUNNING,
+			UserID: 1,
+		}
+		job.CreateOne()
+	}
+
 }

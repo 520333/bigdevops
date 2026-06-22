@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bigdevops/src/cache"
 	"bigdevops/src/common"
 	"bigdevops/src/config"
 	"bigdevops/src/cron"
@@ -71,11 +72,14 @@ func main() {
 	logger.Info("同步表结构成功")
 	fmt.Printf("主配置文件路径:%v  sc:%v\n", configFile, sc)
 
-	// TODO 测试用 后期删除
+	// TODO 注入基础数据->数据库 测试用 后期删除
 	models.MockUserRegister(sc)
 
 	// 初始化cronManager
 	cm := cron.NewCronManager(sc)
+
+	// 初始化任务执行模块的cache
+	tc := cache.NewTaskCache(sc)
 
 	// 初始化group
 	group, stopChan := esl.SetupStopSignalContext()
@@ -123,6 +127,21 @@ func main() {
 		}
 	}
 
+	{
+		if sc.JobExec.Enable {
+			group.Go(func() error {
+				logger.Info("计划任务--任务执行模块--启动")
+				err := tc.TaskCacheManager(ctxAll)
+				if err != nil {
+					logger.Error("计划任务--任务执行模块--报错", zap.Error(err))
+				}
+				return err
+			})
+		} else {
+			logger.Info("计划任务--任务执行模块--关闭")
+		}
+	}
+
 	// GIN-WEB
 	group.Go(func() error {
 		errChan := make(chan error, 1)
@@ -144,7 +163,7 @@ func main() {
 	group.Go(func() error {
 		errChan := make(chan error, 1)
 		go func() {
-			errChan <- rpc.StartServerGrpc(sc)
+			errChan <- rpc.StartServerGrpc(sc, tc)
 		}()
 		select {
 		case err := <-errChan:

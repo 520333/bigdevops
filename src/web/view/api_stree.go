@@ -139,6 +139,22 @@ func getStreeNodeList(c *gin.Context) {
 	common.OkWithDetailed(finalNodes, "ok", c)
 }
 
+func getStreeNodeSelect(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+	streeNodes, err := models.GetStreeNodeAll()
+	if err != nil {
+		sc.Logger.Error("去数据库中拿所有的树节点错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的树节点错误：%v", err.Error()), c)
+		return
+	}
+	for _, streeNode := range streeNodes {
+		streeNode := streeNode
+		streeNode.Key = streeNode.ID
+	}
+	common.OkWithDetailed(streeNodes, "ok", c)
+
+}
+
 // crud权限通用校验方法
 func streeNodeOpsAdminPermissionCheck(node *models.StreeNode, c *gin.Context) (bool, error) {
 	userName := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)

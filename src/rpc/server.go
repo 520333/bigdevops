@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"bigdevops/src/cache"
 	"bigdevops/src/config"
 	"bigdevops/src/pbms"
 	"net"
@@ -11,7 +12,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
-func StartServerGrpc(sc *config.ServerConfig) error {
+func StartServerGrpc(sc *config.ServerConfig, taskCache *cache.TaskCache) error {
 	kaep := keepalive.EnforcementPolicy{
 		MinTime:             5 * time.Second, // 允许客户端每 5 秒发一次 ping
 		PermitWithoutStream: true,            // 允许在没有活跃 RPC 流时发送 ping
@@ -21,7 +22,7 @@ func StartServerGrpc(sc *config.ServerConfig) error {
 		sc.Logger.Fatal("grpc server 监听失败", zap.Error(err))
 	}
 	infoReportServer := &InfoReportServer{SC: sc}
-	jobExecReport := &JobExecServer{SC: sc}
+	jobExecReport := &JobExecServer{SC: sc, taskCache: taskCache}
 	s := grpc.NewServer(grpc.KeepaliveEnforcementPolicy(kaep))
 	pbms.RegisterInfoReporterServer(s, infoReportServer)
 	pbms.RegisterJobExecServer(s, jobExecReport)

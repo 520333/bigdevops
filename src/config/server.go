@@ -19,7 +19,15 @@ type ServerConfig struct {
 	JWTC                 *JWT                 `yaml:"jwt"`
 	WorkOrderAutoActionC *WorkOrderAutoAction `yaml:"work_order_auto_action"`
 	GrpcServerConfig     *GrpcServerConfig    `yaml:"grpc_server_config"`
-	Logger               *zap.Logger          `yaml:"-"`
+	JobExec              *ServerJobExec       `yaml:"job_exec"`
+
+	Logger *zap.Logger `yaml:"-"`
+}
+
+type ServerJobExec struct {
+	Enable             bool `yaml:"enable"`
+	RunIntervalSeconds int  `yaml:"run_interval_seconds"`
+	ExecTimeoutSeconds int  `yaml:"execTimeoutSeconds"`
 }
 
 type GrpcServerConfig struct {
