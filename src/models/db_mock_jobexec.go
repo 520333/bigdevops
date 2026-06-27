@@ -7,6 +7,19 @@ import (
 	"fmt"
 )
 
+var (
+	mockScriptContentNoArgs   = `kubectl get node2`
+	mockScriptContentWithArgs = `kubectl get node $1`
+	mockScriptContentSleep    = `date
+echo hello
+sleep 100`
+	mockScriptContents = []string{
+		mockScriptContentWithArgs,
+		mockScriptContentNoArgs,
+		mockScriptContentSleep,
+	}
+)
+
 func mockJobExecData(sc *config.ServerConfig, adminUser *User) {
 	num := 5
 	hosts := []string{"192.168.50.200"}

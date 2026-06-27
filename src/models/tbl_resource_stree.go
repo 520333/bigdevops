@@ -593,6 +593,11 @@ func GetStreeNodeByLevel(level int) (sn []*StreeNode, err error) {
 	return
 }
 
+func GetStreeNodeAllLeaf() (sn []*StreeNode, err error) {
+	err = Db.Where("is_leaf = 1").Preload("OpsAdmins").Preload("BindEcss").Preload("BindElbs").Preload("BindRds").Find(&sn).Error
+	return
+}
+
 func GetStreeNodeById(id int) (*StreeNode, error) {
 	var dbStreeNode StreeNode
 	err := Db.Where("id = ? ", id).Preload("OpsAdmins").Preload("BindEcss").Preload("BindElbs").Preload("BindRds").First(&dbStreeNode).Error
@@ -617,4 +622,9 @@ func (obj *StreeNode) UpdateStreeNode() error {
 		}
 		return tx.Model(obj).Association("OpsAdmins").Replace(obj.OpsAdmins)
 	})
+}
+
+func GetStreeNodeByIds(ids []int) (sn []*StreeNode, err error) {
+	err = Db.Where("id IN ?", ids).Preload("OpsAdmins").Preload("BindEcss").Find(&sn).Error
+	return
 }

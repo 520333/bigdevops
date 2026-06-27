@@ -20,14 +20,20 @@ type ServerConfig struct {
 	WorkOrderAutoActionC *WorkOrderAutoAction `yaml:"work_order_auto_action"`
 	GrpcServerConfig     *GrpcServerConfig    `yaml:"grpc_server_config"`
 	JobExec              *ServerJobExec       `yaml:"job_exec"`
-
-	Logger *zap.Logger `yaml:"-"`
+	MonitorComputeC      *MonitorCompute      `yaml:"monitor_compute"`
+	Logger               *zap.Logger          `yaml:"-"`
 }
 
 type ServerJobExec struct {
 	Enable             bool `yaml:"enable"`
 	RunIntervalSeconds int  `yaml:"run_interval_seconds"`
 	ExecTimeoutSeconds int  `yaml:"execTimeoutSeconds"`
+}
+type MonitorCompute struct {
+	Enable             bool   `yaml:"enable"`
+	RunIntervalSeconds int    `yaml:"run_interval_seconds"`
+	ExecTimeoutSeconds int    `yaml:"execTimeoutSeconds"`
+	HttpSdApi          string `yaml:"httpSdApi"`
 }
 
 type GrpcServerConfig struct {

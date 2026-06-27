@@ -16,18 +16,8 @@ import (
 )
 
 var (
-	Db                        *gorm.DB
-	CasbinEnforcer            *casbin.Enforcer
-	mockScriptContentNoArgs   = `kubectl get node2`
-	mockScriptContentWithArgs = `kubectl get node $1`
-	mockScriptContentSleep    = `date
-echo hello
-sleep 100`
-	mockScriptContents = []string{
-		mockScriptContentWithArgs,
-		mockScriptContentNoArgs,
-		mockScriptContentSleep,
-	}
+	Db             *gorm.DB
+	CasbinEnforcer *casbin.Enforcer
 )
 
 func InitDb(sc *config.ServerConfig) error {
@@ -112,6 +102,9 @@ func MigrateTable() error {
 		&JobScript{},
 		&JobTask{},
 		&JobResult{},
+
+		&MonitorScrapePool{},
+		&MonitorScrapeJob{},
 	)
 }
 
@@ -137,6 +130,9 @@ func MockUserRegister(sc *config.ServerConfig) {
 
 	// 4. 任务执行数据
 	mockJobExecData(sc, adminUser)
+
+	// 5.监控模块数据
+	mockMonitorData(sc, adminUser)
 
 	sc.Logger.Info("全模块 Mock 基础数据初始化成功 🚀")
 }

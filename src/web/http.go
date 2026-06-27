@@ -1,6 +1,7 @@
 package web
 
 import (
+	"bigdevops/src/cache"
 	"bigdevops/src/common"
 	"bigdevops/src/config"
 	"bigdevops/src/web/middleware"
@@ -16,7 +17,7 @@ import (
 
 // StartGin 启动gin
 // view 路由放专门目录下
-func StartGin(sc *config.ServerConfig) error {
+func StartGin(sc *config.ServerConfig, mc *cache.MonitorCache) error {
 	// 初始化引擎
 	gin.SetMode(gin.ReleaseMode)
 	gin.DisableConsoleColor()
@@ -27,6 +28,7 @@ func StartGin(sc *config.ServerConfig) error {
 	varMap := map[string]interface{}{}
 	//varMap[common.GIN_CTX_CONFIG_LOGGER] = sc.Logger
 	varMap[common.GIN_CTX_CONFIG_CONFIG] = sc
+	varMap[common.GIN_CTX_MONITOR_CACHE] = mc
 	r.Use(middleware.ConfigMiddleware(varMap))
 	//r.Use(middleware.TimeCost())
 	r.Use(requestid.New())

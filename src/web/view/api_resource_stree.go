@@ -7,9 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"go.uber.org/zap"
 )
 
@@ -291,6 +294,36 @@ func deleteStreeNode(c *gin.Context) {
 	common.OkWithMessage("删除成功", c)
 }
 
+func getLeafStreeNodes(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+	topNodes, err := models.GetStreeNodeAllLeaf()
+	if err != nil {
+		sc.Logger.Error("去数据库中拿所有的叶子节点错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的叶子节点错误：%v", err.Error()), c)
+		return
+	}
+	leafNodes := []*models.StreeNode{}
+	for _, node := range topNodes {
+		node := node
+		node.FillFrontAllData()
+		if node.BindEcss == nil || len(node.BindEcss) == 0 {
+			continue
+		}
+		leafNodes = append(leafNodes, node)
+	}
+
+	for _, node := range topNodes {
+		node := node
+		node.FillFrontAllData()
+		//for _, user := range node.OpsAdmins {
+		//	user := user
+		//	node.OpsAdminUsers = append(node.OpsAdminUsers, user.Username)
+		//}
+	}
+	common.OkWithDetailed(leafNodes, "ok", c)
+}
+
+// 获取所有的叶子节点
 func getTopStreeNodes(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	topNodes, err := models.GetStreeNodeByLevel(1)
@@ -385,4 +418,116 @@ func updateStreeNode(c *gin.Context) {
 	}
 
 	common.OkWithMessage("更新成功", c)
+}
+
+// 叶子节点id数组 ids port 传入 返回所有相关叶子节点ip+port的数组
+func getLeafStreeNodeBindIps(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+
+	leafNodeIds := c.DefaultQuery("leafNodeIds", "")
+	port, _ := strconv.Atoi(c.DefaultQuery("port", ""))
+	if port == 0 {
+		err := fmt.Errorf("prometheus监控http服务树发现未传参port")
+		sc.Logger.Error(err.Error())
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	if leafNodeIds == "" {
+		err := fmt.Errorf("prometheus监控http服务树发现未传参leafNodeIds")
+		sc.Logger.Error(err.Error())
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+	//sc.Logger.Info("获取下一层级的节点", zap.Any("pid", leafNodeIds))
+	leafNodeIdsArr := strings.Split(leafNodeIds, ",")
+	if len(leafNodeIdsArr) == 0 {
+		return
+	}
+	leafNodeIdsInt := []int{}
+	for _, ids := range leafNodeIdsArr {
+		idInt, err := strconv.Atoi(ids)
+		if err != nil {
+			continue
+		}
+		leafNodeIdsInt = append(leafNodeIdsInt, idInt)
+	}
+
+	if len(leafNodeIdsInt) == 0 {
+		return
+	}
+	leafNodes, err := models.GetStreeNodeByIds(leafNodeIdsInt)
+	if err != nil {
+		msg := "prometheus监控http服务树发现 根据ids获取叶子节点错误"
+		sc.Logger.Error(msg, zap.Error(err), zap.Any("叶子节点", leafNodeIds))
+		return
+	}
+
+	sdTargetsMap := map[string]*targetgroup.Group{}
+	// 遍历叶子节点 找到绑定的机器
+	//for _, leafNode := range leafNodes {
+	//	leafNode := leafNode
+	//	if leafNode.BindEcss == nil {
+	//		continue
+	//	}
+	//	if len(leafNode.BindEcss) == 0 {
+	//		continue
+	//	}
+	//	for _, ecs := range leafNode.BindEcss {
+	//		ecs := ecs
+	//		oneTarget := targetgroup.Group{
+	//			Targets: []model.LabelSet{
+	//				{model.AddressLabel: model.LabelValue(fmt.Sprintf("%v:%v", ecs.PrivateIpAddress, port))},
+	//			},
+	//			Labels: model.LabelSet{},
+	//		}
+	//		// 设置虚拟机的标签
+	//		for _, tag := range ecs.Tags {
+	//			tags := strings.Split(tag, "=")
+	//			tagK := tags[0]
+	//			tagV := tags[1]
+	//			oneTarget.Labels[model.LabelName(tagK)] = model.LabelValue(tagV)
+	//		}
+	//
+	//		sdTargetsMap[ecs.PrivateIpAddress] = oneTarget
+	//	}
+	//}
+	for _, leafNode := range leafNodes {
+		if leafNode.BindEcss == nil || len(leafNode.BindEcss) == 0 {
+			continue
+		}
+		for _, ecs := range leafNode.BindEcss {
+			// 解决报错2：PrivateIpAddress 是 StringArray，提取第一个 IP
+			if len(ecs.PrivateIpAddress) == 0 {
+				continue // 如果没有私网IP则跳过
+			}
+			primaryIp := ecs.PrivateIpAddress[0] // 取出数组中的第一个 IP 字符串
+
+			oneTarget := targetgroup.Group{
+				Targets: []model.LabelSet{
+					// 使用提取出的 primaryIp
+					{model.AddressLabel: model.LabelValue(fmt.Sprintf("%v:%v", primaryIp, port))},
+				},
+				Labels: model.LabelSet{},
+			}
+			// 设置虚拟机的标签
+			for _, tag := range ecs.Tags {
+				tags := strings.SplitN(tag, "=", 2) // 使用 SplitN 防止 tag 值里有 "=" 报错
+				if len(tags) == 2 {
+					tagK := tags[0]
+					tagV := tags[1]
+					oneTarget.Labels[model.LabelName(tagK)] = model.LabelValue(tagV)
+				}
+			}
+
+			// 解决报错1：将 oneTarget 的内存地址存入 map (因为 map value 期望的是指针 *)
+			sdTargetsMap[primaryIp] = &oneTarget
+		}
+	}
+	fRes := []*targetgroup.Group{}
+	for _, v := range sdTargetsMap {
+		v := v
+		fRes = append(fRes, v)
+	}
+	c.JSON(200, fRes)
 }

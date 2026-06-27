@@ -3,14 +3,16 @@ package common
 const (
 	GIN_CTX_CONFIG_LOGGER = "gin_logger"
 	GIN_CTX_CONFIG_CONFIG = "gin_config"
+	GIN_CTX_MONITOR_CACHE = "monitor_cache"
 	GIN_CTX_JWT_CLAIM     = "jwt_claim"
 	GIN_CTX_JWT_USER_NAME = "jwt_user_name"
 	COMMON_STATUS_ENABLE  = "1"
 	COMMON_STATUS_DISABLE = "0"
-	RESOURCE_TYPE_ECS     = "ecs"
-	RESOURCE_TYPE_ELB     = "elb"
-	RESOURCE_TYPE_RDS     = "rds"
-	RESOURCE_TYPE_DNS     = "dns"
+
+	RESOURCE_TYPE_ECS = "ecs"
+	RESOURCE_TYPE_ELB = "elb"
+	RESOURCE_TYPE_RDS = "rds"
+	RESOURCE_TYPE_DNS = "dns"
 
 	AGENT_VAR_ENV     = "VAR_ENV"
 	AGENT_VERSION     = "1.0"
@@ -45,6 +47,10 @@ const (
 	JOB_ONERROR_STRATEGY_PAUSE  = "pause"
 	JOB_ONERROR_STRATEGY_IGNORE = "ignore"
 	JOB_ONERROR_STRATEGY_STOP   = "stop"
+
+	// 监控采集器的服务类型
+	MONITOR_SCRAPE_JOB_SD_TYPE_K8S  = "kubernetes"
+	MONITOR_SCRAPE_JOB_SD_TYPE_HTTP = "http"
 )
 
 var (

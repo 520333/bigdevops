@@ -132,12 +132,6 @@ func (tc *TaskCache) SyncCache(ctx context.Context) {
 		for _, task := range tasks {
 			task := task
 			taskIds = append(taskIds, task.ID)
-			//tc.Sc.Logger.Info("[任务执行模块]打印这个resM",
-			//	zap.Any("总数量", len(tasks)),
-			//	zap.Any("这个ip的任务数量", len(tasks)),
-			//	zap.Any("ip", ip),
-			//	zap.Any("任务", task),
-			//)
 		}
 		tc.Sc.Logger.Info("[任务执行模块]打印这个resM",
 			zap.Any("总数量", len(tasks)),

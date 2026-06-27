@@ -75,11 +75,14 @@ func main() {
 	// TODO 注入基础数据->数据库 测试用 后期删除
 	models.MockUserRegister(sc)
 
-	// 初始化cronManager
+	// 初始化 服务树cronManager
 	cm := cron.NewCronManager(sc)
 
-	// 初始化任务执行模块的cache
+	// 初始化 任务执行模块的cache
 	tc := cache.NewTaskCache(sc)
+
+	// 初始化 监控模块的cache
+	mc := cache.NewMonitorCache(sc)
 
 	// 初始化group
 	group, stopChan := esl.SetupStopSignalContext()
@@ -96,49 +99,65 @@ func main() {
 		}
 
 	})
+
 	// TODO 这里添加任务
 	{
 		if sc.PublicCloudSyncC.Enable {
 			group.Go(func() error {
-				logger.Info("计划任务--同步公有云--启动")
+				logger.Info("计划任务-同步公有云-启动")
 				err := cm.SyncCloudResourceManager(ctxAll)
 				if err != nil {
-					logger.Error("计划任务--同步公有云--报错", zap.Error(err))
+					logger.Error("计划任务-同步公有云-报错", zap.Error(err))
 				}
 				return err
 			})
 		} else {
-			logger.Info("计划任务--同步公有云--关闭")
+			logger.Info("计划任务-同步公有云-关闭")
 		}
 	}
 	// 工单自动执行模块
 	{
 		if sc.WorkOrderAutoActionC.Enable {
 			group.Go(func() error {
-				logger.Info("计划任务--工单自动执行模块--启动")
+				logger.Info("计划任务-工单自动执行模块-启动")
 				err := cm.AuthOrderManager(ctxAll)
 				if err != nil {
-					logger.Error("计划任务--工单自动执行模块--报错", zap.Error(err))
+					logger.Error("计划任务-工单自动执行模块-报错", zap.Error(err))
 				}
 				return err
 			})
 		} else {
-			logger.Info("计划任务--工单自动执行模块--关闭")
+			logger.Info("计划任务-工单自动执行模块-关闭")
 		}
 	}
 
 	{
 		if sc.JobExec.Enable {
 			group.Go(func() error {
-				logger.Info("计划任务--任务执行模块--启动")
+				logger.Info("计划任务-任务执行模块-启动")
 				err := tc.TaskCacheManager(ctxAll)
 				if err != nil {
-					logger.Error("计划任务--任务执行模块--报错", zap.Error(err))
+					logger.Error("计划任务-任务执行模块-报错", zap.Error(err))
 				}
 				return err
 			})
 		} else {
-			logger.Info("计划任务--任务执行模块--关闭")
+			logger.Info("计划任务-任务执行模块-关闭")
+		}
+	}
+
+	{
+		if sc.MonitorComputeC.Enable {
+			group.Go(func() error {
+				logger.Info("计划任务-监控模块-启动")
+				err := mc.MonitorCacheManager(ctxAll)
+				if err != nil {
+					logger.Error("计划任务-监控模块-报错", zap.Error(err))
+				}
+				return err
+			})
+		} else {
+			logger.Info("计划任务-监控模块-关闭")
 		}
 	}
 
@@ -146,7 +165,7 @@ func main() {
 	group.Go(func() error {
 		errChan := make(chan error, 1)
 		go func() {
-			errChan <- web.StartGin(sc)
+			errChan <- web.StartGin(sc, mc)
 		}()
 		logger.Info("[web启动成功]")
 		select {

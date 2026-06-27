@@ -16,6 +16,12 @@ func ConfigRouter(r *gin.Engine) {
 	base.POST("/login", UserLogin)
 	base.GET("/logout", UserLogout)
 
+	noAuth := r.Group("/noAuth")
+	{
+		noAuth.GET("/downloadPrometheusMainConfigYaml", downloadPrometheusMainConfigYaml) //给prometheus使用的
+		noAuth.GET("/getLeafStreeNodeBindIps", getLeafStreeNodeBindIps)
+	}
+
 	// 以下开始需要认证
 	afterLoginApiGroup := r.Group("/api")
 	afterLoginApiGroup.Use(middleware.JWTAuthMiddleWare()).Use(middleware.CasBinRbacMiddleware())
@@ -66,6 +72,7 @@ func ConfigRouter(r *gin.Engine) {
 		sTreeApiGroup.POST("/updateStreeNode", updateStreeNode)
 		sTreeApiGroup.DELETE("/deleteStreeNode/:id", deleteStreeNode)
 		sTreeApiGroup.GET("/getChildrenStreeNodes/:pid", getChildrenStreeNodes)
+		sTreeApiGroup.GET("/getLeafStreeNodes", getLeafStreeNodes)
 
 		// ECS
 		sTreeApiGroup.GET("/getResourceEcsUnbindList", getResourceEcsUnbindList)
