@@ -18,7 +18,7 @@ type MonitorScrapeJob struct {
 
 	UserID uint
 
-	Enable                   int    `json:"enable" gorm:"comment:是否被开启 1正常 2冻结"`
+	Enable                   int    `json:"enable" gorm:"comment:是否被开启 1正常 2禁用"`
 	ServiceDiscoveryType     string `json:"serviceDiscoveryType" gorm:"comment:k8s or tree-http"`
 	MetricsPath              string `json:"metricsPath"`
 	Scheme                   string `json:"scheme"`

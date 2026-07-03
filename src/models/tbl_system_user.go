@@ -20,8 +20,10 @@ type User struct {
 	HomePath string `json:"homePath" gorm:"comment:登录后跳转地址"`
 	Enable   int    `json:"enable" gorm:"default:1;comment:用户是否被冻结 1正常 2冻结"`
 	//Roles    []*Role `json:"roles" gorm:"many2many:user_roles"`
-	Roles    []*Role      `json:"roles" gorm:"many2many:user_roles"`
-	OpsNodes []*StreeNode `json:"ops_nodes,omitempty" gorm:"many2many:ops_admins;comment:人员服务树节点"`
+	Roles              []*Role                         `json:"roles" gorm:"many2many:user_roles"`
+	OpsNodes           []*StreeNode                    `json:"ops_nodes,omitempty" gorm:"many2many:ops_admins;comment:人员服务树节点"`
+	StaticReceiveUsers []*MonitorAlertManagerSendGroup `json:"staticReceiveUsers,omitempty" gorm:"many2many:static_receive_user;comment:人员告警组节点"`
+	FirstUpgradeUsers  []*MonitorAlertManagerSendGroup `json:"firstUpgradeUsers,omitempty" gorm:"many2many:first_upgrade_users;comment:人员第一告警组节点"`
 
 	Processes   []WorkOrderProcess
 	FormDesigns []WorkOrderFormDesign

@@ -25,3 +25,22 @@ func getMonitorPrometheusYamlOne(c *gin.Context) {
 	mainConfigYaml := fetchPrometheusMainConfigYaml(c)
 	common.OkWithData(mainConfigYaml, c)
 }
+
+func fetchAlertManagerMainConfigYaml(c *gin.Context) string {
+	mc := c.MustGet(common.GIN_CTX_MONITOR_CACHE).(*cache.MonitorCache)
+	ip := c.Query("ip")
+
+	// 从缓存中根据ip 获取这个节点的主配置文件
+	mainConfigYaml := mc.GetAlertManagerMainConfigYamlByIp(ip)
+	return mainConfigYaml
+}
+
+func downloadAlertManagerMainConfigYaml(c *gin.Context) {
+	mainConfigYaml := fetchAlertManagerMainConfigYaml(c)
+	c.String(200, mainConfigYaml)
+}
+
+func getMonitorAlertManagerYamlOne(c *gin.Context) {
+	mainConfigYaml := fetchAlertManagerMainConfigYaml(c)
+	common.OkWithData(mainConfigYaml, c)
+}

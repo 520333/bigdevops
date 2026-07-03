@@ -29,10 +29,11 @@ const (
 )
 
 type MonitorCache struct {
-	PrometheusMainConfigMap map[string]string
-	AlertRuleMap            map[string]string
-	RecordRuleMap           map[string]string
-	Sc                      *config.ServerConfig
+	PrometheusMainConfigMap   map[string]string
+	AlertManagerMainConfigMap map[string]string
+	AlertRuleMap              map[string]string
+	RecordRuleMap             map[string]string
+	Sc                        *config.ServerConfig
 	sync.RWMutex
 }
 
@@ -49,6 +50,7 @@ func NewMonitorCache(sc *config.ServerConfig) *MonitorCache {
 
 func (mc *MonitorCache) MonitorCacheManager(ctx context.Context) error {
 	go wait.UntilWithContext(ctx, mc.GeneratePrometheusMainConfigYaml, time.Duration(mc.Sc.MonitorComputeC.RunIntervalSeconds)*time.Second)
+	go wait.UntilWithContext(ctx, mc.GenerateAlertManagerMainConfigYaml, time.Duration(mc.Sc.MonitorComputeC.RunIntervalSeconds)*time.Second)
 	<-ctx.Done()
 	mc.Sc.Logger.Info("SyncCache 收到其他任务退出信号")
 	return nil
@@ -112,6 +114,56 @@ func (mc *MonitorCache) GeneratePrometheusMainConfigYaml(ctx context.Context) {
 
 			// 3. 所有内容组装完毕，执行序列化转为 YAML
 			out, err := yaml.Marshal(allConfig)
+
+			// ====删除一些没用的字段====
+			//var m map[string]any
+			//_ = yaml.Unmarshal(out, &m)
+			//
+			//if remoteWrites, ok := m["remote_write"].([]any); ok {
+			//	for _, rw := range remoteWrites {
+			//		if rwMap, ok := rw.(map[string]any); ok {
+			//			delete(rwMap, "follow_redirects")
+			//			delete(rwMap, "enable_http2")
+			//		}
+			//	}
+			//}
+			//if scrapeConfigs, ok := m["scrape_configs"].([]any); ok {
+			//	for _, rw := range scrapeConfigs {
+			//		if rwMap, ok := rw.(map[string]any); ok {
+			//			delete(rwMap, "enable_compression")
+			//			delete(rwMap, "enable_http2")
+			//			delete(rwMap, "follow_redirects")
+			//			delete(rwMap, "honor_timestamps")
+			//			delete(rwMap, "track_timestamps_staleness")
+			//		}
+			//	}
+			//}
+			//if scrapeConfigs, ok := m["scrape_configs"].([]any); ok {
+			//	for _, rw := range scrapeConfigs {
+			//		if scMap, ok := rw.(map[string]any); ok {
+			//			// 1. 清理 http_sd_configs
+			//			if httpSds, ok := scMap["http_sd_configs"].([]any); ok {
+			//				for _, hsd := range httpSds {
+			//					if hsdMap, ok := hsd.(map[string]any); ok {
+			//						delete(hsdMap, "enable_http2")
+			//						delete(hsdMap, "follow_redirects")
+			//						// ⚠️ 提醒：如果这里删除了 refresh_interval，Prometheus 会使用默认的 1m(60s)
+			//						// 如果你在数据库里配置了特定的刷新时间，建议保留它。确定要删的话就放开下面这行：
+			//						delete(hsdMap, "refresh_interval")
+			//					}
+			//				}
+			//			}
+			//			delete(scMap, "enable_compression")
+			//			delete(scMap, "enable_http2")
+			//			delete(scMap, "follow_redirects")
+			//			delete(scMap, "honor_timestamps")
+			//		}
+			//	}
+			//}
+			//out, _ = yaml.Marshal(m)
+
+			// ======================
+
 			if err != nil {
 				mc.Sc.Logger.Error("[监控模块]根据采集池配置生成prometheus主配置文件错误", zap.Error(err), zap.String("采集池", pool.Name))
 				continue
@@ -150,36 +202,6 @@ func GenPromModeDuration(ts int) pmodel.Duration {
 	return pmodel.Duration(time.Duration(ts) * time.Second)
 
 }
-
-// HashModScrapeConfig 给单独一个ip的scrape数组添加relabelConfigs
-//func (mc *MonitorCache) HashModScrapeConfig(scrapeConfigs []*ppc.ScrapeConfig, modNul, index int) []*ppc.ScrapeConfig {
-//	res := []*ppc.ScrapeConfig{}
-//	for _, scrapeConfig := range scrapeConfigs {
-//		scrapeConfig := scrapeConfig
-//		//scrapeConfig.RelabelConfigs = []*relabel.Config{
-//		hasModes := []*relabel.Config{
-//			{
-//
-//				SourceLabels: pmodel.LabelNames{pmodel.AddressLabel},
-//				Regex:        relabel.MustNewRegexp("(.*)"),
-//				Modulus:      uint64(modNul),
-//				TargetLabel:  hashTmpKey,
-//				Replacement:  "$1",
-//				Action:       relabel.HashMod,
-//			},
-//			{
-//				SourceLabels: pmodel.LabelNames{hashTmpKey},
-//				Regex:        relabel.MustNewRegexp(fmt.Sprintf("^%d$", index)),
-//				Replacement:  "$1",
-//				Action:       relabel.Keep,
-//			},
-//		}
-//		scrapeConfig.RelabelConfigs = append(scrapeConfig.RelabelConfigs, hasModes...)
-//		res = append(res, scrapeConfig)
-//	}
-//	return res
-//
-//}
 
 func (mc *MonitorCache) HashModScrapeConfig(scrapeConfigs []*ppc.ScrapeConfig, modNul, index int) []*ppc.ScrapeConfig {
 	res := []*ppc.ScrapeConfig{}
@@ -246,74 +268,6 @@ func (mc *MonitorCache) GeneratePrometheusMainConfigYamlOnePool(pool *models.Mon
 
 	return all
 }
-
-// GeneratePrometheusScrapeConfigYamlOnePool 生成采集段
-//func (mc *MonitorCache) GeneratePrometheusScrapeConfigYamlOnePool(pool *models.MonitorScrapePool) []*ppc.ScrapeConfig {
-//	var scrapeConfigs []*ppc.ScrapeConfig
-//	scrapeJobs, err := models.GetMonitorScrapeJobByPoolId(pool.ID)
-//	if err != nil {
-//		mc.Sc.Logger.Error("[监控模块]根据采集池poolId查找所有采集任务错误", zap.Error(err), zap.String("池子", pool.Name))
-//		return nil
-//	}
-//
-//	for _, scrapeJob := range scrapeJobs {
-//		scrapeJob := scrapeJob
-//		oneJob := &ppc.ScrapeConfig{}
-//
-//		switch scrapeJob.ServiceDiscoveryType {
-//		case common.MONITOR_SCRAPE_JOB_SD_TYPE_HTTP:
-//			oneJob.JobName = scrapeJob.Name
-//			oneJob.ScrapeInterval = GenPromModeDuration(scrapeJob.ScrapeInterval)
-//			oneJob.ScrapeTimeout = GenPromModeDuration(scrapeJob.ScrapeTimeout)
-//			oneJob.Scheme = scrapeJob.Scheme
-//			oneJob.MetricsPath = scrapeJob.MetricsPath
-//			var relabelConfigObj []*relabel.Config
-//			_ = yaml.Unmarshal([]byte(scrapeJob.RelabelConfigsYamlString), &relabelConfigObj)
-//			if relabelConfigObj != nil {
-//				oneJob.RelabelConfigs = relabelConfigObj
-//			}
-//
-//			sdUrl := fmt.Sprintf("%s?port=%v&leafNodeIds=%v", mc.Sc.MonitorComputeC.HttpSdApi, scrapeJob.Port, strings.Join(scrapeJob.TreeNodeIds, ","))
-//			oneJob.ServiceDiscoveryConfigs = discovery.Configs{
-//				&http.SDConfig{
-//					URL:             sdUrl,
-//					RefreshInterval: GenPromModeDuration(scrapeJob.RefreshInterval),
-//				},
-//			}
-//			scrapeConfigs = append(scrapeConfigs, oneJob)
-//
-//		case common.MONITOR_SCRAPE_JOB_SD_TYPE_K8S:
-//			oneJob.JobName = scrapeJob.Name
-//			oneJob.Scheme = scrapeJob.Scheme
-//			oneJob.MetricsPath = scrapeJob.MetricsPath
-//			//oneJob.HTTPClientConfig.BearerTokenFile = scrapeJob.BearerTokenFile
-//			oneJob.HTTPClientConfig.TLSConfig = pcc.TLSConfig{
-//				InsecureSkipVerify: true,
-//			}
-//			oneJob.HTTPClientConfig.BearerToken = pcc.Secret(scrapeJob.BearerToken)
-//			oneJob.HTTPClientConfig.BearerTokenFile = scrapeJob.BearerTokenFile
-//			oneJob.ServiceDiscoveryConfigs = discovery.Configs{
-//				&kubernetes.SDConfig{
-//					APIServer:  *mustParseURL(scrapeJob.APIServer),
-//					Role:       kubernetes.Role(scrapeJob.KubernetesSdRole),
-//					KubeConfig: scrapeJob.KubeConfigFilePath,
-//					HTTPClientConfig: pcc.HTTPClientConfig{
-//						BearerToken: pcc.Secret(scrapeJob.BearerToken),
-//						//BearerTokenFile: scrapeJob.BearerTokenFile,
-//						TLSConfig: pcc.TLSConfig{
-//							CA:                 scrapeJob.TlsCaContent,
-//							CAFile:             scrapeJob.TlsCaFilePath,
-//							InsecureSkipVerify: true,
-//						},
-//					},
-//				},
-//			}
-//			scrapeConfigs = append(scrapeConfigs, oneJob)
-//		}
-//	}
-//	return scrapeConfigs
-//
-//}
 
 func (mc *MonitorCache) GeneratePrometheusScrapeConfigYamlOnePool(pool *models.MonitorScrapePool) []*ppc.ScrapeConfig {
 	var scrapeConfigs []*ppc.ScrapeConfig

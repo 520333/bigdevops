@@ -51,6 +51,8 @@ const (
 	// 监控采集器的服务类型
 	MONITOR_SCRAPE_JOB_SD_TYPE_K8S  = "kubernetes"
 	MONITOR_SCRAPE_JOB_SD_TYPE_HTTP = "http"
+
+	MONITOR_ALERT_MATCH_KEY = "alert_send_group"
 )
 
 var (

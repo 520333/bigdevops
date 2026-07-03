@@ -21,6 +21,11 @@ type MonitorScrapePool struct {
 	ScrapeTimeout  int         `json:"scrapeTimeout" gorm:"comment:采集超时时间"`
 	ExternalLabels StringArray `json:"externalLabels" gorm:"comment:remote_write的时候添加的标签组 key=v"`
 
+	// 告警段
+	SuperAlert    int    `json:"superAlert" gorm:"comment:是否支持告警 1支持 2不支持"`
+	RemoteReadUrl string `json:"remoteReadUrl" gorm:"comment:远程读取的地址"`
+	RuleFilePath  string `json:"ruleFilePath" gorm:"comment:rule文件路径"`
+
 	// remote_write段
 	RemoteWriteUrl       string `json:"remoteWriteUrl" gorm:"comment:tsdb远程写入的地址"`
 	RemoteTimeoutSeconds int    `json:"remoteTimeoutSeconds" gorm:"comment:tsdb远程写入的超时时间"`

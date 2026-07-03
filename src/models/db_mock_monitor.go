@@ -152,4 +152,38 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 		}
 		k8s.CreateOne()
 	}
+
+	// alertManager pool
+	num = 1
+	ips := []string{"192.168.50.200", "192.168.50.201"}
+	for i := 0; i < num; i++ {
+		p := MonitorAlertManagerPool{
+			Name:                   fmt.Sprintf("online-%v", i+1),
+			AlertManagerInstanceId: ips,
+			UserID:                 1,
+			ResolveTimeout:         "30m",
+			GroupWait:              "15s",
+			GroupInterval:          "20s",
+			RepeatInterval:         "30s",
+			Receiver:               "sre-1",
+			GroupBy:                []string{"alertname"},
+		}
+		p.CreateOne()
+	}
+
+	// 创建发送组
+	for i := 0; i < num; i++ {
+		sg := MonitorAlertManagerSendGroup{
+			Name:           fmt.Sprintf("sre-%v", i+1),
+			NameZh:         fmt.Sprintf("运维组-%v", i+1),
+			Enable:         1,
+			UserID:         1,
+			PoolId:         uint(1),
+			ImRobotToken:   "aa",
+			RepeatInterval: "30s",
+			SendResolved:   1,
+		}
+		_ = sg.CreateOne()
+
+	}
 }

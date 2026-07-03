@@ -32,8 +32,9 @@ type ServerJobExec struct {
 type MonitorCompute struct {
 	Enable             bool   `yaml:"enable"`
 	RunIntervalSeconds int    `yaml:"run_interval_seconds"`
-	ExecTimeoutSeconds int    `yaml:"execTimeoutSeconds"`
-	HttpSdApi          string `yaml:"httpSdApi"`
+	ExecTimeoutSeconds int    `yaml:"exec_timeout_seconds"`
+	HttpSdApi          string `yaml:"http_sd_api"`
+	AlertWebhookAddr   string `yaml:"alert_web_hook_addr"`
 }
 
 type GrpcServerConfig struct {
