@@ -29,20 +29,20 @@ PeO73tYJhHTq
 -----END CERTIFICATE-----`
 	tokenContext        = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjdFV09MMTZnRnlxVlBkczIzTmVMTU5yMG1Wa29Rb3FNYTdNVE5TQXZYN0UifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlLXN5c3RlbSIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJwcm9tZXRoZXVzIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6InByb21ldGhldXMiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiJhMDNkZTFhZS04NTBjLTRjMzUtOWIzNC00MzI4YjY5MzU2OWYiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZS1zeXN0ZW06cHJvbWV0aGV1cyJ9.fvm5rJ85Zl__E2kVhNe4fjdDRrO0ibWAD0UpKRooS2GZjy45fcJiURC5jxw5n_46zdqxeoEZhfn3tkV3rb0uYe7xrT6TqC8Jg-I146KTGk6PzI5lMXAKKnbQlcPXlOHX9xDRQCudZSiTL8c13ekUM4IvRDq6qugllvcDL7c35m3P0lQw3ndqhrDoFSWnVkHISbut-d1LeJlYgh6xsS2sl343T2wpwlXR7LRnPvmO1tGZLl6ry-6Q5JHwE2bMNCQaRBmrW1ZvhouNoKOG2H1ntwSD--ibCN7L2Z2gXKHnUL4treMdA_cNoe2zZX9uenZ0eOzaG30GirLSBNRwQl3qBg"
 	k8sCadVisorRelabels = `
-        - action: replace
-          regex: (.+)
-          source_labels:
-            - __meta_kubernetes_node_label_kubernetes_io_hostname
-          target_label: node
-        - separator:
-          regex: __meta_kubernetes_node_label_(.+)
-          replacement: $1
-          action: labelmap
-        - separator:
-          regex: (.*)
-          target_label: __metrics_path__
-          replacement: /metrics/cadvisor
-          action: replace
+- action: replace
+  regex: (.+)
+  source_labels:
+    - __meta_kubernetes_node_label_kubernetes_io_hostname
+  target_label: node
+- separator:
+  regex: __meta_kubernetes_node_label_(.+)
+  replacement: $1
+  action: labelmap
+- separator:
+  regex: (.*)
+  target_label: __metrics_path__
+  replacement: /metrics/cadvisor
+  action: replace
 `
 )
 
@@ -92,6 +92,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 		http := MonitorScrapeJob{
 			Name:                 fmt.Sprintf("%v-exporter-%v", exporterNames[k], i+1),
 			UserID:               1,
+			Enable:               1,
 			ServiceDiscoveryType: common.MONITOR_SCRAPE_JOB_SD_TYPE_HTTP,
 			MetricsPath:          "/metrics",
 			Scheme:               "http",
@@ -132,8 +133,9 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 
 		// 使用K8S集群SA  token证书方式
 		k8s := MonitorScrapeJob{
-			Name:                 fmt.Sprintf("k8s-%v", i+1),
+			Name:                 "k8s-pod-monitor",
 			UserID:               1,
+			Enable:               1,
 			ServiceDiscoveryType: common.MONITOR_SCRAPE_JOB_SD_TYPE_K8S,
 			MetricsPath:          "/metrics",
 			Scheme:               "https",
@@ -145,7 +147,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 
 			KubeConfigFilePath:       "/root/.kube/config",
 			BearerTokenFile:          "/opt/app/prometheus/k8s-cluster-token",
-			KubernetesSdRole:         "node",
+			KubernetesSdRole:         "pod",
 			RelabelConfigsYamlString: k8sCadVisorRelabels,
 		}
 		k8s.CreateOne()

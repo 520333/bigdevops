@@ -155,6 +155,7 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.POST("/updateMonitorScrapeJob", updateMonitorScrapeJob)
 		monitorApiGroup.DELETE("/deleteMonitorScrapeJob/:id", deleteMonitorScrapeJob)
 		monitorApiGroup.GET("/getMonitorScrapeJobOne", getMonitorScrapeJobOne)
+		monitorApiGroup.POST("/setScrapeJobStatus", setScrapeJobStatus)
 
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 )
 
@@ -175,6 +176,54 @@ func updateMonitorScrapeJob(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// setScrapeJobEnableReq 请求参数结构体
+type setScrapeJobEnableReq struct {
+	Id     uint `json:"id" validate:"required"`
+	Enable int  `json:"enable" validate:"required,oneof=1 2"` // 假设 1=启用 2=禁用
+}
+
+// setScrapeJobStatus 设置采集任务的启用/禁用状态
+func setScrapeJobStatus(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+
+	var reqObj setScrapeJobEnableReq
+	err := c.ShouldBindJSON(&reqObj)
+	if err != nil {
+		sc.Logger.Error("解析修改采集任务状态请求失败", zap.Any("req", reqObj), zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	// 结构体数据校验
+	err = validate.Struct(&reqObj)
+	if err != nil {
+		if errors, ok := err.(validator.ValidationErrors); ok {
+			common.ReqBadFailWithDetailed(errors.Translate(trans), "请求出错", c)
+			return
+		}
+	}
+
+	// 1. 查询数据库中原有的记录
+	dbJob, err := models.GetMonitorScrapeJobById(int(reqObj.Id))
+	if err != nil {
+		sc.Logger.Error("根据id查找采集任务错误", zap.Any("req", reqObj), zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	// 2. 内存中修改状态
+	dbJob.Enable = reqObj.Enable
+
+	// 3. 执行更新
+	err = dbJob.UpdateEnable()
+	if err != nil {
+		sc.Logger.Error("更新采集任务状态错误", zap.Any("req", reqObj), zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	common.OkWithMessage("状态修改成功", c)
+}
 func deleteMonitorScrapeJob(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
