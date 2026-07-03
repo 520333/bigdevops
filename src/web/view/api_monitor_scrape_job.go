@@ -21,8 +21,11 @@ func getMonitorScrapeJobList(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
 	searchUserID := c.DefaultQuery("UserID", "")
+	searchEnable := c.DefaultQuery("enable", "")
+
 	searchUserIDInt, _ := strconv.Atoi(searchUserID)
 	searchTitle := c.DefaultQuery("name", "")
+	searchEnableInt, _ := strconv.Atoi(searchEnable)
 	searchCreateUserName := c.DefaultQuery("createUserName", "")
 
 	offset := 0
@@ -41,6 +44,9 @@ func getMonitorScrapeJobList(c *gin.Context) {
 
 	for _, obj := range objs {
 		if searchUserID != "" && int(obj.UserID) != searchUserIDInt {
+			continue
+		}
+		if searchEnable != "" && obj.Enable != searchEnableInt {
 			continue
 		}
 
