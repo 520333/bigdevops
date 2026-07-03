@@ -76,10 +76,11 @@ func ConfigRouter(r *gin.Engine) {
 
 		// ECS
 		sTreeApiGroup.GET("/getResourceEcsUnbindList", getResourceEcsUnbindList)
+
 		sTreeApiGroup.POST("/bindEcsToStreeNode", bindEcsToStreeNode)
 		sTreeApiGroup.POST("/unBindEcsToStreeNode", unBindEcsToStreeNode)
 		sTreeApiGroup.GET("getStreeNodeEcsList/:id", getStreeNodeEcsList)
-
+		sTreeApiGroup.GET("/getResourceEcsList", getResourceEcsList)
 		// ELB
 		sTreeApiGroup.GET("/getResourceElbUnbindList", getResourceElbUnbindList)
 		sTreeApiGroup.POST("/bindElbToStreeNode", bindElbToStreeNode)
@@ -139,6 +140,22 @@ func ConfigRouter(r *gin.Engine) {
 		jobExecApiGroup.GET("/getJobExecTaskOne/:id", getJobExecTaskOne)
 		jobExecApiGroup.POST("/actionJobExecTaskOne/:id", actionJobExecTaskOne)
 		jobExecApiGroup.GET("/getJobExecResultByJobId", getJobExecResultByJobId)
+	}
+
+	monitorApiGroup := afterLoginApiGroup.Group("/monitor")
+	{
+		monitorApiGroup.GET("/getMonitorScrapePoolList", getMonitorScrapePoolList)
+		monitorApiGroup.POST("/createMonitorScrapePool", createMonitorScrapePool)
+		monitorApiGroup.POST("/updateMonitorScrapePool", updateMonitorScrapePool)
+		monitorApiGroup.DELETE("/deleteMonitorScrapePool/:id", deleteMonitorScrapePool)
+		monitorApiGroup.GET("/getMonitorPrometheusYamlOne", getMonitorPrometheusYamlOne)
+
+		monitorApiGroup.GET("/getMonitorScrapeJobList", getMonitorScrapeJobList)
+		monitorApiGroup.POST("/createMonitorScrapeJob", createMonitorScrapeJob)
+		monitorApiGroup.POST("/updateMonitorScrapeJob", updateMonitorScrapeJob)
+		monitorApiGroup.DELETE("/deleteMonitorScrapeJob/:id", deleteMonitorScrapeJob)
+		monitorApiGroup.GET("/getMonitorScrapeJobOne", getMonitorScrapeJobOne)
+
 	}
 }
 

@@ -3,6 +3,7 @@ package models
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -24,8 +25,9 @@ type MonitorScrapePool struct {
 	RemoteWriteUrl       string `json:"remoteWriteUrl" gorm:"comment:tsdb远程写入的地址"`
 	RemoteTimeoutSeconds int    `json:"remoteTimeoutSeconds" gorm:"comment:tsdb远程写入的超时时间"`
 
-	Key            string `json:"key" gorm:"-"` // 前端表格使用
-	CreateUserName string `json:"createUserName" gorm:"-"`
+	ExternalLabelsFront string `json:"externalLabelsFront" gorm:"-"`
+	Key                 string `json:"key" gorm:"-"` // 前端表格使用
+	CreateUserName      string `json:"createUserName" gorm:"-"`
 }
 
 func (obj *MonitorScrapePool) Create() error {
@@ -62,11 +64,48 @@ func GetMonitorScrapePoolAll() (ps []*MonitorScrapePool, err error) {
 	return
 }
 
+func (obj *MonitorScrapePool) CheckInstanceIpExists() bool {
+	all, err := GetMonitorScrapePoolAll()
+	if err != nil {
+		return true
+	}
+	ipMap := map[string]string{}
+	for _, p := range all {
+		p := p
+		if p.Name == obj.Name {
+			continue
+		}
+		for _, ip := range p.PrometheusInstances {
+			ipMap[ip] = ip
+		}
+		for _, ip := range obj.PrometheusInstances {
+			_, ok := ipMap[ip]
+			if ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (obj *MonitorScrapePool) FillDefaultData() {
+	if obj.ScrapeInterval == 0 {
+		obj.ScrapeInterval = 15
+	}
+	if obj.ScrapeTimeout == 0 {
+		obj.ScrapeTimeout = 10
+	}
+	if obj.RemoteTimeoutSeconds == 0 {
+		obj.RemoteTimeoutSeconds = 5
+	}
+}
+
 func (obj *MonitorScrapePool) FillFrontAllData() {
 	dbUser, _ := GetUserById(int(obj.UserID))
 	if dbUser != nil {
 		obj.CreateUserName = fmt.Sprintf("%s(%s)", dbUser.Username, dbUser.RealName)
 	}
+	obj.ExternalLabelsFront = strings.Join(obj.ExternalLabels, "\n")
 	obj.Key = fmt.Sprintf("%d", obj.ID)
 }
 

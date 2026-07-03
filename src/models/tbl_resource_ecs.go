@@ -187,3 +187,8 @@ func GetResourceEcsBySnOrIP(sn string, ip string) (*ResourceEcs, error) {
 	}
 	return &ecs, nil
 }
+
+func (obj *ResourceEcs) FillFrontAllData() {
+	obj.Key = fmt.Sprintf("%d", obj.ID)
+
+}

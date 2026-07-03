@@ -197,3 +197,62 @@ func getStreeNodeEcsList(c *gin.Context) {
 
 	common.OkWithDetailed(ecsList, "ok", c)
 }
+
+func getResourceEcsList(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "500"))
+
+	searchInstance := c.DefaultQuery("instance", "")
+
+	offset := 0
+	limit := pageSize
+	if currentPage > 1 {
+		offset = (currentPage - 1) * limit
+	}
+
+	objs, err := models.GetResourceEcsAll()
+	if err != nil {
+		sc.Logger.Error("去数据库中拿所有的机器执行错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的机器执行错误：%v", err.Error()), c)
+		return
+	}
+	allIds := []int{}
+
+	for _, obj := range objs {
+		obj := obj
+		if searchInstance != "" && obj.InstanceName != searchInstance {
+			continue
+		}
+		obj.FillFrontAllData()
+
+		allIds = append(allIds, int(obj.ID))
+	}
+
+	// 如果过滤后没有数据，直接返回空列表
+	if len(allIds) == 0 {
+		common.OkWithDetailed(gin.H{
+			"items": []models.ResourceEcs{},
+			"total": 0,
+		}, "ok", c)
+		return
+	}
+
+	// 根据过滤后的 ID 进行分页查询
+	pagedObjs, err := models.GetResourceEcsByIdsWithLimitOffset(allIds, limit, offset)
+	if err != nil {
+		sc.Logger.Error("limit-offset 去数据库中拿所有的采集池执行错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的采集池执行错误：%v", err.Error()), c)
+		return
+	}
+
+	// 🚀 修复 2：分页查出来的新对象，必须再次遍历填充一次虚拟字段，否则响应里还是空的！
+	for _, obj := range pagedObjs {
+		obj.FillFrontAllData()
+	}
+
+	common.OkWithDetailed(gin.H{
+		"items": pagedObjs,
+		"total": len(allIds),
+	}, "ok", c)
+}

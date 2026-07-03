@@ -18,6 +18,51 @@ sleep 100`
 		mockScriptContentNoArgs,
 		mockScriptContentSleep,
 	}
+	ansible = `aaa: 
+	- name: "aaa"
+  	value: "111"
+bbb: "222"`
+	shell = `#!/bin/bash
+VERSION=123
+OS-VERSION=$(cat /etc/os-release)
+echo $VERSION
+
+if [ $? eq 0]
+ echo "未找到"
+fi`
+	python = `import secrets
+import string
+
+def generate_password(length=12):
+	"""生成一个包含大小写字母、数字和符号的随机密码"""
+  alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+	password = ''.join(secrets.choice(alphabet) for i in range(length))
+	return password
+
+# 使用示例
+print(f"你的新密码是: {generate_password(16)}")`
+	js = `{
+  "code": 200,
+  "msg": "operation successfully",
+  "result": {
+    "test_get": {
+      "pageNum": 1,
+      "pageSize": 10,
+      "dataSize": 1,
+      "totalPage": 1,
+      "totalCount": 1,
+      "data": [
+        {
+          "ZsTestPO": {
+            "name": "ccc",
+            "salary": 2200
+          }
+        }
+      ]
+    }
+  },
+  "log": null
+}`
 )
 
 func mockJobExecData(sc *config.ServerConfig, adminUser *User) {
@@ -45,4 +90,36 @@ func mockJobExecData(sc *config.ServerConfig, adminUser *User) {
 		job.CreateOne()
 	}
 	sc.Logger.Info("任务执行模块 Mock 数据注入成功")
+
+	script1 := JobScript{
+		Name:    "ansible",
+		Lang:    "ansible",
+		UserID:  1,
+		Content: ansible,
+	}
+	script1.Create()
+
+	script2 := JobScript{
+		Name:    "shell",
+		Lang:    "shell",
+		UserID:  1,
+		Content: shell,
+	}
+	script2.Create()
+
+	script3 := JobScript{
+		Name:    "python",
+		Lang:    "python",
+		UserID:  1,
+		Content: python,
+	}
+	script3.Create()
+
+	script4 := JobScript{
+		Name:    "json",
+		Lang:    "json",
+		UserID:  1,
+		Content: js,
+	}
+	script4.Create()
 }

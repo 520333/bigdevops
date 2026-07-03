@@ -77,28 +77,45 @@ func (mc *MonitorCache) GeneratePrometheusMainConfigYaml(ctx context.Context) {
 		allConfig := mc.GeneratePrometheusMainConfigYamlOnePool(pool)
 
 		// 2. 生成并附加采集段 (scrape_configs) - 必须在 Marshal 之前！
-		scrapeConfigs := mc.GeneratePrometheusScrapeConfigYamlOnePool(pool)
-		if scrapeConfigs == nil {
+		baseScrapeConfigs := mc.GeneratePrometheusScrapeConfigYamlOnePool(pool)
+		if baseScrapeConfigs == nil {
 			continue
 		}
-		//allConfig.ScrapeConfigs = scrapeConfigs
+		//scrapeConfigs := mc.GeneratePrometheusScrapeConfigYamlOnePool(pool)
+		//if scrapeConfigs == nil {
+		//	continue
+		//}
 
 		ipNum := len(pool.PrometheusInstances)
 
 		for index, ip := range pool.PrometheusInstances {
 			ip := ip
 			// 根据数量做hashmod的判断 大于0需要分片
-			if ipNum > 0 {
-				scrapeConfigs = mc.HashModScrapeConfig(scrapeConfigs, ipNum, index)
+			//if ipNum > 0 {
+			//	scrapeConfigs = mc.HashModScrapeConfig(scrapeConfigs, ipNum, index)
+			//}
+			//allConfig.ScrapeConfigs = scrapeConfigs
+			//// 3. 所有内容组装完毕，执行序列化转为 YAML
+			//out, err := yaml.Marshal(allConfig)
+			//if err != nil {
+			//	mc.Sc.Logger.Error("[监控模块]根据采集池配置生成prometheus主配置文件错误", zap.Error(err), zap.String("采集池", pool.Name))
+			//	continue
+			//}
+			var currentScrapeConfigs []*ppc.ScrapeConfig
+			if ipNum > 1 {
+				currentScrapeConfigs = mc.HashModScrapeConfig(baseScrapeConfigs, ipNum, index)
+			} else {
+				currentScrapeConfigs = baseScrapeConfigs
 			}
-			allConfig.ScrapeConfigs = scrapeConfigs
+
+			allConfig.ScrapeConfigs = currentScrapeConfigs
+
 			// 3. 所有内容组装完毕，执行序列化转为 YAML
 			out, err := yaml.Marshal(allConfig)
 			if err != nil {
 				mc.Sc.Logger.Error("[监控模块]根据采集池配置生成prometheus主配置文件错误", zap.Error(err), zap.String("采集池", pool.Name))
 				continue
 			}
-
 			outStr := string(out)
 			// 重新查一遍当前 pool 下的任务（因为 allConfig.ScrapeConfigs 里的顺序和查询出的顺序一致）
 			scrapeJobs, _ := models.GetMonitorScrapeJobByPoolId(pool.ID)
@@ -135,13 +152,43 @@ func GenPromModeDuration(ts int) pmodel.Duration {
 }
 
 // HashModScrapeConfig 给单独一个ip的scrape数组添加relabelConfigs
+//func (mc *MonitorCache) HashModScrapeConfig(scrapeConfigs []*ppc.ScrapeConfig, modNul, index int) []*ppc.ScrapeConfig {
+//	res := []*ppc.ScrapeConfig{}
+//	for _, scrapeConfig := range scrapeConfigs {
+//		scrapeConfig := scrapeConfig
+//		//scrapeConfig.RelabelConfigs = []*relabel.Config{
+//		hasModes := []*relabel.Config{
+//			{
+//
+//				SourceLabels: pmodel.LabelNames{pmodel.AddressLabel},
+//				Regex:        relabel.MustNewRegexp("(.*)"),
+//				Modulus:      uint64(modNul),
+//				TargetLabel:  hashTmpKey,
+//				Replacement:  "$1",
+//				Action:       relabel.HashMod,
+//			},
+//			{
+//				SourceLabels: pmodel.LabelNames{hashTmpKey},
+//				Regex:        relabel.MustNewRegexp(fmt.Sprintf("^%d$", index)),
+//				Replacement:  "$1",
+//				Action:       relabel.Keep,
+//			},
+//		}
+//		scrapeConfig.RelabelConfigs = append(scrapeConfig.RelabelConfigs, hasModes...)
+//		res = append(res, scrapeConfig)
+//	}
+//	return res
+//
+//}
+
 func (mc *MonitorCache) HashModScrapeConfig(scrapeConfigs []*ppc.ScrapeConfig, modNul, index int) []*ppc.ScrapeConfig {
 	res := []*ppc.ScrapeConfig{}
 	for _, scrapeConfig := range scrapeConfigs {
-		scrapeConfig := scrapeConfig
-		scrapeConfig.RelabelConfigs = []*relabel.Config{
-			{
+		// 【最小改动点】：必须解引用创建一个新结构体，防止循环污染原始数据
+		newScrapeConfig := *scrapeConfig
 
+		hasModes := []*relabel.Config{
+			{
 				SourceLabels: pmodel.LabelNames{pmodel.AddressLabel},
 				Regex:        relabel.MustNewRegexp("(.*)"),
 				Modulus:      uint64(modNul),
@@ -156,10 +203,16 @@ func (mc *MonitorCache) HashModScrapeConfig(scrapeConfigs []*ppc.ScrapeConfig, m
 				Action:       relabel.Keep,
 			},
 		}
-		res = append(res, scrapeConfig)
+
+		// 【最小改动点】：分配新切片内存，防止底层数组互相覆盖
+		newRelabels := make([]*relabel.Config, 0, len(newScrapeConfig.RelabelConfigs)+len(hasModes))
+		newRelabels = append(newRelabels, newScrapeConfig.RelabelConfigs...)
+		newRelabels = append(newRelabels, hasModes...)
+
+		newScrapeConfig.RelabelConfigs = newRelabels
+		res = append(res, &newScrapeConfig)
 	}
 	return res
-
 }
 
 func (mc *MonitorCache) GeneratePrometheusMainConfigYamlOnePool(pool *models.MonitorScrapePool) ppc.Config {
@@ -195,6 +248,73 @@ func (mc *MonitorCache) GeneratePrometheusMainConfigYamlOnePool(pool *models.Mon
 }
 
 // GeneratePrometheusScrapeConfigYamlOnePool 生成采集段
+//func (mc *MonitorCache) GeneratePrometheusScrapeConfigYamlOnePool(pool *models.MonitorScrapePool) []*ppc.ScrapeConfig {
+//	var scrapeConfigs []*ppc.ScrapeConfig
+//	scrapeJobs, err := models.GetMonitorScrapeJobByPoolId(pool.ID)
+//	if err != nil {
+//		mc.Sc.Logger.Error("[监控模块]根据采集池poolId查找所有采集任务错误", zap.Error(err), zap.String("池子", pool.Name))
+//		return nil
+//	}
+//
+//	for _, scrapeJob := range scrapeJobs {
+//		scrapeJob := scrapeJob
+//		oneJob := &ppc.ScrapeConfig{}
+//
+//		switch scrapeJob.ServiceDiscoveryType {
+//		case common.MONITOR_SCRAPE_JOB_SD_TYPE_HTTP:
+//			oneJob.JobName = scrapeJob.Name
+//			oneJob.ScrapeInterval = GenPromModeDuration(scrapeJob.ScrapeInterval)
+//			oneJob.ScrapeTimeout = GenPromModeDuration(scrapeJob.ScrapeTimeout)
+//			oneJob.Scheme = scrapeJob.Scheme
+//			oneJob.MetricsPath = scrapeJob.MetricsPath
+//			var relabelConfigObj []*relabel.Config
+//			_ = yaml.Unmarshal([]byte(scrapeJob.RelabelConfigsYamlString), &relabelConfigObj)
+//			if relabelConfigObj != nil {
+//				oneJob.RelabelConfigs = relabelConfigObj
+//			}
+//
+//			sdUrl := fmt.Sprintf("%s?port=%v&leafNodeIds=%v", mc.Sc.MonitorComputeC.HttpSdApi, scrapeJob.Port, strings.Join(scrapeJob.TreeNodeIds, ","))
+//			oneJob.ServiceDiscoveryConfigs = discovery.Configs{
+//				&http.SDConfig{
+//					URL:             sdUrl,
+//					RefreshInterval: GenPromModeDuration(scrapeJob.RefreshInterval),
+//				},
+//			}
+//			scrapeConfigs = append(scrapeConfigs, oneJob)
+//
+//		case common.MONITOR_SCRAPE_JOB_SD_TYPE_K8S:
+//			oneJob.JobName = scrapeJob.Name
+//			oneJob.Scheme = scrapeJob.Scheme
+//			oneJob.MetricsPath = scrapeJob.MetricsPath
+//			//oneJob.HTTPClientConfig.BearerTokenFile = scrapeJob.BearerTokenFile
+//			oneJob.HTTPClientConfig.TLSConfig = pcc.TLSConfig{
+//				InsecureSkipVerify: true,
+//			}
+//			oneJob.HTTPClientConfig.BearerToken = pcc.Secret(scrapeJob.BearerToken)
+//			oneJob.HTTPClientConfig.BearerTokenFile = scrapeJob.BearerTokenFile
+//			oneJob.ServiceDiscoveryConfigs = discovery.Configs{
+//				&kubernetes.SDConfig{
+//					APIServer:  *mustParseURL(scrapeJob.APIServer),
+//					Role:       kubernetes.Role(scrapeJob.KubernetesSdRole),
+//					KubeConfig: scrapeJob.KubeConfigFilePath,
+//					HTTPClientConfig: pcc.HTTPClientConfig{
+//						BearerToken: pcc.Secret(scrapeJob.BearerToken),
+//						//BearerTokenFile: scrapeJob.BearerTokenFile,
+//						TLSConfig: pcc.TLSConfig{
+//							CA:                 scrapeJob.TlsCaContent,
+//							CAFile:             scrapeJob.TlsCaFilePath,
+//							InsecureSkipVerify: true,
+//						},
+//					},
+//				},
+//			}
+//			scrapeConfigs = append(scrapeConfigs, oneJob)
+//		}
+//	}
+//	return scrapeConfigs
+//
+//}
+
 func (mc *MonitorCache) GeneratePrometheusScrapeConfigYamlOnePool(pool *models.MonitorScrapePool) []*ppc.ScrapeConfig {
 	var scrapeConfigs []*ppc.ScrapeConfig
 	scrapeJobs, err := models.GetMonitorScrapeJobByPoolId(pool.ID)
@@ -205,7 +325,20 @@ func (mc *MonitorCache) GeneratePrometheusScrapeConfigYamlOnePool(pool *models.M
 
 	for _, scrapeJob := range scrapeJobs {
 		scrapeJob := scrapeJob
-		oneJob := &ppc.ScrapeConfig{}
+
+		// 【核心修复 1】：使用官方默认模板初始化，防止 Go 的零值(false)被意外序列化！
+		defaultJob := ppc.DefaultScrapeConfig
+		oneJob := &defaultJob
+
+		if scrapeJob.RelabelConfigsYamlString != "" {
+			var relabelConfigObj []*relabel.Config
+			err := yaml.Unmarshal([]byte(scrapeJob.RelabelConfigsYamlString), &relabelConfigObj)
+			if err != nil {
+				mc.Sc.Logger.Error("[监控模块]解析Relabel YAML字符串失败", zap.Error(err), zap.String("job", scrapeJob.Name))
+			} else if relabelConfigObj != nil {
+				oneJob.RelabelConfigs = relabelConfigObj
+			}
+		}
 
 		switch scrapeJob.ServiceDiscoveryType {
 		case common.MONITOR_SCRAPE_JOB_SD_TYPE_HTTP:
@@ -214,69 +347,71 @@ func (mc *MonitorCache) GeneratePrometheusScrapeConfigYamlOnePool(pool *models.M
 			oneJob.ScrapeTimeout = GenPromModeDuration(scrapeJob.ScrapeTimeout)
 			oneJob.Scheme = scrapeJob.Scheme
 			oneJob.MetricsPath = scrapeJob.MetricsPath
+
 			sdUrl := fmt.Sprintf("%s?port=%v&leafNodeIds=%v", mc.Sc.MonitorComputeC.HttpSdApi, scrapeJob.Port, strings.Join(scrapeJob.TreeNodeIds, ","))
-			oneJob.ServiceDiscoveryConfigs = discovery.Configs{
-				&http.SDConfig{
-					URL:             sdUrl,
-					RefreshInterval: GenPromModeDuration(scrapeJob.RefreshInterval),
-				},
+
+			// HTTP SD 也赋予官方默认的 HTTP 客户端配置
+			httpSdConfig := &http.SDConfig{
+				URL:              sdUrl,
+				RefreshInterval:  GenPromModeDuration(scrapeJob.RefreshInterval),
+				HTTPClientConfig: pcc.DefaultHTTPClientConfig,
 			}
+			oneJob.ServiceDiscoveryConfigs = discovery.Configs{httpSdConfig}
 			scrapeConfigs = append(scrapeConfigs, oneJob)
 
 		case common.MONITOR_SCRAPE_JOB_SD_TYPE_K8S:
 			oneJob.JobName = scrapeJob.Name
 			oneJob.Scheme = scrapeJob.Scheme
 			oneJob.MetricsPath = scrapeJob.MetricsPath
-			//oneJob.HTTPClientConfig.BearerTokenFile = scrapeJob.BearerTokenFile
+
+			// 【核心修复 2】：Job 级别的 HTTP 客户端也要基于官方 Default 初始化
+			oneJob.HTTPClientConfig = pcc.DefaultHTTPClientConfig
 			oneJob.HTTPClientConfig.TLSConfig = pcc.TLSConfig{
 				InsecureSkipVerify: true,
+				CAFile:             scrapeJob.TlsCaFilePath,
 			}
-			// ================= 新增：写入 K8s 专属的 Relabel 规则 =================
-			oneJob.RelabelConfigs = []*relabel.Config{
-				{
-					Action:       relabel.Replace,
-					SourceLabels: pmodel.LabelNames{"__meta_kubernetes_node_label_kubernetes_io_hostname"},
-					Regex:        relabel.MustNewRegexp("(.+)"),
-					TargetLabel:  "node",
-				},
-				{
-					Action:      relabel.LabelMap,
-					Regex:       relabel.MustNewRegexp("__meta_kubernetes_node_label_(.+)"),
-					Replacement: "$1",
-				},
-				{
-					Action:      relabel.Replace,
-					Regex:       relabel.MustNewRegexp("(.*)"),
-					TargetLabel: "__metrics_path__",
-					Replacement: "/metrics/cadvisor", // 注意：这会硬性覆盖上面 oneJob.MetricsPath 的值
-				},
+			if scrapeJob.BearerTokenFile != "" {
+				oneJob.HTTPClientConfig.BearerTokenFile = scrapeJob.BearerTokenFile
+			} else if scrapeJob.BearerToken != "" {
+				oneJob.HTTPClientConfig.BearerToken = pcc.Secret(scrapeJob.BearerToken)
 			}
-			// ==================================================================
-			oneJob.HTTPClientConfig.BearerToken = pcc.Secret(scrapeJob.BearerToken)
-			oneJob.HTTPClientConfig.BearerTokenFile = scrapeJob.BearerTokenFile
-			oneJob.ServiceDiscoveryConfigs = discovery.Configs{
-				&kubernetes.SDConfig{
-					APIServer:  *mustParseURL(scrapeJob.APIServer),
-					Role:       kubernetes.Role(scrapeJob.KubernetesSdRole),
-					KubeConfig: scrapeJob.KubeConfigFilePath,
-					HTTPClientConfig: pcc.HTTPClientConfig{
-						BearerToken: pcc.Secret(scrapeJob.BearerToken),
-						//BearerTokenFile: scrapeJob.BearerTokenFile,
-						TLSConfig: pcc.TLSConfig{
-							CA:                 scrapeJob.TlsCaContent,
-							CAFile:             scrapeJob.TlsCaFilePath,
-							InsecureSkipVerify: true,
-						},
-					},
-				},
+
+			// 【核心修复 3】：K8s SD 必须赋予 DefaultHTTPClientConfig，否则会被判定为 Custom Client 从而报错
+			k8sSdConfig := &kubernetes.SDConfig{
+				Role:             kubernetes.Role(scrapeJob.KubernetesSdRole),
+				HTTPClientConfig: pcc.DefaultHTTPClientConfig,
 			}
+
+			if scrapeJob.KubeConfigFilePath != "" {
+				// 认证方式 A: 使用本地 Kubeconfig 证书
+				k8sSdConfig.KubeConfig = scrapeJob.KubeConfigFilePath
+				// 注意：这里绝对不能再对 k8sSdConfig.HTTPClientConfig 做任何赋值操作！
+			} else if scrapeJob.APIServer != "" {
+				// 认证方式 B: 使用 APIServer + Token
+				parsedUrl, err := url.Parse(scrapeJob.APIServer)
+				if err == nil {
+					k8sSdConfig.APIServer = pcc.URL{URL: parsedUrl}
+				}
+
+				// 只有在使用 APIServer 方式时，才允许配置 Custom TLS/Token
+				k8sSdConfig.HTTPClientConfig.TLSConfig = pcc.TLSConfig{
+					CA:                 scrapeJob.TlsCaContent,
+					CAFile:             scrapeJob.TlsCaFilePath,
+					InsecureSkipVerify: true,
+				}
+				if scrapeJob.BearerTokenFile != "" {
+					k8sSdConfig.HTTPClientConfig.BearerTokenFile = scrapeJob.BearerTokenFile
+				} else if scrapeJob.BearerToken != "" {
+					k8sSdConfig.HTTPClientConfig.BearerToken = pcc.Secret(scrapeJob.BearerToken)
+				}
+			}
+
+			oneJob.ServiceDiscoveryConfigs = discovery.Configs{k8sSdConfig}
 			scrapeConfigs = append(scrapeConfigs, oneJob)
 		}
 	}
 	return scrapeConfigs
-
 }
-
 func mustParseURL(u string) *pcc.URL {
 	parsed, err := url.Parse(u)
 	if err != nil {

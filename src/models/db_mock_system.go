@@ -31,9 +31,13 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		{Name: "WorkOrderCreate", Title: "工单填写", Icon: "ant-design:form-outlined", Type: "1", Show: "0", OrderNo: 25, Component: "workorder/ticket/create", Pid: 11, Path: "create"},
 		{Name: "WorkOrderSearch", Title: "我的工单", Icon: "ant-design:profile-outlined", Type: "1", Show: "1", OrderNo: 26, Component: "workorder/ticket/search", Pid: 11, Path: "search"},
 
-		{Name: "JobExec", Title: "任务执行中心", Icon: "ant-design:reconciliation-outlined", Type: "0", Show: "1", OrderNo: 30, Component: "LAYOUT", Path: "/JobExec", Redirect: "/JobExec/task/index"},
+		{Name: "JobExec", Title: "任务执行中心", Icon: "ant-design:reconciliation-outlined", Type: "0", Show: "1", OrderNo: 30, Component: "LAYOUT", Path: "/jobExec", Redirect: "/jobExec/task/index"},
 		{Name: "JobExecScript", Title: "脚本管理", Icon: "ant-design:profile-outlined", Type: "1", Show: "1", OrderNo: 31, Component: "jobExec/script/index", Pid: 18, Path: "script"},
 		{Name: "JobExecTask", Title: "任务管理", Icon: "ant-design:profile-outlined", Type: "1", Show: "1", OrderNo: 32, Component: "jobExec/task/index", Pid: 18, Path: "task"},
+
+		{Name: "PrometheusMonitor", Title: "监控中心", Icon: "ant-design:reconciliation-outlined", Type: "0", Show: "1", OrderNo: 40, Component: "LAYOUT", Path: "/monitor", Redirect: "/monitor/scrape/index"},
+		{Name: "MonitorPool", Title: "采集池管理", Icon: "ant-design:profile-outlined", Type: "1", Show: "1", OrderNo: 41, Component: "monitor/pool/index", Pid: 21, Path: "pool"},
+		{Name: "MonitorScrapeJob", Title: "采集任务管理", Icon: "ant-design:profile-outlined", Type: "1", Show: "1", OrderNo: 42, Component: "monitor/scrape/index", Pid: 21, Path: "scrape"},
 	}
 
 	apis := []*Api{
