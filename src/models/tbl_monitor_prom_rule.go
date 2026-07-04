@@ -1,8 +1,10 @@
 package models
 
 import (
+	"bigdevops/src/common"
 	"errors"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -15,11 +17,12 @@ type MonitorPromAlertRule struct {
 	Name string `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:采集任务名称"`
 
 	UserID uint
+	PoolId uint `json:"poolId,omitempty" gorm:"comment:关联哪个alertManager实例"`
 
 	Enable      int         `json:"enable" gorm:"comment:是否被开启 1正常 2禁用"`
-	SendGroupId string      `json:"sendGroupId"`
+	SendGroupId int         `json:"sendGroupId"`
 	Expr        string      `json:"expr" gorm:"type:text;comment:规则PQL"`
-	FormTime    string      `json:"formTime" gorm:"comment:持续时间 到这个时间才触发"`
+	ForTime     string      `json:"forTime" gorm:"comment:持续时间 到这个时间才触发"`
 	Labels      StringArray `json:"labels"  gorm:"comment:标签组 k=v ,severity=critical"`
 	Annotations StringArray `json:"annotations"  gorm:"comment:注解 k=v ,summary=xxx,description=xxx"`
 
@@ -27,6 +30,9 @@ type MonitorPromAlertRule struct {
 	Key            string      `json:"key" gorm:"-"` // 前端表格使用
 	PoolName       string      `json:"poolName" gorm:"-"`
 	CreateUserName string      `json:"createUserName" gorm:"-"`
+
+	LabelsM      map[string]string `json:"labelsM" gorm:"-"`
+	AnnotationsM map[string]string `json:"annotationsM" gorm:"-"`
 }
 
 func (obj *MonitorPromAlertRule) Create() error {
@@ -73,6 +79,20 @@ func GetMonitorPromAlertRuleAll() (ps []*MonitorPromAlertRule, err error) {
 	return
 }
 
+func (obj *MonitorPromAlertRule) GenMapFromKvs(kvs []string) map[string]string {
+	labelsM := map[string]string{}
+	for _, i := range kvs {
+		kvs := strings.Split(i, "=")
+		if len(kvs) != 2 {
+			continue
+		}
+		k := kvs[0]
+		v := kvs[1]
+		labelsM[k] = v
+	}
+	return labelsM
+}
+
 func (obj *MonitorPromAlertRule) FillFrontAllData() {
 	dbUser, _ := GetUserById(int(obj.UserID))
 	if dbUser != nil {
@@ -83,6 +103,10 @@ func (obj *MonitorPromAlertRule) FillFrontAllData() {
 	//	obj.PoolName = dbPool.Name
 	//}
 	obj.Key = fmt.Sprintf("%d", obj.ID)
+	obj.LabelsM = obj.GenMapFromKvs(obj.Labels)
+	// 绑定发送组标签
+	obj.LabelsM[common.MONITOR_ALERT_MATCH_KEY] = fmt.Sprintf("%d", obj.SendGroupId)
+	obj.AnnotationsM = obj.GenMapFromKvs(obj.Annotations)
 }
 
 func GetMonitorPromAlertRuleByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorPromAlertRule, err error) {

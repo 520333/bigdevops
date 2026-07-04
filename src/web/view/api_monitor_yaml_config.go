@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ==========  prometheus配置 ===========
 func fetchPrometheusMainConfigYaml(c *gin.Context) string {
 	mc := c.MustGet(common.GIN_CTX_MONITOR_CACHE).(*cache.MonitorCache)
 	ip := c.Query("ip")
@@ -26,6 +27,7 @@ func getMonitorPrometheusYamlOne(c *gin.Context) {
 	common.OkWithData(mainConfigYaml, c)
 }
 
+// ==========  alertmanager配置 ===========
 func fetchAlertManagerMainConfigYaml(c *gin.Context) string {
 	mc := c.MustGet(common.GIN_CTX_MONITOR_CACHE).(*cache.MonitorCache)
 	ip := c.Query("ip")
@@ -42,5 +44,23 @@ func downloadAlertManagerMainConfigYaml(c *gin.Context) {
 
 func getMonitorAlertManagerYamlOne(c *gin.Context) {
 	mainConfigYaml := fetchAlertManagerMainConfigYaml(c)
+	common.OkWithData(mainConfigYaml, c)
+}
+
+// ==========  rule告警规则 ===========
+func fetchPrometheusRuleMainConfigYaml(c *gin.Context) string {
+	mc := c.MustGet(common.GIN_CTX_MONITOR_CACHE).(*cache.MonitorCache)
+	ip := c.Query("ip")
+	mainConfigYaml := mc.GetPrometheusRuleConfigYamlByIp(ip)
+	return mainConfigYaml
+}
+
+func downloadPrometheusRuleMainConfigYaml(c *gin.Context) {
+	mainConfigYaml := fetchPrometheusRuleMainConfigYaml(c)
+	c.String(200, mainConfigYaml)
+}
+
+func getMonitorPrometheusRuleYamlOne(c *gin.Context) {
+	mainConfigYaml := fetchPrometheusRuleMainConfigYaml(c)
 	common.OkWithData(mainConfigYaml, c)
 }

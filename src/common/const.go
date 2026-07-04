@@ -53,6 +53,9 @@ const (
 	MONITOR_SCRAPE_JOB_SD_TYPE_HTTP = "http"
 
 	MONITOR_ALERT_MATCH_KEY = "alert_send_group"
+
+	GORM_ENABLE_RES_YES = 1
+	GORM_ENABLE_RES_NO  = 2
 )
 
 var (

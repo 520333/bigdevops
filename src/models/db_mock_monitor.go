@@ -47,7 +47,7 @@ PeO73tYJhHTq
 )
 
 func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
-	// 采集池
+	// prometheus 实例池
 	randTagKeys := []string{"dev", "test", "pre", "prod"}
 	randTagValues := []string{"project1", "project2", "project3", "project4", "project5"}
 	num := 1
@@ -67,12 +67,16 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			RemoteWriteUrl:       fmt.Sprintf("http://192.168.50.%v:8428/api/v1/write", 200),
 			RemoteTimeoutSeconds: 5,
 			UserID:               1,
+			SupperAlert:          common.GORM_ENABLE_RES_YES,
+			RemoteReadUrl:        "http://192.168.50.200:8428/api/v1/read",
+			AlertManagerUrl:      "192.168.50.200:9093",
+			RuleFilePath:         "/opt/app/prometheus/rule.yml",
 		}
 		p.CreateOne()
 	}
 	sc.Logger.Info("监控采集池数据 Mock 数据注入成功")
 
-	// 采集任务
+	// prometheus 采集任务
 	treeNodes, _ := GetStreeNodeAllLeaf()
 	treeNodeIds := []string{}
 	for _, treeNode := range treeNodes {
@@ -153,7 +157,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 		k8s.CreateOne()
 	}
 
-	// alertManager pool
+	// alertManager 实例池
 	num = 1
 	ips := []string{"192.168.50.200", "192.168.50.201"}
 	for i := 0; i < num; i++ {
@@ -184,6 +188,24 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			SendResolved:   1,
 		}
 		_ = sg.CreateOne()
+
+	}
+
+	// rule规则
+	num = 4
+	for i := 0; i < num; i++ {
+		rule := MonitorPromAlertRule{
+			Name:        fmt.Sprintf("rule-%v", i+1),
+			UserID:      1,
+			PoolId:      1,
+			Enable:      1,
+			SendGroupId: 1,
+			Expr:        `node_memory_Active_bytes{instance="192.168.50.200",job="node_exporter"} > 0`,
+			ForTime:     "30s",
+			Labels:      []string{"k1=v1", "k2=v2"},
+			Annotations: []string{"k3=v3", "k4=v4"},
+		}
+		_ = rule.CreateOne()
 
 	}
 }

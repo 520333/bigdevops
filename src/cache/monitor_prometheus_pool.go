@@ -51,6 +51,7 @@ func NewMonitorCache(sc *config.ServerConfig) *MonitorCache {
 func (mc *MonitorCache) MonitorCacheManager(ctx context.Context) error {
 	go wait.UntilWithContext(ctx, mc.GeneratePrometheusMainConfigYaml, time.Duration(mc.Sc.MonitorComputeC.RunIntervalSeconds)*time.Second)
 	go wait.UntilWithContext(ctx, mc.GenerateAlertManagerMainConfigYaml, time.Duration(mc.Sc.MonitorComputeC.RunIntervalSeconds)*time.Second)
+	go wait.UntilWithContext(ctx, mc.GeneratePrometheusRuleConfigYaml, time.Duration(mc.Sc.MonitorComputeC.RunIntervalSeconds)*time.Second)
 	<-ctx.Done()
 	mc.Sc.Logger.Info("SyncCache 收到其他任务退出信号")
 	return nil
@@ -116,51 +117,66 @@ func (mc *MonitorCache) GeneratePrometheusMainConfigYaml(ctx context.Context) {
 			out, err := yaml.Marshal(allConfig)
 
 			// ====删除一些没用的字段====
-			//var m map[string]any
-			//_ = yaml.Unmarshal(out, &m)
-			//
-			//if remoteWrites, ok := m["remote_write"].([]any); ok {
-			//	for _, rw := range remoteWrites {
-			//		if rwMap, ok := rw.(map[string]any); ok {
-			//			delete(rwMap, "follow_redirects")
-			//			delete(rwMap, "enable_http2")
-			//		}
-			//	}
-			//}
-			//if scrapeConfigs, ok := m["scrape_configs"].([]any); ok {
-			//	for _, rw := range scrapeConfigs {
-			//		if rwMap, ok := rw.(map[string]any); ok {
-			//			delete(rwMap, "enable_compression")
-			//			delete(rwMap, "enable_http2")
-			//			delete(rwMap, "follow_redirects")
-			//			delete(rwMap, "honor_timestamps")
-			//			delete(rwMap, "track_timestamps_staleness")
-			//		}
-			//	}
-			//}
-			//if scrapeConfigs, ok := m["scrape_configs"].([]any); ok {
-			//	for _, rw := range scrapeConfigs {
-			//		if scMap, ok := rw.(map[string]any); ok {
-			//			// 1. 清理 http_sd_configs
-			//			if httpSds, ok := scMap["http_sd_configs"].([]any); ok {
-			//				for _, hsd := range httpSds {
-			//					if hsdMap, ok := hsd.(map[string]any); ok {
-			//						delete(hsdMap, "enable_http2")
-			//						delete(hsdMap, "follow_redirects")
-			//						// ⚠️ 提醒：如果这里删除了 refresh_interval，Prometheus 会使用默认的 1m(60s)
-			//						// 如果你在数据库里配置了特定的刷新时间，建议保留它。确定要删的话就放开下面这行：
-			//						delete(hsdMap, "refresh_interval")
-			//					}
-			//				}
-			//			}
-			//			delete(scMap, "enable_compression")
-			//			delete(scMap, "enable_http2")
-			//			delete(scMap, "follow_redirects")
-			//			delete(scMap, "honor_timestamps")
-			//		}
-			//	}
-			//}
-			//out, _ = yaml.Marshal(m)
+			var m map[string]any
+			_ = yaml.Unmarshal(out, &m)
+
+			if remoteWrites, ok := m["remote_write"].([]any); ok {
+				for _, rw := range remoteWrites {
+					if rwMap, ok := rw.(map[string]any); ok {
+						delete(rwMap, "follow_redirects")
+						delete(rwMap, "enable_http2")
+					}
+				}
+			}
+			if remoteRead, ok := m["remote_read"].([]any); ok {
+				for _, rw := range remoteRead {
+					if rwMap, ok := rw.(map[string]any); ok {
+						delete(rwMap, "follow_redirects")
+						delete(rwMap, "enable_http2")
+					}
+				}
+			}
+			if alertingMap, ok := m["alerting"].(map[string]any); ok {
+
+				// 2. alertmanagers 是字典里的一个列表 ([]any)
+				if alertmanagers, ok := alertingMap["alertmanagers"].([]any); ok {
+
+					// 3. 遍历这个列表
+					for _, am := range alertmanagers {
+
+						// 4. 列表里的每个元素是一个字典 (map[string]any)
+						if amMap, ok := am.(map[string]any); ok {
+							// 执行删除
+							delete(amMap, "api_version")
+							delete(amMap, "enable_http2")
+							delete(amMap, "follow_redirects")
+						}
+					}
+				}
+			}
+
+			if scrapeConfigs, ok := m["scrape_configs"].([]any); ok {
+				for _, rw := range scrapeConfigs {
+					if scMap, ok := rw.(map[string]any); ok {
+						// 1. 清理 http_sd_configs
+						if httpSds, ok := scMap["http_sd_configs"].([]any); ok {
+							for _, hsd := range httpSds {
+								if hsdMap, ok := hsd.(map[string]any); ok {
+									delete(hsdMap, "enable_http2")
+									delete(hsdMap, "follow_redirects")
+								}
+							}
+						}
+						delete(scMap, "enable_compression")
+						delete(scMap, "enable_http2")
+						delete(scMap, "follow_redirects")
+						delete(scMap, "honor_timestamps")
+						delete(scMap, "track_timestamps_staleness")
+					}
+				}
+			}
+
+			out, _ = yaml.Marshal(m)
 
 			// ======================
 
@@ -266,6 +282,38 @@ func (mc *MonitorCache) GeneratePrometheusMainConfigYamlOnePool(pool *models.Mon
 	all.GlobalConfig = gc
 	all.RemoteWriteConfigs = []*ppc.RemoteWriteConfig{remoteWriteC}
 
+	// 拼接rule_files
+	all.RuleFiles = []string{pool.RuleFilePath}
+
+	// 判断 如果是支持alert池子 需要添加alert段
+	switch pool.SupperAlert {
+	case common.GORM_ENABLE_RES_YES:
+		remoteReadC := &ppc.RemoteReadConfig{
+			URL:           mustParseURL(pool.RemoteReadUrl),
+			RemoteTimeout: GenPromModeDuration(pool.RemoteTimeoutSeconds),
+		}
+		all.RemoteReadConfigs = []*ppc.RemoteReadConfig{remoteReadC}
+
+		// 拼接alert告警段
+		alt := &ppc.AlertmanagerConfig{}
+		alt.APIVersion = "v2"
+		alt.ServiceDiscoveryConfigs = []discovery.Config{
+			discovery.StaticConfig{
+				{
+					Targets: []pmodel.LabelSet{{
+						pmodel.AddressLabel: pmodel.LabelValue(pool.AlertManagerUrl),
+					}},
+				},
+			},
+		}
+
+		all.AlertingConfig = ppc.AlertingConfig{
+			AlertmanagerConfigs: []*ppc.AlertmanagerConfig{
+				alt,
+			},
+		}
+
+	}
 	return all
 }
 

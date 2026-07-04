@@ -19,6 +19,7 @@ func ConfigRouter(r *gin.Engine) {
 	noAuth := r.Group("/noAuth")
 	{
 		noAuth.GET("/downloadPrometheusMainConfigYaml", downloadPrometheusMainConfigYaml) //给prometheus使用的
+		noAuth.GET("/downloadPrometheusRuleMainConfigYaml", downloadPrometheusRuleMainConfigYaml)
 		noAuth.GET("/downloadAlertManagerMainConfigYaml", downloadAlertManagerMainConfigYaml)
 		noAuth.GET("/getLeafStreeNodeBindIps", getLeafStreeNodeBindIps)
 	}

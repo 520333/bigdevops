@@ -1,9 +1,9 @@
 cat <<EOF >/etc/cron.d/alertmanager_reload
-* * * * * root /bin/bash /opt/app/alertmanager/alertmanager_reload.sh
+* * * * * root /bin/bash /opt/app/alertmanager/reload_alertmanager_config.sh
 EOF
 
 
-cat <<"EOF" >/opt/app/alertmanager/alertmanager_reload.sh
+cat <<"EOF" >/opt/app/alertmanager/reload_alertmanager_config.sh
 #!/bin/bash
 SERVER=192.168.50.1:8080
 HOST=$(ip route get 8.8.8.8 | awk '{print $7}')
@@ -11,7 +11,7 @@ HOST=$(ip route get 8.8.8.8 | awk '{print $7}')
 RES=`curl http://${SERVER}/noAuth/downloadAlertManagerMainConfigYaml?ip=${HOST}`
 echo $RES
 
-if test -z $RES;then
+if [ -z "$RES" ]; then
   echo "downloadAlertManagerMainConfigYaml.empty"
 else
   echo "$RES" > /opt/app/alertmanager/alertmanager.yml
@@ -19,5 +19,5 @@ else
 fi
 EOF
 
-chmod +x alertmanager_reload.sh
-bash -x alertmanager_reload.sh
+chmod +x reload_alertmanager_config.sh
+bash -x reload_alertmanager_config.sh

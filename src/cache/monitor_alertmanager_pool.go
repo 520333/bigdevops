@@ -5,7 +5,6 @@ import (
 	"bigdevops/src/models"
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	ac "github.com/prometheus/alertmanager/config"
@@ -107,8 +106,8 @@ func (mc *MonitorCache) GenerateAlertManagerMainConfigYaml(ctx context.Context) 
 		}
 
 		mc.Sc.Logger.Debug("[监控模块]根据alertmanager生成主配置文件成功", zap.Any("池子", pool.Name), zap.Any("config", outStr))
-		fileName := fmt.Sprintf("alertmanager_%s.yaml", pool.Name)
-		_ = os.WriteFile(fileName, []byte(outStr), 0666)
+		//fileName := fmt.Sprintf("alertmanager_%s.yaml", pool.Name)
+		//_ = os.WriteFile(fileName, []byte(outStr), 0666)
 
 		for _, ip := range pool.AlertManagerInstanceId {
 			mainConfigMap[ip] = outStr
