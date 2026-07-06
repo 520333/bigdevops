@@ -70,9 +70,6 @@ func (mc *MonitorCache) GenerateAlertManagerMainConfigYaml(ctx context.Context) 
 								delete(webhook, "max_alerts")
 								delete(webhook, "timeout")
 								delete(webhook, "url_file")
-
-								// 如果不需要 send_resolved，也可以一起删掉
-								// delete(webhook, "send_resolved")
 							}
 						}
 					}

@@ -24,6 +24,7 @@ type User struct {
 	OpsNodes           []*StreeNode                    `json:"ops_nodes,omitempty" gorm:"many2many:ops_admins;comment:人员服务树节点"`
 	StaticReceiveUsers []*MonitorAlertManagerSendGroup `json:"staticReceiveUsers,omitempty" gorm:"many2many:static_receive_user;comment:人员告警组节点"`
 	FirstUpgradeUsers  []*MonitorAlertManagerSendGroup `json:"firstUpgradeUsers,omitempty" gorm:"many2many:first_upgrade_users;comment:人员第一告警组节点"`
+	MonitorOnDutyGroup []*MonitorOndutyGroup           `json:"monitorOnDutyGroup" gorm:"many2many:monitor_onduty_users;comment:值班人列表"`
 
 	Processes   []WorkOrderProcess
 	FormDesigns []WorkOrderFormDesign

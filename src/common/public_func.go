@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
@@ -86,4 +87,8 @@ func WriteFileWithString(filePath string, content string) error {
 func ReadFile(path string) (string, error) {
 	res, err := os.ReadFile(path)
 	return string(res), err
+}
+
+func GetDayAgoDate(num int) string {
+	return time.Now().Add(time.Duration(num) * time.Hour * 24).Format("2006-01-02")
 }

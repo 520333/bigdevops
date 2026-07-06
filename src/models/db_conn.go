@@ -109,6 +109,10 @@ func MigrateTable() error {
 
 		&MonitorAlertManagerPool{},
 		&MonitorAlertManagerSendGroup{},
+
+		// 值班
+		&MonitorOndutyGroup{},
+		&MonitorOndutyHistory{},
 	)
 }
 

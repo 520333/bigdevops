@@ -160,7 +160,18 @@ func main() {
 			logger.Info("计划任务-监控模块-关闭")
 		}
 	}
+	// 值班
+	{
+		group.Go(func() error {
+			logger.Info("计划任务-监控值班历史设置-启动")
+			err := cm.FullFillOnDutyHistoryManager(ctxAll)
+			if err != nil {
+				logger.Error("计划任务-监控值班历史设置-报错", zap.Error(err))
+			}
+			return err
+		})
 
+	}
 	// GIN-WEB
 	group.Go(func() error {
 		errChan := make(chan error, 1)

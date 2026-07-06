@@ -22,6 +22,7 @@ func ConfigRouter(r *gin.Engine) {
 		noAuth.GET("/downloadPrometheusRuleMainConfigYaml", downloadPrometheusRuleMainConfigYaml)
 		noAuth.GET("/downloadAlertManagerMainConfigYaml", downloadAlertManagerMainConfigYaml)
 		noAuth.GET("/getLeafStreeNodeBindIps", getLeafStreeNodeBindIps)
+		noAuth.GET("/getMonitorOndutyGroupFuturePlan/:id", getMonitorOndutyGroupFuturePlan)
 	}
 
 	// 以下开始需要认证

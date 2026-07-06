@@ -72,7 +72,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			AlertManagerUrl:      "192.168.50.200:9093",
 			RuleFilePath:         "/opt/app/prometheus/rule.yml",
 		}
-		p.CreateOne()
+		_ = p.CreateOne()
 	}
 	sc.Logger.Info("监控采集池数据 Mock 数据注入成功")
 
@@ -107,8 +107,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			TreeNodeIds:          []string{treeNodeIds[0]},
 			PoolId:               1,
 		}
-		http.CreateOne()
-
+		_ = http.CreateOne()
 	}
 	// k8s采集job
 	for i := 0; i < 1; i++ {
@@ -173,7 +172,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			Receiver:               "default",
 			GroupBy:                []string{"alertname"},
 		}
-		r.CreateOne()
+		_ = r.CreateOne()
 	}
 
 	// 创建发送组
@@ -216,5 +215,20 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			Annotations: []string{"a3=v3", "a4=v4"},
 		}
 		_ = rule.CreateOne()
+	}
+
+	// 值班组
+	users, _ := GetUserAll()
+	for i := 0; i < num; i++ {
+		dutyGroup := &MonitorOndutyGroup{
+			Name:    fmt.Sprintf("mock-dutyGroup-%v", i+1),
+			UserID:  1,
+			Members: users,
+
+			Key:            "",
+			PoolName:       "",
+			CreateUserName: "",
+		}
+		_ = dutyGroup.CreateOne()
 	}
 }
