@@ -84,7 +84,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 		treeNodeIds = append(treeNodeIds, fmt.Sprintf("%d", treeNode.ID))
 	}
 
-	exporterNames := []string{"kafka", "redis", "mysql"}
+	exporterNames := []string{"node", "redis", "mysql"}
 
 	num = 3
 	for i := 0; i < num; i++ {
@@ -94,7 +94,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 		}
 		k := i % len(exporterNames)
 		http := MonitorScrapeJob{
-			Name:                 fmt.Sprintf("%v-exporter-%v", exporterNames[k], i+1),
+			Name:                 fmt.Sprintf("%v_exporter_%v", exporterNames[k], i+1),
 			UserID:               1,
 			Enable:               1,
 			ServiceDiscoveryType: common.MONITOR_SCRAPE_JOB_SD_TYPE_HTTP,
@@ -104,12 +104,13 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			ScrapeTimeout:        5,
 			RefreshInterval:      30,
 			Port:                 9200,
-			TreeNodeIds:          []string{treeNodeIds[j]},
+			TreeNodeIds:          []string{treeNodeIds[0]},
 			PoolId:               1,
 		}
 		http.CreateOne()
 
 	}
+	// k8s采集job
 	for i := 0; i < 1; i++ {
 		//k8s := MonitorScrapeJob{
 		//	Name:                 fmt.Sprintf("k8s-%v", i+1),
@@ -161,7 +162,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 	num = 1
 	ips := []string{"192.168.50.200", "192.168.50.201"}
 	for i := 0; i < num; i++ {
-		p := MonitorAlertManagerPool{
+		r := MonitorAlertManagerPool{
 			Name:                   fmt.Sprintf("online-%v", i+1),
 			AlertManagerInstanceId: ips,
 			UserID:                 1,
@@ -169,10 +170,10 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			GroupWait:              "15s",
 			GroupInterval:          "20s",
 			RepeatInterval:         "30s",
-			Receiver:               "sre-1",
+			Receiver:               "default",
 			GroupBy:                []string{"alertname"},
 		}
-		p.CreateOne()
+		r.CreateOne()
 	}
 
 	// 创建发送组
@@ -192,20 +193,28 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 	}
 
 	// rule规则
-	num = 4
+	metricsNames := []string{
+		`node_memory_Active_bytes`,
+		`node_boot_time_seconds`,
+		`node_uname_info`,
+	}
+	num = 3
 	for i := 0; i < num; i++ {
+		mIndex := i
+		if mIndex >= len(metricsNames) {
+			mIndex = len(metricsNames) - 1
+		}
 		rule := MonitorPromAlertRule{
 			Name:        fmt.Sprintf("rule-%v", i+1),
 			UserID:      1,
 			PoolId:      1,
 			Enable:      1,
 			SendGroupId: 1,
-			Expr:        `node_memory_Active_bytes{instance="192.168.50.200",job="node_exporter"} > 0`,
+			Expr:        fmt.Sprintf(`%s{job="node_exporter_1"} > 0`, metricsNames[mIndex]),
 			ForTime:     "30s",
-			Labels:      []string{"k1=v1", "k2=v2"},
-			Annotations: []string{"k3=v3", "k4=v4"},
+			Labels:      []string{"l1=v1", "l2=v2"},
+			Annotations: []string{"a3=v3", "a4=v4"},
 		}
 		_ = rule.CreateOne()
-
 	}
 }

@@ -199,13 +199,14 @@ func (mc *MonitorCache) GeneratePrometheusMainConfigYaml(ctx context.Context) {
 					outStr = strings.Replace(outStr, "bearer_token: <secret>", fmt.Sprintf(`bearer_token: "%s"`, job.BearerToken), replaceCount)
 				}
 			}
+			mc.Sc.Logger.Info("[监控模块]根据采集池配置生成prometheus主配置文件成功", zap.String("采集池", pool.Name), zap.Any("ip", ip))
 
-			mc.Sc.Logger.Info("[监控模块]根据采集池配置生成prometheus主配置文件成功", zap.String("采集池", pool.Name), zap.Any("配置", outStr))
 			//fileName := fmt.Sprintf("pool_%v.yml", pool.Name)
 			//_ = os.WriteFile(fileName, out, 0666)
 			//mainConfigMap[ip] = string(out)
 			mainConfigMap[ip] = outStr
 		}
+
 	}
 
 	mc.Lock()
