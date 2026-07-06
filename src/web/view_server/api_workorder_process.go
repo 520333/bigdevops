@@ -1,4 +1,4 @@
-package view
+package view_server
 
 import (
 	"bigdevops/src/common"

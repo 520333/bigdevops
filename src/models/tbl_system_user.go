@@ -11,23 +11,23 @@ import (
 // User 基于前端依赖的user 字段
 type User struct {
 	Model
-	UserId   int    `json:"userId" gorm:"comment:用户id"`
+	UserId   int    `json:"userId,omitempty" gorm:"comment:用户id"`
 	Username string `json:"userName" gorm:"type:varchar(100);uniqueIndex;comment:用户登录名"`
 	Password string `json:"-" gorm:"comment:用户登录密码"`
 	RealName string `json:"realName" gorm:"comment:用户昵称"`
 	//Avatar   string  `json:"avatar" gorm:"comment:头像"`
-	Desc     string `json:"desc" gorm:"comment:用户描述"`
+	Desc     string `json:"desc,omitempty" gorm:"comment:用户描述"`
 	HomePath string `json:"homePath" gorm:"comment:登录后跳转地址"`
 	Enable   int    `json:"enable" gorm:"default:1;comment:用户是否被冻结 1正常 2冻结"`
 	//Roles    []*Role `json:"roles" gorm:"many2many:user_roles"`
-	Roles              []*Role                         `json:"roles" gorm:"many2many:user_roles"`
+	Roles              []*Role                         `json:"roles,omitempty" gorm:"many2many:user_roles"`
 	OpsNodes           []*StreeNode                    `json:"ops_nodes,omitempty" gorm:"many2many:ops_admins;comment:人员服务树节点"`
 	StaticReceiveUsers []*MonitorAlertManagerSendGroup `json:"staticReceiveUsers,omitempty" gorm:"many2many:static_receive_user;comment:人员告警组节点"`
 	FirstUpgradeUsers  []*MonitorAlertManagerSendGroup `json:"firstUpgradeUsers,omitempty" gorm:"many2many:first_upgrade_users;comment:人员第一告警组节点"`
-	MonitorOnDutyGroup []*MonitorOndutyGroup           `json:"monitorOnDutyGroup" gorm:"many2many:monitor_onduty_users;comment:值班人列表"`
+	MonitorOnDutyGroup []*MonitorOndutyGroup           `json:"monitorOnDutyGroup,omitempty" gorm:"many2many:monitor_onduty_users;comment:值班人列表"`
 
-	Processes   []WorkOrderProcess
-	FormDesigns []WorkOrderFormDesign
+	Processes   []WorkOrderProcess    `json:"-"`
+	FormDesigns []WorkOrderFormDesign `json:"-"`
 
 	RolesFront []string `json:"rolesFront,omitempty" gorm:"-"`
 }

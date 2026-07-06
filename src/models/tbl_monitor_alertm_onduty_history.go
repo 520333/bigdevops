@@ -14,9 +14,9 @@ type MonitorOndutyHistory struct {
 	Model
 	//Name string `json:"name,omitempty" validate:"required,min=1,max=50" gorm:"uniqueIndex;type:varchar(100);comment:历史"`
 
-	OndutyGroupId uint
+	OndutyGroupId uint `json:"ondutyGroupId" gorm:"uniqueIndex:group_id_date;comment:名称"`
 
-	DateString   string `json:"dateString" gorm:"comment:哪一天"`
+	DateString   string `json:"dateString" gorm:"uniqueIndex:group_id_date;type:varchar(50);comment:哪一天"`
 	OndutyUserId uint   `json:"onDutyUserId" gorm:"comment:谁值班"`
 
 	Key            string `json:"key,omitempty" gorm:"-"` // 前端表格使用
@@ -69,7 +69,7 @@ func (obj *MonitorOndutyHistory) FillFrontAllData() {
 }
 
 func GetMonitorOnDutyHistoryByOnDutyGroupIdAndTimeRange(onDutyGroupId int, startDay, endDay string) (objs []*MonitorOndutyHistory, err error) {
-	err = Db.Where("onduty_group_id = ? AND created_at >= ? AND created_at <= ?", onDutyGroupId, startDay, endDay).Find(&objs).Error
+	err = Db.Where("onduty_group_id = ? AND date_string >= ? AND date_string <= ?", onDutyGroupId, startDay, endDay).Find(&objs).Error
 	return
 }
 

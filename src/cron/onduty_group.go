@@ -32,7 +32,7 @@ func (cm *CronManager) FullFillOnDutyHistory(ctx context.Context) {
 func (cm *CronManager) FullFillOnDutyHistoryOnGroup(group *models.MonitorOndutyGroup) {
 	toDayString := time.Now().Format("2006-01-02")
 	dbHistoryToday, _ := models.GetMonitorOnDutyHistoryByOnDutyGroupIdAndDay(group.ID, toDayString)
-	if dbHistoryToday.ID > 0 {
+	if dbHistoryToday.OndutyUserId > 0 {
 		return
 	}
 	dbChange, _ := models.GetMonitorOndutyChangeByOnDutyGroupIdAndDay(group.ID, toDayString)

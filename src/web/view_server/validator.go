@@ -1,4 +1,4 @@
-package view
+package view_server
 
 import (
 	"github.com/go-playground/locales/zh"

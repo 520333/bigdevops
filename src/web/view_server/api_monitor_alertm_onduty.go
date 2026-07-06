@@ -1,4 +1,4 @@
-package view
+package view_server
 
 import (
 	"bigdevops/src/common"
@@ -163,15 +163,15 @@ func getMonitorOndutyGroupFuturePlan(c *gin.Context) {
 
 	}
 
-	yesterday := common.GetDayAgoDate(-1)
-	yesterdayHistory, _ := models.GetMonitorOnDutyHistoryByOnDutyGroupIdAndDay(uint(intVar), yesterday)
-
+	toDayHistory, _ := models.GetMonitorOnDutyHistoryByOnDutyGroupIdAndDay(uint(intVar), todayDate)
 	onDutyUsers := dbObj.Members
-	var yesterdayUserId uint
-	if yesterdayHistory.ID > 0 {
-		yesterdayUserId = yesterdayHistory.ID
+
+	//var yesterdayUserId uint
+	var toDayUserId uint
+	if toDayHistory.OndutyUserId > 0 {
+		toDayUserId = toDayHistory.OndutyUserId
 	} else {
-		yesterdayUserId = onDutyUsers[0].ID
+		toDayUserId = onDutyUsers[0].ID
 	}
 
 	if len(onDutyUsers) == 0 {
@@ -179,68 +179,60 @@ func getMonitorOndutyGroupFuturePlan(c *gin.Context) {
 		return
 	}
 
+	// 1. 计算需要预测的未来天数
 	toDay, _ := time.Parse("2006-01-02", time.Now().Format("2006-01-02")) //今天的日期
-	futureNum := int(endDayTime.Sub(toDay).Hours()/24) + 1
-	plans := []*models.User{}
 
-	// 第一轮填充的索引
+	futureNum := int(endDayTime.Sub(toDay).Hours() / 24)
+	if futureNum < 0 {
+		futureNum = 0 // 🚀 修复负数导致越界崩溃的 Bug
+	}
+
+	// 2. 找到明天的起始轮转索引
 	firstLeftNum := 0
-	for index, user := range onDutyUsers {
-		user := user
-		if user.ID == yesterdayUserId {
-			firstLeftNum = index + 1
-			break
+	if toDayHistory != nil && toDayHistory.OndutyUserId > 0 {
+		for index, user := range onDutyUsers {
+			if user.ID == toDayUserId {
+				firstLeftNum = (index + 1) % len(onDutyUsers) // 🚀 自动轮转到下一个人
+				break
+			}
 		}
 	}
 
-	start := time.Now()
-	finalRes := []string{}
+	// 3. 用一个极简的 for 循环推演未来，抛弃容易报错的切片截取和倍数余数计算
+	start := toDay.Add(24 * time.Hour) // 因为 history 已经查到了今天，预测从明天开始
+	currentIndex := firstLeftNum
 
-	if len(onDutyUsers)-firstLeftNum > futureNum {
-		plans = append(plans, onDutyUsers[firstLeftNum:firstLeftNum+futureNum]...)
-		for _, plan := range plans {
-			day := start.Format("2006-01-02")
-			finalRes = append(finalRes, fmt.Sprintf("日期:%v 值班人:%v", day, plan.Username))
-			tmpRes = append(tmpRes, OnDutyOne{
-				Date: day,
-				User: plan,
-			})
-			start = start.Add(1 * time.Hour * 24)
-
-		}
-
-		common.OkWithData(tmpRes, c)
-		return
-	}
-
-	plans = append(plans, onDutyUsers[firstLeftNum:]...)
-	toFillNum := futureNum - len(plans)
-	beishu := toFillNum / len(onDutyUsers)
-	yushu := toFillNum % len(onDutyUsers)
-	for i := 0; i < beishu; i++ {
-		plans = append(plans, onDutyUsers...)
-	}
-	for i := 0; i < yushu; i++ {
-		plans = append(plans, onDutyUsers[i])
-	}
-	for _, plan := range plans {
+	for i := 0; i < futureNum; i++ {
 		day := start.Format("2006-01-02")
-		start = start.Add(1 * time.Hour * 24)
-		finalRes = append(finalRes, fmt.Sprintf("日期:%v 值班人:%v", day, plan.Username))
+		planUser := onDutyUsers[currentIndex]
+
 		tmpRes = append(tmpRes, OnDutyOne{
 			Date: day,
-			User: plan,
+			User: planUser,
 		})
+
+		start = start.Add(24 * time.Hour)
+		currentIndex = (currentIndex + 1) % len(onDutyUsers) // 索引步进并自动取模
 	}
 
+	// 4. 统一执行终极过滤（剔除 startDay 之前，以及 endDay 之后的脏数据）
 	ffRes := []OnDutyOne{}
 	for _, node := range tmpRes {
 		thisDateTime, _ := time.Parse("2006-01-02", node.Date)
+
+		// 如果这条数据的日期 < 搜索的开始日期，跳过
 		if thisDateTime.Unix() < startDayTime.Unix() {
 			continue
 		}
+		// 如果这条数据的日期 > 搜索的结束日期，跳过
+		if thisDateTime.Unix() > endDayTime.Unix() {
+			continue
+		}
+
 		ffRes = append(ffRes, node)
 	}
+
+	// 🚀 这里是唯一的出口，确保所有数据都经过了上面的时间过滤
 	common.OkWithData(ffRes, c)
 }
 

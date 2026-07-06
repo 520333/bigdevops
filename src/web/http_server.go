@@ -5,7 +5,7 @@ import (
 	"bigdevops/src/common"
 	"bigdevops/src/config"
 	"bigdevops/src/web/middleware"
-	"bigdevops/src/web/view"
+	"bigdevops/src/web/view_server"
 	"net/http"
 	"time"
 
@@ -15,9 +15,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// StartGin 启动gin
-// view 路由放专门目录下
-func StartGin(sc *config.ServerConfig, mc *cache.MonitorCache) error {
+// ServerStartGin 启动gin
+// view_server 路由放专门目录下
+func ServerStartGin(sc *config.ServerConfig, mc *cache.MonitorCache) error {
 	// 初始化引擎
 	gin.SetMode(gin.ReleaseMode)
 	gin.DisableConsoleColor()
@@ -41,7 +41,7 @@ func StartGin(sc *config.ServerConfig, mc *cache.MonitorCache) error {
 	p.Use(r)
 
 	// 配置路由
-	view.ConfigRouter(r)
+	view_server.ConfigRouter(r)
 	s := &http.Server{
 		Addr:           sc.HttpAddr,
 		Handler:        r,

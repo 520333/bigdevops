@@ -1,6 +1,7 @@
 package models
 
 import (
+	"bigdevops/src/common"
 	"errors"
 	"fmt"
 
@@ -38,6 +39,19 @@ func (obj *MonitorOndutyGroup) DeleteOne() error {
 
 func (obj *MonitorOndutyGroup) CreateOne() error {
 	return Db.Create(obj).Error
+}
+
+func (obj *MonitorOndutyGroup) FillToDayOndutyUser() {
+	toDayString := common.GetDayAgoDate(0)
+	dbHistoryToday, _ := GetMonitorOnDutyHistoryByOnDutyGroupIdAndDay(obj.ID, toDayString)
+	if dbHistoryToday.OndutyUserId > 0 {
+		user, err := GetUserById(int(dbHistoryToday.OndutyUserId))
+		if err != nil {
+			obj.ToDayOnDutyUser = user
+		}
+	} else {
+		obj.ToDayOnDutyUser = obj.Members[0]
+	}
 }
 
 func (obj *MonitorOndutyGroup) UpdateOne() error {

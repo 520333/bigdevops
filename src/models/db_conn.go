@@ -20,8 +20,8 @@ var (
 	CasbinEnforcer *casbin.Enforcer
 )
 
-func InitDb(sc *config.ServerConfig) error {
-	db, err := gorm.Open(mysql.Open(sc.MysqlC.DSN), &gorm.Config{
+func InitDb(dsn string) error {
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
@@ -113,6 +113,7 @@ func MigrateTable() error {
 		// 值班
 		&MonitorOndutyGroup{},
 		&MonitorOndutyHistory{},
+		&MonitorOndutyChange{},
 	)
 }
 

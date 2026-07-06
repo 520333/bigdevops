@@ -71,12 +71,12 @@ func (obj *MonitorOndutyChange) FillFrontAllData() {
 }
 
 func GetMonitorOndutyChangeByOnDutyGroupIdAndTimeRange(onDutyGroupId int, startDay, endDay string) (objs []*MonitorOndutyChange, err error) {
-	err = Db.Where("onduty_group_id = ? AND created_at >= ? AND created_at <= ?", onDutyGroupId, startDay, endDay).Find(&objs).Error
+	err = Db.Where("onduty_group_id = ? AND date_string >= ? AND created_at < ?", onDutyGroupId, startDay, endDay).Find(&objs).Error
 	return
 }
 
 func GetMonitorOndutyChangeByOnDutyGroupIdAndDay(onDutyGroupId uint, dateString string) (obj *MonitorOndutyChange, err error) {
-	err = Db.Where("onduty_group_id = ? AND date_string ?", onDutyGroupId, dateString).Find(&obj).Error
+	err = Db.Where("onduty_group_id = ? AND date_string = ?", onDutyGroupId, dateString).Find(&obj).Error
 	return
 }
 func GetMonitorOndutyChangeByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorOndutyChange, err error) {

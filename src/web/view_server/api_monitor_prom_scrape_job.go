@@ -1,4 +1,4 @@
-package view
+package view_server
 
 import (
 	"bigdevops/src/common"
@@ -11,17 +11,21 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 )
 
-func getMonitorScrapePoolList(c *gin.Context) {
+func getMonitorScrapeJobList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
 	searchUserID := c.DefaultQuery("UserID", "")
+	searchEnable := c.DefaultQuery("enable", "")
+
 	searchUserIDInt, _ := strconv.Atoi(searchUserID)
 	searchTitle := c.DefaultQuery("name", "")
+	searchEnableInt, _ := strconv.Atoi(searchEnable)
 	searchCreateUserName := c.DefaultQuery("createUserName", "")
 
 	offset := 0
@@ -30,16 +34,19 @@ func getMonitorScrapePoolList(c *gin.Context) {
 		offset = (currentPage - 1) * limit
 	}
 
-	objs, err := models.GetMonitorScrapePoolAll()
+	objs, err := models.GetMonitorScrapeJobAll()
 	if err != nil {
-		sc.Logger.Error("去数据库中拿所有的采集池执行错误", zap.Error(err))
-		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的采集池执行错误：%v", err.Error()), c)
+		sc.Logger.Error("去数据库中拿所有的采集任务执行错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的采集任务执行错误：%v", err.Error()), c)
 		return
 	}
 	allIds := []int{}
 
 	for _, obj := range objs {
 		if searchUserID != "" && int(obj.UserID) != searchUserIDInt {
+			continue
+		}
+		if searchEnable != "" && obj.Enable != searchEnableInt {
 			continue
 		}
 
@@ -61,17 +68,17 @@ func getMonitorScrapePoolList(c *gin.Context) {
 	// 如果过滤后没有数据，直接返回空列表
 	if len(allIds) == 0 {
 		common.OkWithDetailed(gin.H{
-			"items": []models.MonitorScrapePool{},
+			"items": []models.MonitorScrapeJob{},
 			"total": 0,
 		}, "ok", c)
 		return
 	}
 
 	// 根据过滤后的 ID 进行分页查询
-	pagedObjs, err := models.GetMonitorScrapePoolByIdsWithLimitOffset(allIds, limit, offset)
+	pagedObjs, err := models.GetMonitorScrapeJobByIdsWithLimitOffset(allIds, limit, offset)
 	if err != nil {
-		sc.Logger.Error("limit-offset 去数据库中拿所有的采集池执行错误", zap.Error(err))
-		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的采集池执行错误：%v", err.Error()), c)
+		sc.Logger.Error("limit-offset 去数据库中拿所有的采集任务执行错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的采集任务执行错误：%v", err.Error()), c)
 		return
 	}
 
@@ -86,15 +93,15 @@ func getMonitorScrapePoolList(c *gin.Context) {
 	}, "ok", c)
 }
 
-func getMonitorScrapePoolOne(c *gin.Context) {
+func getMonitorScrapeJobOne(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
-	sc.Logger.Info("采集池实例", zap.Any("id", id))
+	sc.Logger.Info("采集任务实例", zap.Any("id", id))
 	intVar, _ := strconv.Atoi(id)
 
 	dbObj, err := models.GetJobTaskById(intVar)
 	if err != nil {
-		sc.Logger.Error("根据id找采集池实例错误", zap.Any("采集池实例", id), zap.Error(err))
+		sc.Logger.Error("根据id找采集任务实例错误", zap.Any("采集任务实例", id), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
@@ -103,34 +110,36 @@ func getMonitorScrapePoolOne(c *gin.Context) {
 	common.OkWithDetailed(dbObj, "ok", c)
 }
 
-func createMonitorScrapePool(c *gin.Context) {
+func createMonitorScrapeJob(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
-	var reqObj models.MonitorScrapePool
+	var reqObj models.MonitorScrapeJob
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
-		sc.Logger.Error("解析新增采集池执行请求失败", zap.Error(err))
+		sc.Logger.Error("解析新增采集任务执行请求失败", zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	err = reqObj.ValidateRelabelConfigsYamlString()
+	if err != nil {
+		msg := "[监控模块]新增采集任务-解析relabelConfig错误"
+		sc.Logger.Error(msg, zap.Any("采集池", reqObj.Name), zap.Any("yaml", reqObj.RelabelConfigsYamlString), zap.Error(err))
+		common.FailWithMessage(msg, c)
 		return
 	}
 
 	// 获取当前用户ID
 	userName := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)
 	dbUser, err := models.GetUserByUsername(userName)
-	if reqObj.CheckInstanceIpExists() {
-		msg := "ip和其他采集池重复"
-		sc.Logger.Error(msg, zap.Error(err))
-		common.FailWithMessage(msg, c)
-		return
-	}
+
 	if err == nil && dbUser != nil {
 		reqObj.UserID = dbUser.ID
 	}
-	reqObj.FillDefaultData()
 	// 存入数据库
 	err = reqObj.CreateOne()
 	if err != nil {
-		sc.Logger.Error("新增采集池执行数据库失败", zap.Error(err))
+		sc.Logger.Error("新增采集任务执行数据库失败", zap.Error(err))
 		common.FailWithMessage("存入数据库失败: "+err.Error(), c)
 		return
 	}
@@ -138,34 +147,34 @@ func createMonitorScrapePool(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
-func updateMonitorScrapePool(c *gin.Context) {
+func updateMonitorScrapeJob(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
 	// 🚀 致命修复：同上
-	var reqObj models.MonitorScrapePool
+	var reqObj models.MonitorScrapeJob
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
-		sc.Logger.Error("解析更新采集池请求失败", zap.Error(err))
+		sc.Logger.Error("解析更新采集任务请求失败", zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
-	if reqObj.CheckInstanceIpExists() {
-		msg := "ip和其他采集池重复"
-		sc.Logger.Error(msg, zap.Error(err))
+	// 检查是否存在
+	_, err = models.GetMonitorScrapeJobById(int(reqObj.ID))
+	if err != nil {
+		common.FailWithMessage("采集任务不存在", c)
+		return
+	}
+	err = reqObj.ValidateRelabelConfigsYamlString()
+	if err != nil {
+		msg := "[监控模块]新增采集任务-解析relabelConfig错误"
+		sc.Logger.Error(msg, zap.Any("采集池", reqObj.Name), zap.Any("yaml", reqObj.RelabelConfigsYamlString), zap.Error(err))
 		common.FailWithMessage(msg, c)
 		return
 	}
-	// 检查是否存在
-	_, err = models.GetMonitorScrapePoolById(int(reqObj.ID))
-	if err != nil {
-		common.FailWithMessage("采集池不存在", c)
-		return
-	}
-
 	// 更新
 	err = reqObj.UpdateOne()
 	if err != nil {
-		sc.Logger.Error("更新采集池执行错误", zap.Error(err))
+		sc.Logger.Error("更新采集任务执行错误", zap.Error(err))
 		common.FailWithMessage("更新失败: "+err.Error(), c)
 		return
 	}
@@ -173,20 +182,68 @@ func updateMonitorScrapePool(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
-func deleteMonitorScrapePool(c *gin.Context) {
+// setScrapeJobEnableReq 请求参数结构体
+type setScrapeJobEnableReq struct {
+	Id     uint `json:"id" validate:"required"`
+	Enable int  `json:"enable" validate:"required,oneof=1 2"` // 假设 1=启用 2=禁用
+}
+
+// setScrapeJobStatus 设置采集任务的启用/禁用状态
+func setScrapeJobStatus(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+
+	var reqObj setScrapeJobEnableReq
+	err := c.ShouldBindJSON(&reqObj)
+	if err != nil {
+		sc.Logger.Error("解析修改采集任务状态请求失败", zap.Any("req", reqObj), zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	// 结构体数据校验
+	err = validate.Struct(&reqObj)
+	if err != nil {
+		if errors, ok := err.(validator.ValidationErrors); ok {
+			common.ReqBadFailWithDetailed(errors.Translate(trans), "请求出错", c)
+			return
+		}
+	}
+
+	// 1. 查询数据库中原有的记录
+	dbJob, err := models.GetMonitorScrapeJobById(int(reqObj.Id))
+	if err != nil {
+		sc.Logger.Error("根据id查找采集任务错误", zap.Any("req", reqObj), zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	// 2. 内存中修改状态
+	dbJob.Enable = reqObj.Enable
+
+	// 3. 执行更新
+	err = dbJob.UpdateEnable()
+	if err != nil {
+		sc.Logger.Error("更新采集任务状态错误", zap.Any("req", reqObj), zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	common.OkWithMessage("状态修改成功", c)
+}
+func deleteMonitorScrapeJob(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
 	intVar, _ := strconv.Atoi(id)
 
-	dbObj, err := models.GetMonitorScrapePoolById(intVar)
+	dbObj, err := models.GetMonitorScrapeJobById(intVar)
 	if err != nil {
-		common.FailWithMessage("采集池不存在", c)
+		common.FailWithMessage("采集任务不存在", c)
 		return
 	}
 
 	err = dbObj.DeleteOne()
 	if err != nil {
-		sc.Logger.Error("删除采集池执行错误", zap.Error(err))
+		sc.Logger.Error("删除采集任务执行错误", zap.Error(err))
 		common.FailWithMessage("删除失败: "+err.Error(), c)
 		return
 	}
@@ -194,22 +251,22 @@ func deleteMonitorScrapePool(c *gin.Context) {
 	common.OkWithMessage("删除成功", c)
 }
 
-func actionMonitorScrapePoolOne(c *gin.Context) {
+func actionMonitorScrapeJobOne(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
-	sc.Logger.Info("采集池动作", zap.Any("id", id))
+	sc.Logger.Info("采集任务动作", zap.Any("id", id))
 	intVar, _ := strconv.Atoi(id)
 
 	dbObj, err := models.GetJobTaskById(intVar)
 	if err != nil {
-		sc.Logger.Error("根据id找采集池执行错误", zap.Any("采集池执行", id), zap.Error(err))
+		sc.Logger.Error("根据id找采集任务执行错误", zap.Any("采集任务执行", id), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
 	action := c.Query("action")
 	nextStatus, exist := common.JOB_ACTION_NEXT_STATUS_MAP[action]
 	if !exist {
-		sc.Logger.Error("传入的动作错误", zap.Any("采集池执行", id), zap.Error(err))
+		sc.Logger.Error("传入的动作错误", zap.Any("采集任务执行", id), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
@@ -219,7 +276,7 @@ func actionMonitorScrapePoolOne(c *gin.Context) {
 	}
 
 	// ==========================================
-	// 💡 补充记录采集池流 到 ActualFlowData json
+	// 💡 补充记录采集任务流 到 ActualFlowData json
 	// ==========================================
 
 	// 1. 获取当前执行操作的用户
@@ -232,8 +289,8 @@ func actionMonitorScrapePoolOne(c *gin.Context) {
 	actionNameMap := map[string]string{
 		common.AGENT_TASK_ACTION_START:  "手动下发执行",
 		common.AGENT_TASK_ACTION_KILL:   "强行Kill终止",
-		common.AGENT_TASK_ACTION_PAUSE:  "手动暂停采集池",
-		common.AGENT_TASK_ACTION_RESUME: "恢复执行采集池",
+		common.AGENT_TASK_ACTION_PAUSE:  "手动暂停采集任务",
+		common.AGENT_TASK_ACTION_RESUME: "恢复执行采集任务",
 		common.AGENT_TASK_ACTION_STOP:   "手动标记停止",
 	}
 	actionName := actionNameMap[action]
@@ -268,12 +325,12 @@ func actionMonitorScrapePoolOne(c *gin.Context) {
 
 	// ==========================================
 
-	sc.Logger.Info("采集池动作", zap.Any("id", id), zap.Any("动作", action), zap.Any("nextStatus", nextStatus))
+	sc.Logger.Info("采集任务动作", zap.Any("id", id), zap.Any("动作", action), zap.Any("nextStatus", nextStatus))
 
 	dbObj.Status = nextStatus
 	err = dbObj.UpdateOne()
 	if err != nil {
-		sc.Logger.Error("更新采集池执行错误", zap.Any("采集池执行", id), zap.Error(err))
+		sc.Logger.Error("更新采集任务执行错误", zap.Any("采集任务执行", id), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}

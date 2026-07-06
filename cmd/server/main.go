@@ -49,7 +49,7 @@ func main() {
 	//}
 
 	// 初始化数据库
-	err = models.InitDb(sc)
+	err = models.InitDb(sc.MysqlC.DSN)
 	if err != nil {
 		logger.Error("初始化gorm-db错误", zap.String("错误", err.Error()))
 		return
@@ -176,7 +176,7 @@ func main() {
 	group.Go(func() error {
 		errChan := make(chan error, 1)
 		go func() {
-			errChan <- web.StartGin(sc, mc)
+			errChan <- web.ServerStartGin(sc, mc)
 		}()
 		logger.Info("[web启动成功]")
 		select {
@@ -206,5 +206,5 @@ func main() {
 	})
 	_ = group.Wait()
 
-	//err = web.StartGin(sc)
+	//err = web.ServerStartGin(sc)
 }

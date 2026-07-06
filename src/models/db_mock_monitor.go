@@ -231,4 +231,18 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 		}
 		_ = dutyGroup.CreateOne()
 	}
+	num = 10
+	ago := -30
+	users, _ = GetUserAll()
+	for i := 0; i < num; i++ {
+		startDay := common.GetDayAgoDate(ago)
+		userId := users[i%len(users)].ID
+		history := MonitorOndutyHistory{
+			OndutyGroupId: 1,
+			DateString:    startDay,
+			OndutyUserId:  userId,
+		}
+		_ = history.CreateOne()
+		ago += 1
+	}
 }
