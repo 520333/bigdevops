@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bigdevops/src/alert_webhook/cron"
 	"bigdevops/src/common"
 	"bigdevops/src/config"
 	"bigdevops/src/models"
@@ -10,6 +11,7 @@ import (
 	"fmt"
 
 	esl "github.com/ning1875/errgroup-signal/signal"
+	"github.com/prometheus/alertmanager/template"
 	"go.uber.org/zap"
 )
 
@@ -40,8 +42,13 @@ func main() {
 		return
 	}
 	logger.Info("初始化gorm-db成功")
-	user, err := models.GetUserAll()
-	fmt.Println(user, err)
+
+	alertReceiveQ := make(chan template.Alert)
+
+	// new cache
+
+	cacheHasSynced := make(chan struct{})
+	ac := cron.NewAlertCache(sc, alertReceiveQ, cacheHasSynced)
 
 	group, stopChan := esl.SetupStopSignalContext()
 	ctxAll, cancelAll := context.WithCancel(context.Background())
@@ -57,11 +64,30 @@ func main() {
 		}
 
 	})
+	// TODO
+	group.Go(func() error {
+		logger.Info("计划任务-receive模块-启动")
+		err := ac.RenewMapManager(ctxAll)
+		if err != nil {
+			logger.Error("计划任务-receive模块-报错", zap.Error(err))
+		}
+		return err
+	})
 
 	group.Go(func() error {
+		logger.Info("计划任务-receive模块-启动")
+		err := ac.AlertReceiveConsumerManager(ctxAll)
+		if err != nil {
+			logger.Error("计划任务-receive模块-报错", zap.Error(err))
+		}
+		return err
+	})
+
+	group.Go(func() error {
+		<-cacheHasSynced
 		errChan := make(chan error, 1)
 		go func() {
-			errChan <- web.AlertWebhookStartGin(sc)
+			errChan <- web.AlertWebhookStartGin(sc, alertReceiveQ)
 		}()
 		logger.Info("[web启动成功]")
 		select {
@@ -73,21 +99,6 @@ func main() {
 			return nil
 		}
 	})
-	// TODO 任务
-	//{
-	//	if sc.MonitorComputeC.Enable {
-	//		group.Go(func() error {
-	//			logger.Info("计划任务-监控模块-启动")
-	//			err := mc.MonitorCacheManager(ctxAll)
-	//			if err != nil {
-	//				logger.Error("计划任务-监控模块-报错", zap.Error(err))
-	//			}
-	//			return err
-	//		})
-	//	} else {
-	//		logger.Info("计划任务-监控模块-关闭")
-	//	}
-	//}
 
 	_ = group.Wait()
 }

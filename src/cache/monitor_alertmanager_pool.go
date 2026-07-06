@@ -90,7 +90,7 @@ func (mc *MonitorCache) GenerateAlertManagerMainConfigYaml(ctx context.Context) 
 		sendGroups, err := models.GetMonitorAlertManagerSendGroupByPoolId(pool.ID)
 		if err == nil {
 			for _, sendGroup := range sendGroups {
-				webhookUrl := fmt.Sprintf("%s/webhook?%s=%v",
+				webhookUrl := fmt.Sprintf("%s?%s=%v",
 					mc.Sc.MonitorComputeC.AlertWebhookAddr,
 					common.MONITOR_ALERT_MATCH_KEY,
 					sendGroup.ID,

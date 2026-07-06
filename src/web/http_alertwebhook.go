@@ -4,19 +4,22 @@ import (
 	"bigdevops/src/common"
 	"bigdevops/src/config"
 	"bigdevops/src/web/middleware"
+	"bigdevops/src/web/view_alertwebhook"
 	"net/http"
 	"time"
 
 	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/alertmanager/template"
 	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
 
-func AlertWebhookStartGin(sc *config.AlertWebhookConfig) error {
+func AlertWebhookStartGin(sc *config.AlertWebhookConfig, alertReceiveQ chan template.Alert) error {
 	gin.DisableConsoleColor()
 	r := gin.New()
 	varMap := map[string]interface{}{}
 	varMap[common.GIN_CTX_CONFIG_CONFIG] = sc
+	varMap[common.GIN_CTX_CONFIG_ALERTRECEIVEQ] = alertReceiveQ
 	r.Use(middleware.ConfigMiddleware(varMap))
 	r.Use(requestid.New())
 	r.Use(middleware.NewGinZapLogger(sc.Logger))
@@ -24,7 +27,7 @@ func AlertWebhookStartGin(sc *config.AlertWebhookConfig) error {
 	// 暴露metrics
 	p := ginprometheus.NewPrometheus("bigdevops-webhook")
 	p.Use(r)
-	AlertWebhookConfigRouter(r)
+	view_alertwebhook.ConfigRouter(r)
 	s := &http.Server{
 		Addr:           sc.HttpAddr,
 		Handler:        r,
@@ -34,11 +37,4 @@ func AlertWebhookStartGin(sc *config.AlertWebhookConfig) error {
 	}
 
 	return s.ListenAndServe()
-}
-
-func AlertWebhookConfigRouter(r *gin.Engine) {
-	base := r.Group("/")
-	{
-		base.GET("/ping", ping)
-	}
 }

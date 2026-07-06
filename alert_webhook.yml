@@ -2,5 +2,7 @@ http_addr: 0.0.0.0:8085
 log_file_path: alert_webhook.log
 log_level: INFO
 
+alert_receive_queue_size: 500
+common_map_renew_interval_seconds: 20
 mysql:
   dsn: "root:123456@tcp(192.168.50.100:3306)/bigdevops?charset=utf8mb4&parseTime=True&loc=Local"
