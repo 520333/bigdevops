@@ -11,9 +11,11 @@ import (
 // User 基于前端依赖的user 字段
 type User struct {
 	Model
-	UserId   int    `json:"userId,omitempty" gorm:"comment:用户id"`
-	Username string `json:"userName" gorm:"type:varchar(100);uniqueIndex;comment:用户登录名"`
-	Password string `json:"-" gorm:"comment:用户登录密码"`
+	UserId      int    `json:"userId,omitempty" gorm:"comment:用户id"`
+	Username    string `json:"userName" gorm:"type:varchar(100);uniqueIndex;comment:用户登录名"`
+	Password    string `json:"-" gorm:"comment:用户登录密码"`
+	ReqPassword string `json:"password,omitempty" gorm:"-"` //仅用于接收前端 JSON 中的 password 传参，不涉及数据库存取
+
 	RealName string `json:"realName" gorm:"comment:用户昵称"`
 	//Avatar   string  `json:"avatar" gorm:"comment:头像"`
 	Desc     string `json:"desc,omitempty" gorm:"comment:用户描述"`
@@ -30,6 +32,15 @@ type User struct {
 	FormDesigns []WorkOrderFormDesign `json:"-"`
 
 	RolesFront []string `json:"rolesFront,omitempty" gorm:"-"`
+}
+
+// UserCreateRequest 新增用户专用的请求结构体
+type UserCreateRequest struct {
+	Username   string   `json:"userName" binding:"required"`
+	Password   string   `json:"password" binding:"required"` // 这里正常接收密码
+	RealName   string   `json:"realName"`
+	Desc       string   `json:"desc"`
+	RolesFront []string `json:"rolesFront"`
 }
 
 func CheckUserPassword(ru *UserLoginRequest) (*User, error) {

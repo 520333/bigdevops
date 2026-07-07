@@ -2,7 +2,9 @@ package cron
 
 import (
 	"bigdevops/src/common"
+	"bigdevops/src/models"
 	"context"
+	"strconv"
 
 	"github.com/prometheus/alertmanager/template"
 	"go.uber.org/zap"
@@ -28,6 +30,17 @@ func (ac *AlertCache) DealWithOneAlertReceive(alert template.Alert) {
 			zap.Any("告警", alert))
 		return
 	}
+
+	ruleId, exists := alert.Labels[common.MONITOR_ALERT_MATCH_KEY]
+	if !exists {
+		ac.Sc.Logger.Info("alert消费者收到告警信息,ruleId不存在",
+			zap.Any("告警", alert))
+		return
+	}
+
+	ruleIdInt, _ := strconv.Atoi(ruleId)
+	sendGroupIdInt, _ := strconv.Atoi(sendGroupId)
+
 	sendGroup := ac.GetSendGroupById(sendGroupId)
 	if sendGroup == nil {
 		ac.Sc.Logger.Info("alert消费者收到告警信息,根据sendGroupId去缓存中查询结果不存在",
@@ -40,7 +53,23 @@ func (ac *AlertCache) DealWithOneAlertReceive(alert template.Alert) {
 	createUser := ac.GetUserById(sendGroup.UserID)
 	ac.Sc.Logger.Info("alert消费者收到告警信息", zap.Any("createUser", createUser), zap.Any("告警", alert))
 
-	//onondutyGroup := ac.GetOnDutyGroupById(sendGroup.UserID)
-	//ac.Sc.Logger.Info("alert消费者收到告警信息", zap.Any("onondutyGroup", onondutyGroup), zap.Any("告警", alert))
+	rule := ac.GetRuleById(ruleId)
+	ac.Sc.Logger.Info("alert消费者收到告警信息",
+		zap.Any("告警", alert), zap.Any("开始时间", alert.StartsAt), zap.Any("结束时间", alert.EndsAt),
+	)
 
+	event := &models.MonitorAlertEvent{
+		AlertName:   alert.Labels[common.MONITOR_ALERT_NAME_KEY],
+		FingerPrint: alert.Fingerprint,
+		Status:      alert.Status,
+		RuleId:      uint(ruleIdInt),
+		SendGroupId: uint(sendGroupIdInt),
+	}
+	go func() {
+		err := event.UpdateOrCreateOne()
+		if err != nil {
+			ac.Sc.Logger.Error("保存alert到event出错", zap.Error(err), zap.Any("event", rule), zap.Any("告警", alert))
+
+		}
+	}()
 }

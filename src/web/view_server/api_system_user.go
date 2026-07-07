@@ -174,7 +174,8 @@ func createAccount(c *gin.Context) {
 	}
 
 	//hashPwd := common.BcryptHash(reqUser.Password)
-	reqUser.Password = common.BcryptHash(reqUser.Password)
+	//reqUser.Password = common.BcryptHash(reqUser.Password)
+	reqUser.Password = common.BcryptHash(reqUser.ReqPassword)
 	reqUser.HomePath = "/system/role"
 	err = reqUser.CreateOne()
 	if err != nil {
@@ -350,44 +351,6 @@ type DefineUserOrGroup struct {
 	Type  string `json:"type"`
 }
 
-//func getAllUserAndRoles(c *gin.Context) {
-//	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-//	// 数据库中拿到所有的menu列表
-//	users, err := models.GetUserAll()
-//	if err != nil {
-//		sc.Logger.Error("去数据库中拿所有用户错误", zap.Error(err))
-//		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有用户错误：%v", err.Error()), c)
-//		return
-//	}
-//	roles, err := models.GetRoleAll()
-//	if err != nil {
-//		sc.Logger.Error("去数据库中拿所有角色错误", zap.Error(err))
-//		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有角色错误：%v", err.Error()), c)
-//		return
-//	}
-//	var res []DefineUserOrGroup
-//	for _, user := range users {
-//		user := user
-//		key := user.Username
-//		//key := fmt.Sprintf("%s@%s", "用户", user.Username)
-//		one := DefineUserOrGroup{
-//			Label: key,
-//			Value: key,
-//		}
-//		res = append(res, one)
-//	}
-//	for _, role := range roles {
-//		role := role
-//		key := role.RoleName
-//		one := DefineUserOrGroup{
-//			Label: key,
-//			Value: key,
-//		}
-//		res = append(res, one)
-//	}
-//	common.OkWithDetailed(res, "ok", c)
-//}
-
 func getAllUserAndRoles(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	users, err := models.GetUserAll()
@@ -426,62 +389,3 @@ func getAllUserAndRoles(c *gin.Context) {
 
 	common.OkWithDetailed(res, "ok", c)
 }
-
-//type CreateUserReq struct {
-//	UserName string   `json:"userName" validate:"required"`
-//	Password string   `json:"password" validate:"required"`
-//	RealName string   `json:"realName"`
-//	Desc     string   `json:"desc"`
-//	Roles    []string `json:"roles"` // 👈 用字符串数组接收 ["super", "frontAdmin"]
-//}
-//
-//func createAccount(c *gin.Context) {
-//	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-//
-//	// 1. 改用 DTO 接收，避免 Unmarshal 报错
-//	var req CreateUserReq
-//	if err := c.ShouldBindJSON(&req); err != nil {
-//		sc.Logger.Error("解析新增用户请求失败", zap.Error(err))
-//		common.FailWithMessage(err.Error(), c)
-//		return
-//	}
-//
-//	// 2. 校验
-//	if err := validate.Struct(&req); err != nil {
-//		if errors, ok := err.(validator.ValidationErrors); ok {
-//			common.ReqBadFailWithDetailed(errors.Translate(trans), "请求出错", c)
-//			return
-//		}
-//	}
-//
-//	// 3. 处理角色转换：根据字符串去数据库查出真实的 Role 对象
-//	var dbRoles []*models.Role
-//	if len(req.Roles) > 0 {
-//		// 这里的 role_value 对应你数据库里存 "super" 的那个字段
-//		err := models.Db.Where("role_value IN ?", req.Roles).Find(&dbRoles).Error
-//		if err != nil {
-//			sc.Logger.Error("查询角色失败", zap.Error(err))
-//		}
-//	}
-//
-//	// 4. 组装真正的 User 模型
-//	// 密码加密逻辑建议放在这里或者 User 的钩子里
-//	hashedPassword := common.BcryptHash(req.Password)
-//	newUser := models.User{
-//		Username: req.UserName,
-//		Password: hashedPassword,
-//		RealName: req.RealName,
-//		Desc:     req.Desc,
-//		Roles:    dbRoles, // 👈 关联查出来的实体
-//	}
-//
-//	// 5. 执行创建
-//	err := newUser.CreateOne()
-//	if err != nil {
-//		sc.Logger.Error("创建用户错误", zap.Any("用户", req.UserName), zap.Error(err))
-//		common.FailWithMessage(err.Error(), c)
-//		return
-//	}
-//
-//	common.OkWithMessage("创建成功", c)
-//}

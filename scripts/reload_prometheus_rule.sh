@@ -18,7 +18,7 @@ fi
 
 echo "$RES" > /opt/app/prometheus/rule_tmp.yml
 
-./promtool check rules rule.yml
+./promtool check rules rule_tmp.yml
 if  [ $? -ne 0 ]; then
   echo "rule failed exit"
   exit 3

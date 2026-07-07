@@ -106,6 +106,7 @@ func (obj *MonitorPromAlertRule) FillFrontAllData() {
 	obj.LabelsM = obj.GenMapFromKvs(obj.Labels)
 	// 绑定发送组标签
 	obj.LabelsM[common.MONITOR_ALERT_MATCH_KEY] = fmt.Sprintf("%d", obj.SendGroupId)
+	obj.LabelsM[common.MONITOR_ALERT_RULE_KEY] = fmt.Sprintf("%d", obj.ID)
 	obj.AnnotationsM = obj.GenMapFromKvs(obj.Annotations)
 }
 

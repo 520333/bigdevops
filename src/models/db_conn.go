@@ -114,6 +114,8 @@ func MigrateTable() error {
 		&MonitorOndutyGroup{},
 		&MonitorOndutyHistory{},
 		&MonitorOndutyChange{},
+
+		&MonitorAlertEvent{},
 	)
 }
 

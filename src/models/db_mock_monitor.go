@@ -166,10 +166,10 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			AlertManagerInstanceId: ips,
 			UserID:                 1,
 			ResolveTimeout:         "30m",
-			GroupWait:              "15s",
-			GroupInterval:          "20s",
-			RepeatInterval:         "30s",
-			Receiver:               "default",
+			GroupWait:              "5s",
+			GroupInterval:          "50s",
+			RepeatInterval:         "15s",
+			Receiver:               "sre-1",
 			GroupBy:                []string{"alertname"},
 		}
 		_ = r.CreateOne()
@@ -210,7 +210,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			Enable:      1,
 			SendGroupId: 1,
 			Expr:        fmt.Sprintf(`%s{job="node_exporter_1"} > 0`, metricsNames[mIndex]),
-			ForTime:     "30s",
+			ForTime:     "1s",
 			Labels:      []string{"l1=v1", "l2=v2"},
 			Annotations: []string{"a3=v3", "a4=v4"},
 		}
