@@ -57,7 +57,7 @@ func (mae *MonitorAlertEvent) UpdateOrCreateOne() error {
 }
 
 func (mae *MonitorAlertEvent) UpdateOne() error {
-	return Db.Debug().Where("id = ?", mae.ID).Updates(mae).Error
+	return Db.Where("id = ?", mae.ID).Updates(mae).Error
 }
 
 func GetMonitorAlertEventById(id int) (*MonitorAlertEvent, error) {
