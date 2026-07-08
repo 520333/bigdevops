@@ -4,5 +4,12 @@ log_level: INFO
 
 alert_receive_queue_size: 500
 common_map_renew_interval_seconds: 20
+front_domain: "http://localhost:3100/#"
+backend_domain: "http://localhost:8085"
+
+http_request_global_timeout_seconds: 2
+alert_manager_api: http://192.168.50.200:9093
+
+alert_timezone: "Asia/Shanghai"
 mysql:
   dsn: "root:123456@tcp(192.168.50.100:3306)/bigdevops?charset=utf8mb4&parseTime=True&loc=Local"

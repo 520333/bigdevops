@@ -45,8 +45,8 @@ func (obj *MonitorOndutyGroup) FillToDayOndutyUser() {
 	toDayString := common.GetDayAgoDate(0)
 	dbHistoryToday, _ := GetMonitorOnDutyHistoryByOnDutyGroupIdAndDay(obj.ID, toDayString)
 	if dbHistoryToday.OndutyUserId > 0 {
-		user, err := GetUserById(int(dbHistoryToday.OndutyUserId))
-		if err != nil {
+		user, _ := GetUserById(int(dbHistoryToday.OndutyUserId))
+		if user.ID > 0 {
 			obj.ToDayOnDutyUser = user
 		}
 	} else {

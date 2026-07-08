@@ -18,9 +18,10 @@ type User struct {
 
 	RealName string `json:"realName" gorm:"comment:用户昵称"`
 	//Avatar   string  `json:"avatar" gorm:"comment:头像"`
-	Desc     string `json:"desc,omitempty" gorm:"comment:用户描述"`
-	HomePath string `json:"homePath" gorm:"comment:登录后跳转地址"`
-	Enable   int    `json:"enable" gorm:"default:1;comment:用户是否被冻结 1正常 2冻结"`
+	Desc         string `json:"desc,omitempty" gorm:"comment:用户描述"`
+	FeiShuUserId string `json:"feiShuUserId,omitempty" gorm:"comment:飞书userid"`
+	HomePath     string `json:"homePath" gorm:"comment:登录后跳转地址"`
+	Enable       int    `json:"enable" gorm:"default:1;comment:用户是否被冻结 1正常 2冻结"`
 	//Roles    []*Role `json:"roles" gorm:"many2many:user_roles"`
 	Roles              []*Role                         `json:"roles,omitempty" gorm:"many2many:user_roles"`
 	OpsNodes           []*StreeNode                    `json:"ops_nodes,omitempty" gorm:"many2many:ops_admins;comment:人员服务树节点"`

@@ -1,6 +1,7 @@
 package common
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -91,4 +92,25 @@ func ReadFile(path string) (string, error) {
 
 func GetDayAgoDate(num int) string {
 	return time.Now().Add(time.Duration(num) * time.Hour * 24).Format("2006-01-02")
+}
+
+func GenJsonString(str string) string {
+	data, _ := json.Marshal(str)
+	return string(data)
+}
+
+func GenKvStringByMap(m map[string]string) string {
+	res := ""
+	for k, v := range m {
+		res = fmt.Sprintf("%s %s=%s", res, k, v)
+	}
+	return res
+}
+
+func GentStringArrayByMap(m map[string]string) []string {
+	res := []string{}
+	for k, v := range m {
+		res = append(res, fmt.Sprintf("%s=%s", k, v))
+	}
+	return res
 }

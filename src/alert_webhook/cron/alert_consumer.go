@@ -31,7 +31,7 @@ func (ac *AlertCache) DealWithOneAlertReceive(alert template.Alert) {
 		return
 	}
 
-	ruleId, exists := alert.Labels[common.MONITOR_ALERT_MATCH_KEY]
+	ruleId, exists := alert.Labels[common.MONITOR_ALERT_RULE_KEY]
 	if !exists {
 		ac.Sc.Logger.Info("alert消费者收到告警信息,ruleId不存在",
 			zap.Any("告警", alert))
@@ -57,12 +57,22 @@ func (ac *AlertCache) DealWithOneAlertReceive(alert template.Alert) {
 	ac.Sc.Logger.Info("alert消费者收到告警信息",
 		zap.Any("告警", alert), zap.Any("开始时间", alert.StartsAt), zap.Any("结束时间", alert.EndsAt),
 	)
+	// 判断是否已升级
+	upgredeNeed := false
+	if alert.Status == common.MONITOR_ALERT_STATUS_FIRING && sendGroup.FirstUpgradeUsers != nil && len(sendGroup.FirstUpgradeUsers) > 0 {
+		upgredeNeed = true
+	}
+	status := alert.Status
+	if upgredeNeed {
+		status = common.MONITOR_ALERT_STATUS_UPGRADED
+	}
 
 	event := &models.MonitorAlertEvent{
 		AlertName:   alert.Labels[common.MONITOR_ALERT_NAME_KEY],
 		FingerPrint: alert.Fingerprint,
-		Status:      alert.Status,
+		Status:      status,
 		RuleId:      uint(ruleIdInt),
+		Labels:      common.GentStringArrayByMap(alert.Labels),
 		SendGroupId: uint(sendGroupIdInt),
 	}
 	go func() {
@@ -72,4 +82,10 @@ func (ac *AlertCache) DealWithOneAlertReceive(alert template.Alert) {
 
 		}
 	}()
+	//err := event.UpdateOrCreateOne()
+	//if err != nil {
+	//	ac.Sc.Logger.Error("保存alert到event出错", zap.Error(err), zap.Any("event", rule), zap.Any("告警", alert))
+	//}
+	// 处理告警信息
+	ac.GenerateFeiShuCardMsgOneAlert(alert, event, rule, sendGroup)
 }

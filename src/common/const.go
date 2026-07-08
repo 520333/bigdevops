@@ -53,15 +53,39 @@ const (
 	MONITOR_SCRAPE_JOB_SD_TYPE_K8S  = "kubernetes"
 	MONITOR_SCRAPE_JOB_SD_TYPE_HTTP = "http"
 
-	MONITOR_ALERT_MATCH_KEY = "alert_send_group"
-	MONITOR_ALERT_RULE_KEY  = "alert_rule_id"
-	MONITOR_ALERT_NAME_KEY  = "alertname"
+	MONITOR_ALERT_MATCH_KEY     = "alert_send_group"
+	MONITOR_ALERT_RULE_KEY      = "alert_rule_id"
+	MONITOR_ALERT_NAME_KEY      = "alertname"
+	MONITOR_ALERT_SEVERITY_KEY  = "severity"
+	MONITOR_ALERT_BIND_NODE_KEY = "bind_stree_node"
+
+	MONITOR_ALERT_SEVERITY_CRITICAL = "critical"
+	MONITOR_ALERT_SEVERITY_WARNING  = "warning"
+	MONITOR_ALERT_SEVERITY_INFO     = "info"
+	MONITOR_ALERT_RULE_ANNO_VALUE   = "description_value"
+	MONITOR_ALERT_STATUS_FIRING     = "firing"
+	MONITOR_ALERT_STATUS_RESOLVED   = "resolved"
+	MONITOR_ALERT_STATUS_UPGRADED   = "upgraded"
+	MONITOR_ALERT_STATUS_SILIENCED  = "silenced"
 
 	GORM_ENABLE_RES_YES = 1
 	GORM_ENABLE_RES_NO  = 2
 )
 
 var (
+	MONITOR_ALERT_SEVERITY_TITLE_COLOR_MAP = map[string]string{
+		MONITOR_ALERT_SEVERITY_CRITICAL: "red",
+		MONITOR_ALERT_SEVERITY_WARNING:  "yellow",
+		MONITOR_ALERT_SEVERITY_INFO:     "blue",
+	}
+	MONITOR_ALERT_STATUS_CH_MAP = map[string]string{
+		MONITOR_ALERT_STATUS_FIRING:   "触发中",
+		MONITOR_ALERT_STATUS_RESOLVED: "已恢复",
+	}
+	MONITOR_ALERT_STATUS_COLOR_MAP = map[string]string{
+		MONITOR_ALERT_STATUS_FIRING:   "red",
+		MONITOR_ALERT_STATUS_RESOLVED: "green",
+	}
 	COMMON_SHOW_MAP = map[string]bool{
 		"1": true,
 		"0": false,

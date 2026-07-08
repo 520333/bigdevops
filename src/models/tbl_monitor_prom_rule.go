@@ -16,16 +16,19 @@ type MonitorPromAlertRule struct {
 	Model
 	Name string `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:采集任务名称"`
 
-	UserID uint
-	PoolId uint `json:"poolId,omitempty" gorm:"comment:关联哪个alertManager实例"`
-
+	UserID      uint
+	PoolId      uint        `json:"poolId,omitempty" gorm:"comment:关联哪个alertManager实例"`
+	TreeNodeId  uint        `json:"treeNodeId" gorm:"comment:绑定到哪个节点"`
 	Enable      int         `json:"enable" gorm:"comment:是否被开启 1正常 2禁用"`
 	SendGroupId int         `json:"sendGroupId"`
+	GrafanaLink string      `json:"grafanaLink" gorm:"type:text;comment:grafana面板地址"`
 	Expr        string      `json:"expr" gorm:"type:text;comment:规则PQL"`
+	Severity    string      `json:"severity" gorm:"comment:告警级别：critical|warning"`
 	ForTime     string      `json:"forTime" gorm:"comment:持续时间 到这个时间才触发"`
 	Labels      StringArray `json:"labels"  gorm:"comment:标签组 k=v ,severity=critical"`
 	Annotations StringArray `json:"annotations"  gorm:"comment:注解 k=v ,summary=xxx,description=xxx"`
 
+	NodePath       string      `json:"nodePath" gorm:"-"`
 	TreeNodeIds    StringArray `json:"treeNodeIds,omitempty" gorm:"comment:如果使用了服务树接口 通过树id获取ip列表"`
 	Key            string      `json:"key" gorm:"-"` // 前端表格使用
 	PoolName       string      `json:"poolName" gorm:"-"`
@@ -102,11 +105,20 @@ func (obj *MonitorPromAlertRule) FillFrontAllData() {
 	//if dbPool != nil {
 	//	obj.PoolName = dbPool.Name
 	//}
+	node, _ := GetStreeNodeById(int(obj.TreeNodeId))
+	if node != nil {
+		node.FillFrontAllData()
+		obj.NodePath = node.NodePath
+	}
+
 	obj.Key = fmt.Sprintf("%d", obj.ID)
 	obj.LabelsM = obj.GenMapFromKvs(obj.Labels)
 	// 绑定发送组标签
 	obj.LabelsM[common.MONITOR_ALERT_MATCH_KEY] = fmt.Sprintf("%d", obj.SendGroupId)
 	obj.LabelsM[common.MONITOR_ALERT_RULE_KEY] = fmt.Sprintf("%d", obj.ID)
+	obj.LabelsM[common.MONITOR_ALERT_SEVERITY_KEY] = obj.Severity
+	obj.LabelsM[common.MONITOR_ALERT_BIND_NODE_KEY] = obj.NodePath
+
 	obj.AnnotationsM = obj.GenMapFromKvs(obj.Annotations)
 }
 

@@ -9,14 +9,19 @@ import (
 )
 
 type AlertWebhookConfig struct {
-	HttpAddr                      string        `yaml:"http_addr"`
-	LogLevel                      string        `yaml:"log_level"`
-	LogFilePath                   string        `yaml:"log_file_path"`
-	AlertReceiveQ                 int           `yaml:"alert_receive_queue_size"`
-	MysqlC                        *mysql.Config `yaml:"mysql"`
-	CommonMapRenewIntervalSeconds int           `yaml:"common_map_renew_interval_seconds"`
-	LocalIp                       string        `yaml:"-"`
-	Logger                        *zap.Logger   `yaml:"-"`
+	HttpAddr                        string        `yaml:"http_addr"`
+	LogLevel                        string        `yaml:"log_level"`
+	LogFilePath                     string        `yaml:"log_file_path"`
+	AlertReceiveQ                   int           `yaml:"alert_receive_queue_size"`
+	MysqlC                          *mysql.Config `yaml:"mysql"`
+	HttpRequestGlobalTimeoutSeconds int           `yaml:"http_request_global_timeout_seconds"`
+	CommonMapRenewIntervalSeconds   int           `yaml:"common_map_renew_interval_seconds"`
+	AlertManagerApi                 string        `yaml:"alert_manager_api"`
+	AlertTimezone                   string        `yaml:"alert_timezone"`
+	LocalIp                         string        `yaml:"-"`
+	Logger                          *zap.Logger   `yaml:"-"`
+	FrontDomain                     string        `yaml:"front_domain"`
+	BackendDomain                   string        `yaml:"backend_domain"`
 }
 
 // LoadAlertWebhook 根据io read 读取配置文件后的字符串解析yaml

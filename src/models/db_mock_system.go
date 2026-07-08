@@ -68,33 +68,36 @@ func mockSystemData(sc *config.ServerConfig) *User {
 	}
 
 	adminUser := &User{
-		Username: "admin",
-		Password: common.BcryptHash("tingbao89.."),
-		RealName: "超管",
-		HomePath: "/system/role",
-		Enable:   1,
+		Username:     "admin",
+		Password:     common.BcryptHash("tingbao89.."),
+		RealName:     "海绵宝宝",
+		FeiShuUserId: "b75ag4g4",
+		HomePath:     "/system/role",
+		Enable:       1,
 		Roles: []*Role{
 			{RoleName: "超级管理员", RoleValue: "super", Menus: menus},
 		},
 	}
 
 	testUser := &User{
-		Username: "test",
-		Password: common.BcryptHash("123456"),
-		RealName: "测试",
-		HomePath: "/system/role",
-		Enable:   1,
+		Username:     "test",
+		Password:     common.BcryptHash("123456"),
+		RealName:     "派大星",
+		FeiShuUserId: "b75ag4g4",
+		HomePath:     "/system/role",
+		Enable:       1,
 		Roles: []*Role{
 			{RoleName: "前端管理员", RoleValue: "frontAdmin"},
 		},
 	}
 
 	botUser := &User{
-		Username: sc.WorkOrderAutoActionC.ServiceAccount,
-		Password: common.BcryptHash("123456"),
-		RealName: "自动工单执行机器人",
-		HomePath: "/system/role",
-		Enable:   1,
+		Username:     sc.WorkOrderAutoActionC.ServiceAccount,
+		Password:     common.BcryptHash("123456"),
+		RealName:     "自动工单执行机器人",
+		FeiShuUserId: "b75ag4g4",
+		HomePath:     "/system/role",
+		Enable:       1,
 		Roles: []*Role{
 			{RoleName: "集群超级管理员", RoleValue: "bot_super", Menus: menus},
 		},
@@ -109,14 +112,16 @@ func mockSystemData(sc *config.ServerConfig) *User {
 
 	_ = Db.Create(apis)
 
+	users := []string{"蟹老板", "珊迪", "章鱼哥", "皮老板", "小窝"}
 	num := 5
 	for i := 0; i < num; i++ {
 		mockUser := &User{
-			Username: fmt.Sprintf("mock%d", i),
-			Password: common.BcryptHash("123456"),
-			RealName: fmt.Sprintf("mock%d", i),
-			HomePath: "/system/role",
-			Enable:   1,
+			Username:     fmt.Sprintf("mock%d", i),
+			Password:     common.BcryptHash("123456"),
+			RealName:     users[i],
+			FeiShuUserId: "b75ag4g4",
+			HomePath:     "/system/role",
+			Enable:       1,
 		}
 		_ = mockUser.CreateOne()
 	}

@@ -22,6 +22,7 @@ type ServerConfig struct {
 	JobExec              *ServerJobExec       `yaml:"job_exec"`
 	MonitorComputeC      *MonitorCompute      `yaml:"monitor_compute"`
 	Logger               *zap.Logger          `yaml:"-"`
+	Domain               string               `yaml:"front_domain"`
 }
 
 type ServerJobExec struct {

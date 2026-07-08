@@ -21,6 +21,7 @@ type MonitorAlertEvent struct {
 	SendGroupId uint   `json:"sendGroupId"`
 	EventTimes  int    `json:"eventTimes" gorm:"comment:触发次数"`
 
+	Labels    StringArray                   `json:"labels" gorm:"comment: 标签组 k=v"`
 	Key       string                        `json:"key" gorm:"-"` // 前端表格使用
 	Alert     template.Alert                `json:"alert" gorm:"-"`
 	SendGroup *MonitorAlertManagerSendGroup `json:"sendGroup" gorm:"-"`
@@ -42,18 +43,39 @@ func (mae *MonitorAlertEvent) CreateOne() error {
 	return Db.Create(mae).Error
 }
 func (mae *MonitorAlertEvent) UpdateOrCreateOne() error {
+	//dbMae, err := GetMonitorAlertEventByFingerPrintId(mae.FingerPrint)
+	//if err != nil {
+	//	if errors.Is(err, gorm.ErrRecordNotFound) {
+	//		mae.EventTimes += 1
+	//		return mae.CreateOne()
+	//	}
+	//	return err
+	//}
+	//mae.Status = dbMae.Status
+	//dbMae.EventTimes++
+	//
+	//return dbMae.UpdateOne()
+
 	dbMae, err := GetMonitorAlertEventByFingerPrintId(mae.FingerPrint)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			mae.EventTimes += 1
+			// 第一次触发
+			mae.EventTimes = 1
 			return mae.CreateOne()
 		}
 		return err
 	}
-	mae.Status = dbMae.Status
-	dbMae.EventTimes++
 
-	return dbMae.UpdateOne()
+	// 💡 核心修复 1：把数据库里的历史次数 + 1，赋值给当前正在处理的 mae 对象
+	mae.EventTimes = dbMae.EventTimes + 1
+
+	// 💡 核心修复 2：继承数据库里的主键 ID，这样 GORM 执行 UpdateOne 才知道更新哪一行
+	mae.ID = dbMae.ID
+
+	// 注意：去掉了 mae.Status = dbMae.Status，保留外部传进来的最新状态
+
+	// 使用当前对象更新数据库
+	return mae.UpdateOne()
 }
 
 func (mae *MonitorAlertEvent) UpdateOne() error {
@@ -83,9 +105,9 @@ func GetMonitorAlertEventAll() (mae []*MonitorAlertEvent, err error) {
 	return
 }
 
-func (mae *MonitorAlertEvent) GenMapFromKvs(kvs []string) map[string]string {
+func (mae *MonitorAlertEvent) GenMapFromKvs() map[string]string {
 	labelsM := map[string]string{}
-	for _, i := range kvs {
+	for _, i := range mae.Labels {
 		kvs := strings.Split(i, "=")
 		if len(kvs) != 2 {
 			continue
@@ -94,6 +116,7 @@ func (mae *MonitorAlertEvent) GenMapFromKvs(kvs []string) map[string]string {
 		v := kvs[1]
 		labelsM[k] = v
 	}
+	mae.LabelsM = labelsM
 	return labelsM
 }
 

@@ -23,14 +23,15 @@ type MonitorAlertManagerSendGroup struct {
 	PoolId uint `json:"poolId,omitempty" gorm:"comment:关联哪个alertManager实例"`
 
 	// 发送逻辑
-	StaticReceiveUsers []*User `json:"staticReceiveUsers" gorm:"many2many:static_receive_user;comment:静态配置的接收人列表"`
-	ImRobotToken       string  `json:"imRobotToken" gorm:"comment:im机器人token 对应哪个群组"`
-	OnDutyGroupId      uint    `json:"onDutyGroupId,omitempty" gorm:"comment:值班表 在im中发到群组里at值班人或者私聊发送给值班人"`
+	StaticReceiveUsers  []*User `json:"staticReceiveUsers" gorm:"many2many:static_receive_user;comment:静态配置的接收人列表"`
+	FeiShuQunRobotToken string  `json:"feiShuQunRobotToken" gorm:"comment:im飞书自定义机器人token"`
+	OnDutyGroupId       uint    `json:"onDutyGroupId,omitempty" gorm:"comment:值班表 在im中发到群组里at值班人或者私聊发送给值班人"`
 
 	RepeatInterval     string      `json:"repeatInterval" gorm:"comment:默认重复发送间隔"`
 	SendResolved       int         `json:"sendResolved" gorm:"comment:是否被开启 1=true发送 2=false不发送 "`
 	NotifyMethods      StringArray `json:"notifyMethods,omitempty" gorm:"comment:通知方法：email im phone sms 组合"`
 	FirstUpgradeUsers  []*User     `json:"firstUpgradeUsers" gorm:"many2many:first_upgrade_users;comment:第一升级人列表"`
+	UpgradeMinutes     int         `json:"upgradeMinutes" gorm:"comment:告警多久未恢复就升级"`
 	SecondUpgradeUsers []*User     `json:"secondUpgradeUsers" gorm:"many2many:second_upgrade_users;comment:第二升级人列表"`
 
 	TreeNodeIds    StringArray `json:"treeNodeIds,omitempty" gorm:"comment:如果使用了服务树接口 通过树id获取ip列表"`
@@ -86,7 +87,7 @@ func GetMonitorAlertManagerSendGroupByPoolId(poolId uint) (ps []*MonitorAlertMan
 }
 
 func GetMonitorAlertManagerSendGroupAll() (ps []*MonitorAlertManagerSendGroup, err error) {
-	err = Db.Find(&ps).Error
+	err = Db.Preload("FirstUpgradeUsers").Find(&ps).Error
 	return
 }
 

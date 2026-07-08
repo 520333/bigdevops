@@ -47,9 +47,11 @@ PeO73tYJhHTq
 )
 
 func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
+	ips := []string{"192.168.50.200"}
 	// prometheus 实例池
 	randTagKeys := []string{"dev", "test", "pre", "prod"}
 	randTagValues := []string{"project1", "project2", "project3", "project4", "project5"}
+
 	num := 1
 	for i := 0; i < num; i++ {
 		tags := []string{}
@@ -60,7 +62,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 		}
 		p := MonitorScrapePool{
 			Name:                 fmt.Sprintf("pool-%v", i+1),
-			PrometheusInstances:  []string{"192.168.50.200", "192.168.50.201"},
+			PrometheusInstances:  ips,
 			ScrapeInterval:       15,
 			ScrapeTimeout:        10,
 			ExternalLabels:       tags,
@@ -154,12 +156,12 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			KubernetesSdRole:         "pod",
 			RelabelConfigsYamlString: k8sCadVisorRelabels,
 		}
-		k8s.CreateOne()
+		_ = k8s.CreateOne()
 	}
 
 	// alertManager 实例池
 	num = 1
-	ips := []string{"192.168.50.200", "192.168.50.201"}
+	//ips := []string{"192.168.50.200", "192.168.50.201"}
 	for i := 0; i < num; i++ {
 		r := MonitorAlertManagerPool{
 			Name:                   fmt.Sprintf("online-%v", i+1),
@@ -169,23 +171,40 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			GroupWait:              "5s",
 			GroupInterval:          "50s",
 			RepeatInterval:         "15s",
-			Receiver:               "sre-1",
+			Receiver:               "发送组-1",
 			GroupBy:                []string{"alertname"},
 		}
 		_ = r.CreateOne()
 	}
 
+	// 值班组
+	users, _ := GetUserAll()
+	for i := 0; i < num; i++ {
+		dutyGroup := &MonitorOndutyGroup{
+			Name:           fmt.Sprintf("值班组-%v", i+1),
+			UserID:         1,
+			Members:        users,
+			Key:            "",
+			PoolName:       "",
+			CreateUserName: "",
+		}
+		_ = dutyGroup.CreateOne()
+	}
+
 	// 创建发送组
 	for i := 0; i < num; i++ {
 		sg := MonitorAlertManagerSendGroup{
-			Name:           fmt.Sprintf("sre-%v", i+1),
-			NameZh:         fmt.Sprintf("运维组-%v", i+1),
-			Enable:         1,
-			UserID:         1,
-			PoolId:         uint(1),
-			ImRobotToken:   "aa",
-			RepeatInterval: "30s",
-			SendResolved:   1,
+			Name:                fmt.Sprintf("发送组-%v", i+1),
+			NameZh:              fmt.Sprintf("运维组-%v", i+1),
+			Enable:              1,
+			UserID:              1,
+			FirstUpgradeUsers:   users,
+			UpgradeMinutes:      20,
+			PoolId:              uint(1),
+			FeiShuQunRobotToken: "aa",
+			RepeatInterval:      "30s",
+			OnDutyGroupId:       1,
+			SendResolved:        1,
 		}
 		_ = sg.CreateOne()
 
@@ -197,6 +216,18 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 		`node_boot_time_seconds`,
 		`node_uname_info`,
 	}
+	ruleNames := []string{
+		`机器CPU使用率大于60%`,
+		`kafka集群剩余内存小于2G`,
+		`k8s集群pending pod数量大于50`,
+	}
+
+	severitys := []string{
+		common.MONITOR_ALERT_SEVERITY_CRITICAL,
+		common.MONITOR_ALERT_SEVERITY_WARNING,
+		common.MONITOR_ALERT_SEVERITY_INFO,
+	}
+
 	num = 3
 	for i := 0; i < num; i++ {
 		mIndex := i
@@ -204,35 +235,29 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			mIndex = len(metricsNames) - 1
 		}
 		rule := MonitorPromAlertRule{
-			Name:        fmt.Sprintf("rule-%v", i+1),
+			Name:        ruleNames[mIndex],
 			UserID:      1,
-			PoolId:      1,
 			Enable:      1,
+			PoolId:      1,
+			TreeNodeId:  uint(i + 1),
+			Severity:    severitys[mIndex],
 			SendGroupId: 1,
-			Expr:        fmt.Sprintf(`%s{job="node_exporter_1"} > 0`, metricsNames[mIndex]),
+			GrafanaLink: "http://192.168.50.200:3000/d/StarsL-TenSunS-node/0d50bf8",
+			Expr:        fmt.Sprintf(`%s{job='node_exporter_1'} > 0`, metricsNames[mIndex]),
 			ForTime:     "1s",
 			Labels:      []string{"l1=v1", "l2=v2"},
-			Annotations: []string{"a3=v3", "a4=v4"},
+			Annotations: []string{
+				fmt.Sprintf("%s=%s",
+					common.MONITOR_ALERT_RULE_ANNO_VALUE,
+					"{{ $value }}",
+				),
+				"a3=v3", "a4=v4"},
 		}
 		_ = rule.CreateOne()
 	}
 
-	// 值班组
-	users, _ := GetUserAll()
-	for i := 0; i < num; i++ {
-		dutyGroup := &MonitorOndutyGroup{
-			Name:    fmt.Sprintf("mock-dutyGroup-%v", i+1),
-			UserID:  1,
-			Members: users,
-
-			Key:            "",
-			PoolName:       "",
-			CreateUserName: "",
-		}
-		_ = dutyGroup.CreateOne()
-	}
 	num = 10
-	ago := -30
+	ago := -5
 	users, _ = GetUserAll()
 	for i := 0; i < num; i++ {
 		startDay := common.GetDayAgoDate(ago)
