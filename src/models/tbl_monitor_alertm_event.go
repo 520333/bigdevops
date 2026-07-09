@@ -14,18 +14,18 @@ import (
 
 type MonitorAlertEvent struct {
 	Model
-	AlertName   string `json:"alertName"`
-	FingerPrint string `json:"fingerPrint,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:告警unique id eventId"`
-	Status      string `json:"status" gorm:"comment:告警状态： 告警中|已屏蔽|已认领|已恢复"`
-	RuleId      uint   `json:"ruleId"`
-	SendGroupId uint   `json:"sendGroupId"`
-	EventTimes  int    `json:"eventTimes" gorm:"comment:触发次数"`
-
-	Labels    StringArray                   `json:"labels" gorm:"comment: 标签组 k=v"`
-	Key       string                        `json:"key" gorm:"-"` // 前端表格使用
-	Alert     template.Alert                `json:"alert" gorm:"-"`
-	SendGroup *MonitorAlertManagerSendGroup `json:"sendGroup" gorm:"-"`
-	Rule      *MonitorPromAlertRule         `json:"rule" gorm:"-"`
+	AlertName   string                        `json:"alertName"`
+	FingerPrint string                        `json:"fingerPrint,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:告警unique id eventId"`
+	Status      string                        `json:"status" gorm:"comment:告警状态： 告警中|已屏蔽|已认领|已恢复"`
+	RuleId      uint                          `json:"ruleId"`
+	SendGroupId uint                          `json:"sendGroupId"`
+	EventTimes  int                           `json:"eventTimes" gorm:"comment:触发次数"`
+	SilenceID   string                        `json:"silenceID" gorm:"comment:alertmanager返回的静默id"`
+	Labels      StringArray                   `json:"labels" gorm:"comment: 标签组 k=v"`
+	Key         string                        `json:"key" gorm:"-"` // 前端表格使用
+	Alert       template.Alert                `json:"alert" gorm:"-"`
+	SendGroup   *MonitorAlertManagerSendGroup `json:"sendGroup" gorm:"-"`
+	Rule        *MonitorPromAlertRule         `json:"rule" gorm:"-"`
 
 	LabelsM      map[string]string `json:"labelsM" gorm:"-"`
 	AnnotationsM map[string]string `json:"annotationsM" gorm:"-"`

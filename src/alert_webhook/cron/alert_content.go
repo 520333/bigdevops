@@ -433,19 +433,18 @@ var (
                                         "default_url": "%s"
                                     }
                                 ]
-                            },
-                            {
-                                "tag": "overflow",
-                                "width": "default",
-                                "options": [
-                                    {
-                                        "text": {
-                                            "tag": "plain_text",
-                                            "content": "按钮 3"
-                                        }
-                                    }
-                                ]
                             }
+
+
+
+
+
+
+
+
+
+
+
                         ],
                         "padding": "0px 0px 0px 0px",
                         "direction": "horizontal",
@@ -542,11 +541,44 @@ var (
                                     {
                                         "text": {
                                             "tag": "plain_text",
-                                            "content": "按钮 3"
+                                            "content": "屏蔽1小时"
+                                        },
+                                        "multi_url": {
+                                            "url": "%s"
+                                        }
+                                    },
+                                    {
+                                        "text": {
+                                            "tag": "plain_text",
+                                            "content": "屏蔽6小时"
+                                        },
+                                        "multi_url": {
+                                            "url": "%s"
+                                        }
+                                    },
+                                    {
+                                        "text": {
+                                            "tag": "plain_text",
+                                            "content": "屏蔽1天"
+                                        },
+                                        "multi_url": {
+                                            "url": "%s"
+                                        }
+                                    },
+                                    {
+                                        "text": {
+                                            "tag": "plain_text",
+                                            "content": "屏蔽7天"
+                                        },
+                                        "multi_url": {
+                                            "url": "%s"
                                         }
                                     }
                                 ]
                             }
+
+
+
                         ],
                         "padding": "0px 0px 0px 0px",
                         "direction": "horizontal",
@@ -687,11 +719,17 @@ func (ac *AlertCache) GenerateFeiShuCardMsgOneAlert(alert template.Alert, event 
 	msgSendGroupUrl := fmt.Sprintf("%s/%s?id=%v", ac.Sc.FrontDomain, "monitor/sendgroup/detail", sendGroup.ID)
 	msgSendGroup := fmt.Sprintf("**✉️修改发送组：**\\n[%s](%s)", sendGroup.Name, msgSendGroupUrl)
 	msgReLingUrl := fmt.Sprintf("%s/%s?fingerprint=%v", ac.Sc.BackendDomain, "reling", alert.Fingerprint)                    // 认领告警
-	msgSilenceOneHourUrl := fmt.Sprintf("%s/%s?fingerprint=%v&hour=1", ac.Sc.BackendDomain, "silence", alert.Fingerprint)    // 屏蔽 1 小时
-	msgSilenceOneDayUrl := fmt.Sprintf("%s/%s?fingerprint=%v&hour=24", ac.Sc.BackendDomain, "silence", alert.Fingerprint)    // 屏蔽 1 天
 	msgUnSilenceUrl := fmt.Sprintf("%s/%s?fingerprint=%v", ac.Sc.BackendDomain, "unsilence", alert.Fingerprint)              // 取消屏蔽
+	msgSilenceOneHourUrl := fmt.Sprintf("%s/%s?fingerprint=%v&hour=1", ac.Sc.BackendDomain, "silence", alert.Fingerprint)    // 屏蔽 1 小时
 	msgSilenceSexHourUrl := fmt.Sprintf("%s/%s?fingerprint=%v&hour=6", ac.Sc.BackendDomain, "silence", alert.Fingerprint)    // 屏蔽 6 小时
+	msgSilenceOneDayUrl := fmt.Sprintf("%s/%s?fingerprint=%v&hour=24", ac.Sc.BackendDomain, "silence", alert.Fingerprint)    // 屏蔽 1 天
 	msgSilenceSevenDayUrl := fmt.Sprintf("%s/%s?fingerprint=%v&hour=168", ac.Sc.BackendDomain, "silence", alert.Fingerprint) // 屏蔽 7 天
+
+	// 基于alertname名称屏蔽
+	msgSilenceOneHourByNameUrl := fmt.Sprintf("%s/%s?fingerprint=%v&hour=1&by_name=1", ac.Sc.BackendDomain, "silence", alert.Fingerprint)    // 屏蔽 1 小时
+	msgSilenceSexHourByNameUrl := fmt.Sprintf("%s/%s?fingerprint=%v&hour=6&by_name=1", ac.Sc.BackendDomain, "silence", alert.Fingerprint)    // 屏蔽 6 小时
+	msgSilenceOneDayByNameUrl := fmt.Sprintf("%s/%s?fingerprint=%v&hour=24&by_name=1", ac.Sc.BackendDomain, "silence", alert.Fingerprint)    // 屏蔽 1 天
+	msgSilenceSevenDayByNameUrl := fmt.Sprintf("%s/%s?fingerprint=%v&hour=168&by_name=1", ac.Sc.BackendDomain, "silence", alert.Fingerprint) // 屏蔽 7 天
 
 	// 告警标签
 	labelsMap := alert.Labels
@@ -708,12 +746,15 @@ func (ac *AlertCache) GenerateFeiShuCardMsgOneAlert(alert template.Alert, event 
 	msgSi := fmt.Sprintf(feiShuCardContent,
 		msgLabels, msgAnnotations,
 		msgSeverity, msgStatus, msgStreeNode, msgTime, msgUpgrade, msgOnduty, msgGrafana, msgSendGroup, msgExpr,
-		msgReLingUrl, msgSilenceOneHourUrl, msgSilenceOneDayUrl, msgUnSilenceUrl, msgSilenceSexHourUrl, msgSilenceSevenDayUrl, alertHeaderColor, alertHeader)
+		msgReLingUrl, msgSilenceOneHourUrl, msgSilenceOneDayUrl, msgUnSilenceUrl, msgSilenceSexHourUrl, msgSilenceSevenDayUrl,
+		msgSilenceOneHourByNameUrl, msgSilenceSexHourByNameUrl, msgSilenceOneDayByNameUrl, msgSilenceSevenDayByNameUrl,
+		alertHeaderColor, alertHeader)
+	//msgSilenceOneHourByNameUrl, msgSilenceSexHourByNameUrl, msgSilenceOneDayByNameUrl, msgSilenceSevenDayByNameUrl,
 
-	//ac.SentFeiShuPrivate(msgSi, siliaoUserIds) // 应用机器人
+	ac.SentFeiShuPrivate(msgSi, siliaoUserIds) // 应用机器人
 
-	msgQun := fmt.Sprintf(feiShuQunDataQun, msgSi)
-	ac.SentFeiShuQun(msgQun) //发送群聊机器人
+	//msgQun := fmt.Sprintf(feiShuQunDataQun, msgSi)
+	//ac.SentFeiShuQun(msgQun) //发送群聊机器人
 }
 
 // SentFeiShuQun 飞书自定义机器人 群组
@@ -736,7 +777,7 @@ func (ac *AlertCache) SentFeiShuPrivate(cardContent string, siliaoUserId map[str
 	for userId := range siliaoUserId {
 		url := "https://open.feishu.cn/open-apis/im/v1/messages"
 		params := map[string]string{"receive_id_type": "user_id"}
-		tenantAccessToken := "t-g104791JBUOZZTS33I76QU3YJFD7VICJS6GE53TQ"
+		tenantAccessToken := "t-g10479fUVOFXSWITIWQ3VXLHVG7CAOO7WT5A6FOO"
 		headersMap := map[string]string{
 			"Authorization": fmt.Sprintf("Bearer %s", tenantAccessToken),
 			"Content-Type":  "application/json",

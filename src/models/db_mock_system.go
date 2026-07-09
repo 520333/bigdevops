@@ -112,7 +112,7 @@ func mockSystemData(sc *config.ServerConfig) *User {
 
 	_ = Db.Create(apis)
 
-	users := []string{"蟹老板", "珊迪", "章鱼哥", "皮老板", "小窝"}
+	users := []string{"蟹老板", "珊迪", "章鱼哥", "皮老板", "小蜗"}
 	num := 5
 	for i := 0; i < num; i++ {
 		mockUser := &User{

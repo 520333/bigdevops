@@ -11,6 +11,7 @@ func ConfigRouter(r *gin.Engine) {
 	base.GET("/now", getNowTs)
 	base.POST("/receive", AlertReceive)
 	base.GET("/silence", AlertSilence)
+	base.GET("/unsilence", AlertUnSilence)
 
 }
 func getNowTs(c *gin.Context) {
