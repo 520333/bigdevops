@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/prometheus/alertmanager/template"
+	"go.uber.org/zap"
 )
 
 var (
@@ -701,7 +702,7 @@ func (ac *AlertCache) GenerateFeiShuCardMsgOneAlert(alert template.Alert, event 
 				upgredeUserNames = fmt.Sprintf("%s %s", upgredeUserNames, user.RealName)
 				upgredeUserAtIds = fmt.Sprintf("%s <at id=%s></at>", upgredeUserAtIds, user.FeiShuUserId)
 			}
-			msgUpgrade = fmt.Sprintf("**⬆️升级状态：**\\n`已升级`  [接收人变更]:[%s]->[%s]",
+			msgUpgrade = fmt.Sprintf("**⬆️升级状态：**`已升级`\\n  [接收人变更]:[%s]->[%s]",
 				yuanshiRen,
 				upgredeUserNames,
 			)
@@ -749,21 +750,21 @@ func (ac *AlertCache) GenerateFeiShuCardMsgOneAlert(alert template.Alert, event 
 		msgReLingUrl, msgSilenceOneHourUrl, msgSilenceOneDayUrl, msgUnSilenceUrl, msgSilenceSexHourUrl, msgSilenceSevenDayUrl,
 		msgSilenceOneHourByNameUrl, msgSilenceSexHourByNameUrl, msgSilenceOneDayByNameUrl, msgSilenceSevenDayByNameUrl,
 		alertHeaderColor, alertHeader)
-	//msgSilenceOneHourByNameUrl, msgSilenceSexHourByNameUrl, msgSilenceOneDayByNameUrl, msgSilenceSevenDayByNameUrl,
 
 	ac.SentFeiShuPrivate(msgSi, siliaoUserIds) // 应用机器人
 
-	//msgQun := fmt.Sprintf(feiShuQunDataQun, msgSi)
-	//ac.SentFeiShuQun(msgQun) //发送群聊机器人
+	msgQun := fmt.Sprintf(feiShuQunDataQun, msgSi)
+	ac.SentFeiShuQun(msgQun) //发送群聊机器人
 }
 
 // SentFeiShuQun 飞书自定义机器人 群组
 func (ac *AlertCache) SentFeiShuQun(msg string) {
-	url := "https://open.feishu.cn/open-apis/bot/v2/hook/c5a63034-7a00-43e5-84c2-31b0661cc0ea"
+	url := ac.Sc.ImC.FeiShu.Webhook
 	emptyMap := map[string]string{}
-	respBytes, err := common.PostWithJsonString(ac.Sc.Logger, "SentFeiShuQun", 2, url, msg, emptyMap, emptyMap)
-	fmt.Println(string(respBytes), err)
-
+	respBytes, err := common.PostWithJsonString(ac.Sc.Logger, "SentFeiShuQun", ac.Sc.ImC.FeiShu.RequestTimeoutSeconds, url, msg, emptyMap, emptyMap)
+	if err != nil {
+		ac.Sc.Logger.Error("发送飞书群聊消息失败", zap.Error(err), zap.Any("结果", string(respBytes)))
+	}
 }
 
 type FeiShuPrivateCardMsg struct {
@@ -777,22 +778,21 @@ func (ac *AlertCache) SentFeiShuPrivate(cardContent string, siliaoUserId map[str
 	for userId := range siliaoUserId {
 		url := "https://open.feishu.cn/open-apis/im/v1/messages"
 		params := map[string]string{"receive_id_type": "user_id"}
-		tenantAccessToken := "t-g10479fUVOFXSWITIWQ3VXLHVG7CAOO7WT5A6FOO"
+		tenantAccessToken := ac.GetPrivateChatToken()
 		headersMap := map[string]string{
 			"Authorization": fmt.Sprintf("Bearer %s", tenantAccessToken),
 			"Content-Type":  "application/json",
 		}
-		//feiShuUserId := "b75ag4g4"
 		feiShuPrivateCardMsg := FeiShuPrivateCardMsg{
 			MsgType:   "interactive",
 			ReceiveId: userId,
 			Content:   cardContent,
 		}
 		data, _ := json.Marshal(feiShuPrivateCardMsg)
-		_, _ = common.PostWithJsonString(ac.Sc.Logger, "SentFeiShuPrivate", 2, url, string(data), params, headersMap)
-		//if err != nil {
-		//	ac.Sc.Logger.Error("发送飞书私聊失败", zap.Error(err), zap.String("userId", userId))
-		//}
+		respBytes, err := common.PostWithJsonString(ac.Sc.Logger, "SentFeiShuPrivate", ac.Sc.ImC.FeiShu.RequestTimeoutSeconds, url, string(data), params, headersMap)
+		if err != nil {
+			ac.Sc.Logger.Error("发送飞书私聊消息失败", zap.Error(err), zap.Any("结果", string(respBytes)), zap.Any("userId", userId))
+		}
 	}
 
 }

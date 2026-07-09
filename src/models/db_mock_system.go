@@ -119,7 +119,7 @@ func mockSystemData(sc *config.ServerConfig) *User {
 			Username:     fmt.Sprintf("mock%d", i),
 			Password:     common.BcryptHash("123456"),
 			RealName:     users[i],
-			FeiShuUserId: "b75ag4g4",
+			FeiShuUserId: "b75ag4g4", //5egcb786
 			HomePath:     "/system/role",
 			Enable:       1,
 		}

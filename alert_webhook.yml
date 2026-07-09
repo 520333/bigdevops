@@ -23,3 +23,23 @@ http_request_global_timeout_seconds: 2
 #### 数据库连接配置
 mysql:
   dsn: "root:123456@tcp(192.168.50.100:3306)/bigdevops?charset=utf8mb4&parseTime=True&loc=Local"
+
+
+#### IM工具
+im:
+  feishu:
+    enabled: true
+    webhook: "https://open.feishu.cn/open-apis/bot/v2/hook/c5a63034-7a00-43e5-84c2-31b0661cc0ea"
+    secret: "xxx"
+#    tenant_access_token_api: "https://open.feishu.cn/open-apis/im/v1/messages"
+    app_id: cli_aac67c3c60781be9
+    app_secret: 8CuHU2OlSlTx3tBOKwShbhCRMZJa1itD
+
+    request_timeout_seconds: 5
+#  dingding:
+#    enabled: false
+#    webhook: "https://oapi.dingtalk.com/robot/send?access_token=..."
+#    secret: "SECxxxx"
+#  qywx:
+#    enabled: false
+#    webhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."

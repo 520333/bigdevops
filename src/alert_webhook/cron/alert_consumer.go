@@ -79,13 +79,14 @@ func (ac *AlertCache) DealWithOneAlertReceive(alert template.Alert) {
 		err := event.UpdateOrCreateOne()
 		if err != nil {
 			ac.Sc.Logger.Error("保存alert到event出错", zap.Error(err), zap.Any("event", rule), zap.Any("告警", alert))
-
 		}
+		// 处理告警信息
+		ac.GenerateFeiShuCardMsgOneAlert(alert, event, rule, sendGroup)
 	}()
 	//err := event.UpdateOrCreateOne()
 	//if err != nil {
 	//	ac.Sc.Logger.Error("保存alert到event出错", zap.Error(err), zap.Any("event", rule), zap.Any("告警", alert))
 	//}
-	// 处理告警信息
-	ac.GenerateFeiShuCardMsgOneAlert(alert, event, rule, sendGroup)
+	////处理告警信息
+	//ac.GenerateFeiShuCardMsgOneAlert(alert, event, rule, sendGroup)
 }

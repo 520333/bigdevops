@@ -24,6 +24,9 @@ type AlertCache struct {
 	UserLock                 sync.RWMutex
 	OnDutyGroupLock          sync.RWMutex
 	MonitorPromAlertRuleLock sync.RWMutex
+
+	RobotToken     string
+	RobotTokenLock sync.RWMutex
 }
 
 func NewAlertCache(sc *config.AlertWebhookConfig, alertReceiveQ chan template.Alert, cacheHasSynced chan struct{}) *AlertCache {
@@ -44,6 +47,7 @@ func (ac *AlertCache) RenewMapManager(ctx context.Context) error {
 	go wait.UntilWithContext(ctx, ac.RenewMapUser, time.Duration(ac.Sc.CommonMapRenewIntervalSeconds)*time.Second)
 	go wait.UntilWithContext(ctx, ac.RenewMapOnDutyGroup, time.Duration(ac.Sc.CommonMapRenewIntervalSeconds)*time.Second)
 	go wait.UntilWithContext(ctx, ac.RenewMapRule, time.Duration(ac.Sc.CommonMapRenewIntervalSeconds)*time.Second)
+	go wait.UntilWithContext(ctx, ac.RefreshPrivateChatToken, 10*time.Minute)
 	<-ctx.Done()
 	ac.Sc.Logger.Info("RenewMapManager 收到其他任务退出信号 退出")
 	return nil
