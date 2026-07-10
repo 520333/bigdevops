@@ -38,7 +38,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		{Name: "PrometheusMonitor", Title: "监控中心", Icon: "ant-design:dashboard-outlined", Type: "0", Show: "1", OrderNo: 40, Component: "LAYOUT", Path: "/monitor", Redirect: "/monitor/scrape/index"},
 		{Name: "MonitorPool", Title: "采集实例管理", Icon: "ant-design:database-outlined", Type: "1", Show: "1", OrderNo: 41, Component: "monitor/pool/index", Pid: 21, Path: "pool"},
 		{Name: "MonitorScrapeJob", Title: "采集任务管理", Icon: "ant-design:api-outlined", Type: "1", Show: "1", OrderNo: 42, Component: "monitor/scrape/index", Pid: 21, Path: "scrape"},
-		{Name: "MonitorOnDutyGroup", Title: "轮值排班管理", Icon: "ant-design:ungroup-outlined", Type: "1", Show: "1", OrderNo: 43, Component: "monitor/ondutygroup/index", Pid: 21, Path: "ondutygroup"},
+		{Name: "MonitorOnDutyGroup", Title: "值班组设置", Icon: "ant-design:ungroup-outlined", Type: "1", Show: "1", OrderNo: 43, Component: "monitor/ondutygroup/index", Pid: 21, Path: "ondutygroup"},
+		{Name: "MonitorOnDutyGroupPlan", Title: "轮值排班表", Icon: "ant-design:calendar-outlined", Type: "1", Show: "1", OrderNo: 44, Component: "monitor/plan/index", Pid: 21, Path: "plan"},
 	}
 
 	apis := []*Api{
