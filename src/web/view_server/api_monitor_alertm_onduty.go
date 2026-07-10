@@ -40,8 +40,8 @@ func getMonitorOndutyGroupList(c *gin.Context) {
 
 	objs, err := models.GetMonitorOndutyGroupAll()
 	if err != nil {
-		sc.Logger.Error("去数据库中拿所有的采集任务执行错误", zap.Error(err))
-		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的采集任务执行错误：%v", err.Error()), c)
+		sc.Logger.Error("去数据库中拿所有的值班组执行错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的值班组执行错误：%v", err.Error()), c)
 		return
 	}
 	allIds := []int{}
@@ -81,14 +81,15 @@ func getMonitorOndutyGroupList(c *gin.Context) {
 	// 根据过滤后的 ID 进行分页查询
 	pagedObjs, err := models.GetMonitorOndutyGroupByIdsWithLimitOffset(allIds, limit, offset)
 	if err != nil {
-		sc.Logger.Error("limit-offset 去数据库中拿所有的采集任务执行错误", zap.Error(err))
-		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的采集任务执行错误：%v", err.Error()), c)
+		sc.Logger.Error("limit-offset 去数据库中拿所有的值班组执行错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的值班组执行错误：%v", err.Error()), c)
 		return
 	}
 
 	// 🚀 修复 2：分页查出来的新对象，必须再次遍历填充一次虚拟字段，否则响应里还是空的！
 	for _, obj := range pagedObjs {
 		obj.FillFrontAllData()
+		obj.FillToDayOndutyUser()
 	}
 
 	common.OkWithDetailed(gin.H{
@@ -242,7 +243,7 @@ func createMonitorOndutyGroup(c *gin.Context) {
 	var reqObj models.MonitorOndutyGroup
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
-		sc.Logger.Error("解析新增采集任务执行请求失败", zap.Error(err))
+		sc.Logger.Error("解析新增值班组执行请求失败", zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
@@ -254,10 +255,23 @@ func createMonitorOndutyGroup(c *gin.Context) {
 	if err == nil && dbUser != nil {
 		reqObj.UserID = dbUser.ID
 	}
+
+	// 转化userName到members
+	for _, userName := range reqObj.UserNames {
+		userName := userName
+		dbUser, err := models.GetUserByUsername(userName)
+		if err != nil {
+			sc.Logger.Error("解析新增值班组执行请求失败", zap.Error(err))
+			common.FailWithMessage(err.Error(), c)
+			return
+		}
+		reqObj.Members = append(reqObj.Members, dbUser)
+	}
+
 	// 存入数据库
 	err = reqObj.CreateOne()
 	if err != nil {
-		sc.Logger.Error("新增采集任务执行数据库失败", zap.Error(err))
+		sc.Logger.Error("新增值班组执行数据库失败", zap.Error(err))
 		common.FailWithMessage("存入数据库失败: "+err.Error(), c)
 		return
 	}
@@ -272,21 +286,41 @@ func updateMonitorOndutyGroup(c *gin.Context) {
 	var reqObj models.MonitorOndutyGroup
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
-		sc.Logger.Error("解析更新采集任务请求失败", zap.Error(err))
+		sc.Logger.Error("解析更新值班组请求失败", zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
 	// 检查是否存在
 	_, err = models.GetMonitorOndutyGroupById(int(reqObj.ID))
 	if err != nil {
-		common.FailWithMessage("采集任务不存在", c)
+		common.FailWithMessage("值班组不存在", c)
 		return
+	}
+	// 转化userName到members
+	var newMembers []*models.User
+	for _, userName := range reqObj.UserNames {
+		userName := userName
+		dbUser, err := models.GetUserByUsername(userName)
+		if err != nil {
+			sc.Logger.Error("解析新增值班组执行请求失败", zap.Error(err))
+			common.FailWithMessage("找不到用户: "+userName, c)
+			return
+		}
+		newMembers = append(newMembers, dbUser)
 	}
 
 	// 更新
+	reqObj.Members = newMembers
+	//err = reqObj.UpdateMembers()
+	//if err != nil {
+	//	sc.Logger.Error("更新值班组-关联members执行错误", zap.Error(err))
+	//	common.FailWithMessage("更新失败: "+err.Error(), c)
+	//	return
+	//}
+
 	err = reqObj.UpdateOne()
 	if err != nil {
-		sc.Logger.Error("更新采集任务执行错误", zap.Error(err))
+		sc.Logger.Error("更新值班组执行错误", zap.Error(err))
 		common.FailWithMessage("更新失败: "+err.Error(), c)
 		return
 	}
@@ -307,13 +341,18 @@ func deleteMonitorOndutyGroup(c *gin.Context) {
 
 	dbObj, err := models.GetMonitorOndutyGroupById(intVar)
 	if err != nil {
-		common.FailWithMessage("采集任务不存在", c)
+		common.FailWithMessage("值班组不存在", c)
 		return
 	}
-
+	dbSendGroups, _ := models.GetMonitorSendGroupByOndutyGroupId(uint(intVar))
+	if dbSendGroups != nil && len(dbSendGroups) > 0 {
+		sc.Logger.Warn("该值班组已经绑定了发送组，禁止直接删除！", zap.Any("", id))
+		common.FailWithMessage("该值班组已经绑定了发送组，禁止直接删除！", c)
+		return
+	}
 	err = dbObj.DeleteOne()
 	if err != nil {
-		sc.Logger.Error("删除采集任务执行错误", zap.Error(err))
+		sc.Logger.Error("删除值班组执行错误", zap.Error(err))
 		common.FailWithMessage("删除失败: "+err.Error(), c)
 		return
 	}
@@ -324,19 +363,19 @@ func deleteMonitorOndutyGroup(c *gin.Context) {
 func actionMonitorOndutyGroupOne(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
-	sc.Logger.Info("采集任务动作", zap.Any("id", id))
+	sc.Logger.Info("值班组动作", zap.Any("id", id))
 	intVar, _ := strconv.Atoi(id)
 
 	dbObj, err := models.GetJobTaskById(intVar)
 	if err != nil {
-		sc.Logger.Error("根据id找采集任务执行错误", zap.Any("采集任务执行", id), zap.Error(err))
+		sc.Logger.Error("根据id找值班组执行错误", zap.Any("值班组执行", id), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
 	action := c.Query("action")
 	nextStatus, exist := common.JOB_ACTION_NEXT_STATUS_MAP[action]
 	if !exist {
-		sc.Logger.Error("传入的动作错误", zap.Any("采集任务执行", id), zap.Error(err))
+		sc.Logger.Error("传入的动作错误", zap.Any("值班组执行", id), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
@@ -346,7 +385,7 @@ func actionMonitorOndutyGroupOne(c *gin.Context) {
 	}
 
 	// ==========================================
-	// 💡 补充记录采集任务流 到 ActualFlowData json
+	// 💡 补充记录值班组流 到 ActualFlowData json
 	// ==========================================
 
 	// 1. 获取当前执行操作的用户
@@ -359,8 +398,8 @@ func actionMonitorOndutyGroupOne(c *gin.Context) {
 	actionNameMap := map[string]string{
 		common.AGENT_TASK_ACTION_START:  "手动下发执行",
 		common.AGENT_TASK_ACTION_KILL:   "强行Kill终止",
-		common.AGENT_TASK_ACTION_PAUSE:  "手动暂停采集任务",
-		common.AGENT_TASK_ACTION_RESUME: "恢复执行采集任务",
+		common.AGENT_TASK_ACTION_PAUSE:  "手动暂停值班组",
+		common.AGENT_TASK_ACTION_RESUME: "恢复执行值班组",
 		common.AGENT_TASK_ACTION_STOP:   "手动标记停止",
 	}
 	actionName := actionNameMap[action]
@@ -395,12 +434,12 @@ func actionMonitorOndutyGroupOne(c *gin.Context) {
 
 	// ==========================================
 
-	sc.Logger.Info("采集任务动作", zap.Any("id", id), zap.Any("动作", action), zap.Any("nextStatus", nextStatus))
+	sc.Logger.Info("值班组动作", zap.Any("id", id), zap.Any("动作", action), zap.Any("nextStatus", nextStatus))
 
 	dbObj.Status = nextStatus
 	err = dbObj.UpdateOne()
 	if err != nil {
-		sc.Logger.Error("更新采集任务执行错误", zap.Any("采集任务执行", id), zap.Error(err))
+		sc.Logger.Error("更新值班组执行错误", zap.Any("值班组执行", id), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
@@ -408,14 +447,14 @@ func actionMonitorOndutyGroupOne(c *gin.Context) {
 
 }
 
-// setScrapeJobStatus 设置采集任务的启用/禁用状态
+// setScrapeJobStatus 设置值班组的启用/禁用状态
 //func setMonitorOndutyGroupStatus(c *gin.Context) {
 //	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 //
 //	var reqObj setScrapeJobEnableReq
 //	err := c.ShouldBindJSON(&reqObj)
 //	if err != nil {
-//		sc.Logger.Error("解析修改采集任务状态请求失败", zap.Any("req", reqObj), zap.Error(err))
+//		sc.Logger.Error("解析修改值班组状态请求失败", zap.Any("req", reqObj), zap.Error(err))
 //		common.FailWithMessage(err.Error(), c)
 //		return
 //	}
@@ -432,7 +471,7 @@ func actionMonitorOndutyGroupOne(c *gin.Context) {
 //	// 1. 查询数据库中原有的记录
 //	dbJob, err := models.GetMonitorOndutyGroupById(int(reqObj.Id))
 //	if err != nil {
-//		sc.Logger.Error("根据id查找采集任务错误", zap.Any("req", reqObj), zap.Error(err))
+//		sc.Logger.Error("根据id查找值班组错误", zap.Any("req", reqObj), zap.Error(err))
 //		common.FailWithMessage(err.Error(), c)
 //		return
 //	}
@@ -443,7 +482,7 @@ func actionMonitorOndutyGroupOne(c *gin.Context) {
 //	// 3. 执行更新
 //	err = dbJob.UpdateEnable()
 //	if err != nil {
-//		sc.Logger.Error("更新采集任务状态错误", zap.Any("req", reqObj), zap.Error(err))
+//		sc.Logger.Error("更新值班组状态错误", zap.Any("req", reqObj), zap.Error(err))
 //		common.FailWithMessage(err.Error(), c)
 //		return
 //	}

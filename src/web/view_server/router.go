@@ -161,6 +161,11 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.POST("/setScrapeJobStatus", setScrapeJobStatus)
 
 		monitorApiGroup.GET("/getMonitorAlertManagerYamlOne", getMonitorAlertManagerYamlOne)
+
+		monitorApiGroup.GET("/getMonitorOndutyGroupList", getMonitorOndutyGroupList)
+		monitorApiGroup.POST("/createMonitorOndutyGroup", createMonitorOndutyGroup)
+		monitorApiGroup.POST("/updateMonitorOndutyGroup", updateMonitorOndutyGroup)
+		monitorApiGroup.DELETE("/deleteMonitorOndutyGroup/:id", deleteMonitorOndutyGroup)
 	}
 }
 

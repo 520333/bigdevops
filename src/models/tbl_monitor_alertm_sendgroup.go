@@ -86,6 +86,10 @@ func GetMonitorAlertManagerSendGroupByPoolId(poolId uint) (ps []*MonitorAlertMan
 	return
 }
 
+func GetMonitorSendGroupByOndutyGroupId(ondutyGroupId uint) (ps []*MonitorAlertManagerSendGroup, err error) {
+	err = Db.Where("on_duty_group_id = ? ", ondutyGroupId).Find(&ps).Error
+	return
+}
 func GetMonitorAlertManagerSendGroupAll() (ps []*MonitorAlertManagerSendGroup, err error) {
 	err = Db.Preload("FirstUpgradeUsers").Find(&ps).Error
 	return

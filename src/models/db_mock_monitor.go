@@ -179,19 +179,21 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 
 	// 值班组
 	users, _ := GetUserAll()
+	num = 5
 	for i := 0; i < num; i++ {
 		dutyGroup := &MonitorOndutyGroup{
 			Name:           fmt.Sprintf("值班组-%v", i+1),
 			UserID:         1,
 			Members:        users,
+			ShiftDays:      i + 2,
 			Key:            "",
-			PoolName:       "",
 			CreateUserName: "",
 		}
 		_ = dutyGroup.CreateOne()
 	}
 
 	// 创建发送组
+	num = 1
 	for i := 0; i < num; i++ {
 		sg := MonitorAlertManagerSendGroup{
 			Name:                fmt.Sprintf("发送组-%v", i+1),
