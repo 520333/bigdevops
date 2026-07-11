@@ -12,14 +12,18 @@ import (
 
 type MonitorOndutyChange struct {
 	Model
-	Name string `json:"name,omitempty" validate:"required,min=1,max=50" gorm:"uniqueIndex;type:varchar(100);comment:历史"`
+	Name string `json:"name,omitempty" validate:"required,min=1,max=50" gorm:"type:varchar(100);comment:换班说明"`
 
 	OndutyGroupId uint
 	UserId        uint
 
 	DateString   string `json:"dateString" gorm:"comment:计划哪一天"`
 	OndutyUserId uint   `json:"onDutyUserId" gorm:"comment:谁值班"`
-	OriginUserId uint   `json:"originUserId" gorm:"comment:原来谁在值班"`
+	OriginUserId uint   `json:"originUserId" gorm:"comment:原来谁值班"`
+
+	// 前端请求 2个username
+	TargetUserName string `json:"targetUserName" gorm:"-"`
+	OriginUserName string `json:"originUserName" gorm:"-"`
 
 	Key            string `json:"key,omitempty" gorm:"-"` // 前端表格使用
 	PoolName       string `json:"poolName,omitempty" gorm:"-"`
@@ -76,7 +80,10 @@ func GetMonitorOndutyChangeByOnDutyGroupIdAndTimeRange(onDutyGroupId int, startD
 }
 
 func GetMonitorOndutyChangeByOnDutyGroupIdAndDay(onDutyGroupId uint, dateString string) (obj *MonitorOndutyChange, err error) {
-	err = Db.Where("onduty_group_id = ? AND date_string = ?", onDutyGroupId, dateString).Find(&obj).Error
+	err = Db.Where("onduty_group_id = ? AND date_string = ?", onDutyGroupId, dateString).
+		Order("id desc").
+		Limit(1).
+		Find(&obj).Error
 	return
 }
 func GetMonitorOndutyChangeByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorOndutyChange, err error) {

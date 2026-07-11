@@ -1,9 +1,9 @@
 package models
 
 import (
-	"bigdevops/src/common"
 	"errors"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -18,12 +18,12 @@ type MonitorOndutyGroup struct {
 	UserID uint
 
 	// 发送逻辑
-	Members      []*User  `json:"members" gorm:"many2many:monitor_onduty_users;comment:值班人列表"`
-	UserNames    []string `json:"userNames" gorm:"-"` // 前端使用
-	ShiftDays    int      `json:"shiftDays" gorm:"comment:轮班周期：天、周"`
-	ImRobotToken string   `json:"imRobotToken" gorm:"comment:im机器人token 对应哪个群组"`
-
-	ToDayOnDutyUser *User `json:"toDayOnDutyUser" gorm:"-"` // 当天值班人
+	Members                   []*User  `json:"members" gorm:"many2many:monitor_onduty_users;comment:值班人列表"`
+	ShiftDays                 int      `json:"shiftDays" gorm:"comment:轮班周期：天、周"`
+	ImRobotToken              string   `json:"imRobotToken" gorm:"comment:im机器人token 对应哪个群组"`
+	YesterdayNormalDutyUserId uint     `json:"yesterdayNormalDutyUserId" gorm:"comment:不考虑换班的 正常排班的 昨日值班人 由cron设置"`
+	UserNames                 []string `json:"userNames" gorm:"-"`       // 前端使用
+	ToDayOnDutyUser           *User    `json:"toDayOnDutyUser" gorm:"-"` // 当天值班人
 
 	Key            string `json:"key,omitempty" gorm:"-"` // 前端表格使用
 	CreateUserName string `json:"createUserName,omitempty" gorm:"-"`
@@ -41,17 +41,63 @@ func (obj *MonitorOndutyGroup) CreateOne() error {
 	return Db.Create(obj).Error
 }
 
-func (obj *MonitorOndutyGroup) FillToDayOndutyUser() {
-	toDayString := common.GetDayAgoDate(0)
-	dbHistoryToday, _ := GetMonitorOnDutyHistoryByOnDutyGroupIdAndDay(obj.ID, toDayString)
-	if dbHistoryToday.OndutyUserId > 0 {
-		user, _ := GetUserById(int(dbHistoryToday.OndutyUserId))
-		if user.ID > 0 {
-			obj.ToDayOnDutyUser = user
-		}
-	} else {
-		obj.ToDayOnDutyUser = obj.Members[0]
+//	func (obj *MonitorOndutyGroup) FillToDayOndutyUser() {
+//		toDayString := common.GetDayAgoDate(0)
+//		dbHistoryToday, _ := GetMonitorOnDutyHistoryByOnDutyGroupIdAndDay(obj.ID, toDayString)
+//		if dbHistoryToday.OndutyUserId > 0 {
+//			user, _ := GetUserById(int(dbHistoryToday.OndutyUserId))
+//			if user.ID > 0 {
+//				obj.ToDayOnDutyUser = user
+//			}
+//		} else {
+//			obj.ToDayOnDutyUser = obj.Members[0]
+//		}
+//	}
+func (m *MonitorOndutyGroup) FillToDayOndutyUser() {
+	if len(m.Members) == 0 {
+		return
 	}
+
+	todayStr := time.Now().Format("2006-01-02")
+
+	// 1. 最高优先级：检查今天是否有人“换班” (临时顶替)
+	change, _ := GetMonitorOndutyChangeByOnDutyGroupIdAndDay(m.ID, todayStr)
+	if change != nil && change.OndutyUserId > 0 {
+		user, _ := GetUserById(int(change.OndutyUserId))
+		m.ToDayOnDutyUser = user
+		return
+	}
+
+	// 2. 次优先级：检查历史/计划表中今天排了谁
+	history, _ := GetMonitorOnDutyHistoryByOnDutyGroupIdAndDay(m.ID, todayStr)
+	if history != nil && history.OndutyUserId > 0 {
+		user, _ := GetUserById(int(history.OndutyUserId))
+		m.ToDayOnDutyUser = user
+		return
+	}
+
+	// 3. 兜底推算：如果没有记录，根据【创建时间】和【轮换天数】动态推算
+	// 抹平到当天的 0 点 0 分计算纯天数差
+	now := time.Now()
+	createDate := time.Date(m.CreatedAt.Year(), m.CreatedAt.Month(), m.CreatedAt.Day(), 0, 0, 0, 0, time.Local)
+	todayDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+
+	daysPassed := int(todayDate.Sub(createDate).Hours() / 24)
+	if daysPassed < 0 {
+		daysPassed = 0
+	}
+
+	// 拿到轮转天数，兜底防除 0
+	shiftDays := int(m.ShiftDays)
+	if shiftDays <= 0 {
+		shiftDays = 1
+	}
+
+	// 核心算法：经过的天数 / 每个人的排班天数 = 当前经过了几个排班块
+	// 然后对总人数取模，就能精准算出今天该轮到第几个人！
+	memberIndex := (daysPassed / shiftDays) % len(m.Members)
+
+	m.ToDayOnDutyUser = m.Members[memberIndex]
 }
 
 //func (obj *MonitorOndutyGroup) UpdateOne() error {

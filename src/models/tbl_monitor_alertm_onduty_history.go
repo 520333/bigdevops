@@ -18,6 +18,7 @@ type MonitorOndutyHistory struct {
 
 	DateString   string `json:"dateString" gorm:"uniqueIndex:group_id_date;type:varchar(50);comment:哪一天"`
 	OndutyUserId uint   `json:"onDutyUserId" gorm:"comment:谁值班"`
+	OriginUserId uint   `json:"originUserId" gorm:"comment:原来谁在值班"`
 
 	Key            string `json:"key,omitempty" gorm:"-"` // 前端表格使用
 	PoolName       string `json:"poolName,omitempty" gorm:"-"`

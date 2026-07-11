@@ -166,6 +166,10 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.POST("/createMonitorOndutyGroup", createMonitorOndutyGroup)
 		monitorApiGroup.POST("/updateMonitorOndutyGroup", updateMonitorOndutyGroup)
 		monitorApiGroup.DELETE("/deleteMonitorOndutyGroup/:id", deleteMonitorOndutyGroup)
+		monitorApiGroup.GET("/getMonitorOndutyGroupFuturePlan/:id", getMonitorOndutyGroupFuturePlan)
+		monitorApiGroup.GET("/getMonitorOndutyGroupOne/:id", getMonitorOndutyGroupOne)
+		monitorApiGroup.POST("/createMonitorOndutyChange", createMonitorOndutyChange)
+
 	}
 }
 

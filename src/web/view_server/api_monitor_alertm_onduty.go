@@ -14,9 +14,18 @@ import (
 	"go.uber.org/zap"
 )
 
+type OnDutyPlanResponse struct {
+	Details       []OnDutyOne       `json:"details"`
+	Map           map[string]string `json:"map"`
+	UserNameMap   map[string]string `json:"userNameMap"`
+	OriginUserMap map[string]string `json:"originUserMap"`
+}
+
 type OnDutyOne struct {
-	Date string       `json:"date,omitempty"`
-	User *models.User `json:"user,omitempty"`
+	Date       string       `json:"date,omitempty"`
+	User       *models.User `json:"user,omitempty"`
+	OriginUser string       `json:"originUser,omitempty"`
+	Remark     string       `json:"remark,omitempty"`
 }
 
 func getMonitorOndutyGroupList(c *gin.Context) {
@@ -99,6 +108,9 @@ func getMonitorOndutyGroupList(c *gin.Context) {
 }
 
 // 给一个时间范围 返回这个值班组的值班计划
+// 1.start < end <today 当前时间说明应该从历史记录中返回
+// 2.start < today < end 一部分历史一部分未来
+// 3.today < start < end 完全是未来
 func getMonitorOndutyGroupFuturePlan(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
@@ -128,6 +140,43 @@ func getMonitorOndutyGroupFuturePlan(c *gin.Context) {
 		sc.Logger.Error(msg, zap.Any("值班组", id), zap.Error(err))
 		common.FailWithMessage(msg, c)
 		return
+	}
+
+	// 判断是否完全历史
+	todayTime := time.Now()
+	if endDayTime.Before(todayTime) {
+		historys, err := models.GetMonitorOnDutyHistoryByOnDutyGroupIdAndTimeRange(intVar, startDay, endDay)
+		if err != nil {
+			sc.Logger.Error("根据值班组id找历史错误", zap.Any("值班组id", id), zap.Error(err))
+			common.FailWithMessage(err.Error(), c)
+			return
+		}
+		tmpRes := []OnDutyOne{}
+		ondutyPlanResponse := OnDutyPlanResponse{}
+		tmp := map[string]string{}
+		for _, history := range historys {
+			history := history
+			user, err := models.GetUserById(int(history.OndutyUserId))
+			if err != nil {
+				continue
+			}
+			one := OnDutyOne{
+				Date: history.DateString,
+				User: user,
+			}
+			tmpRes = append(tmpRes, one)
+			tmp[history.DateString] = one.User.RealName
+		}
+		ondutyPlanResponse.Details = tmpRes
+		ondutyPlanResponse.Map = tmp
+		common.OkWithData(ondutyPlanResponse, c)
+		return
+
+	}
+
+	// 后面的逻辑可以混在一起 从start到今天
+	if startDayTime.Sub(startDayTime) > 0 {
+
 	}
 
 	dbObj, err := models.GetMonitorOndutyGroupById(intVar)
@@ -169,9 +218,9 @@ func getMonitorOndutyGroupFuturePlan(c *gin.Context) {
 
 	//var yesterdayUserId uint
 	var toDayUserId uint
-	if toDayHistory.OndutyUserId > 0 {
+	if toDayHistory != nil && toDayHistory.OndutyUserId > 0 {
 		toDayUserId = toDayHistory.OndutyUserId
-	} else {
+	} else if len(onDutyUsers) > 0 {
 		toDayUserId = onDutyUsers[0].ID
 	}
 
@@ -218,7 +267,24 @@ func getMonitorOndutyGroupFuturePlan(c *gin.Context) {
 
 	// 4. 统一执行终极过滤（剔除 startDay 之前，以及 endDay 之后的脏数据）
 	ffRes := []OnDutyOne{}
+	tmp := map[string]string{}
+	userNameMap := map[string]string{}
+	originUserMap := map[string]string{}
+
 	for _, node := range tmpRes {
+
+		// 先获取换班记录
+		dbChange, _ := models.GetMonitorOndutyChangeByOnDutyGroupIdAndDay(dbObj.ID, node.Date)
+		if dbChange.OndutyUserId > 0 {
+			user, _ := models.GetUserById(int(dbChange.OndutyUserId))
+			oriUser, _ := models.GetUserById(int(dbChange.OriginUserId))
+			if user.RealName != "" {
+				node.User = user
+				node.OriginUser = oriUser.RealName
+				node.Remark = dbChange.Name
+			}
+		}
+
 		thisDateTime, _ := time.Parse("2006-01-02", node.Date)
 
 		// 如果这条数据的日期 < 搜索的开始日期，跳过
@@ -231,10 +297,20 @@ func getMonitorOndutyGroupFuturePlan(c *gin.Context) {
 		}
 
 		ffRes = append(ffRes, node)
+		tmp[node.Date] = node.User.RealName
+		originUserMap[node.Date] = node.OriginUser
+		userNameMap[node.Date] = node.User.Username
+
 	}
 
+	ondutyPlanResponse := OnDutyPlanResponse{}
+	ondutyPlanResponse.Details = ffRes
+	ondutyPlanResponse.Map = tmp
+	ondutyPlanResponse.UserNameMap = userNameMap
+	ondutyPlanResponse.OriginUserMap = originUserMap
+
 	// 🚀 这里是唯一的出口，确保所有数据都经过了上面的时间过滤
-	common.OkWithData(ffRes, c)
+	common.OkWithData(ondutyPlanResponse, c)
 }
 
 func createMonitorOndutyGroup(c *gin.Context) {
@@ -447,45 +523,89 @@ func actionMonitorOndutyGroupOne(c *gin.Context) {
 
 }
 
-// setScrapeJobStatus 设置值班组的启用/禁用状态
-//func setMonitorOndutyGroupStatus(c *gin.Context) {
-//	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-//
-//	var reqObj setScrapeJobEnableReq
-//	err := c.ShouldBindJSON(&reqObj)
-//	if err != nil {
-//		sc.Logger.Error("解析修改值班组状态请求失败", zap.Any("req", reqObj), zap.Error(err))
-//		common.FailWithMessage(err.Error(), c)
-//		return
-//	}
-//
-//	// 结构体数据校验
-//	err = validate.Struct(&reqObj)
-//	if err != nil {
-//		if errors, ok := err.(validator.ValidationErrors); ok {
-//			common.ReqBadFailWithDetailed(errors.Translate(trans), "请求出错", c)
-//			return
-//		}
-//	}
-//
-//	// 1. 查询数据库中原有的记录
-//	dbJob, err := models.GetMonitorOndutyGroupById(int(reqObj.Id))
-//	if err != nil {
-//		sc.Logger.Error("根据id查找值班组错误", zap.Any("req", reqObj), zap.Error(err))
-//		common.FailWithMessage(err.Error(), c)
-//		return
-//	}
-//
-//	// 2. 内存中修改状态
-//	dbJob.Enable = reqObj.Enable
-//
-//	// 3. 执行更新
-//	err = dbJob.UpdateEnable()
-//	if err != nil {
-//		sc.Logger.Error("更新值班组状态错误", zap.Any("req", reqObj), zap.Error(err))
-//		common.FailWithMessage(err.Error(), c)
-//		return
-//	}
-//
-//	common.OkWithMessage("状态修改成功", c)
-//}
+func getMonitorOndutyGroupOne(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+	id := c.Param("id")
+
+	intVar, _ := strconv.Atoi(id)
+
+	dbObj, err := models.GetMonitorOndutyGroupById(intVar)
+	if err != nil {
+		sc.Logger.Error("根据id找值班组错误", zap.Any("id", id), zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+	dbObj.FillFrontAllData()
+
+	common.OkWithData(dbObj, c)
+}
+
+func createMonitorOndutyChange(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+
+	var reqObj models.MonitorOndutyChange
+	err := c.ShouldBindJSON(&reqObj)
+	if err != nil {
+		sc.Logger.Error("解析新增值班组执行请求失败", zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	// 获取当前用户ID
+	userName := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)
+	dbUser, err := models.GetUserByUsername(userName)
+	if err != nil {
+		sc.Logger.Error("解析新增值班组执行请求失败", zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+	dbGroup, err := models.GetMonitorOndutyGroupById(int(reqObj.OndutyGroupId))
+	if err != nil {
+		sc.Logger.Error("解析新增值班组执行请求失败", zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+	dbOriginUser, err := models.GetUserByUsername(reqObj.OriginUserName)
+	if err != nil {
+		sc.Logger.Error("通过dbOriginUser去数据库中找user失败", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("通过dbOriginUser去数据库中找user失败%v", err.Error()), c)
+		return
+	}
+
+	dbTargetUser, err := models.GetUserByUsername(reqObj.TargetUserName)
+	if err != nil {
+		sc.Logger.Error("通过dbTargetUser去数据库中找user失败", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("通过dbTargetUser去数据库中找user失败%v", err.Error()), c)
+		return
+	}
+	// 🚀 新增拦截防线：判断源用户ID和目标用户ID是否一致
+	if dbOriginUser.ID == dbTargetUser.ID {
+		common.FailWithMessage("无效操作：替班人员不能是原定值班人自己", c)
+		return
+	}
+
+	isValidMember := false
+	for _, member := range dbGroup.Members {
+		if member.ID == dbTargetUser.ID {
+			isValidMember = true
+			break
+		}
+	}
+	if !isValidMember {
+		common.FailWithMessage("越权操作：替班人员必须是当前值班组的成员", c)
+		return
+	}
+	reqObj.UserId = dbUser.ID
+	reqObj.OriginUserId = dbOriginUser.ID
+	reqObj.OndutyUserId = dbTargetUser.ID
+
+	// 存入数据库
+	err = reqObj.CreateOne()
+	if err != nil {
+		sc.Logger.Error("新增值班组执行数据库失败", zap.Error(err))
+		common.FailWithMessage("存入数据库失败: "+err.Error(), c)
+		return
+	}
+
+	common.OkWithMessage("创建成功", c)
+}

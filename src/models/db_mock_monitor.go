@@ -258,18 +258,37 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 		_ = rule.CreateOne()
 	}
 
-	num = 10
-	ago := -5
-	users, _ = GetUserAll()
-	for i := 0; i < num; i++ {
-		startDay := common.GetDayAgoDate(ago)
-		userId := users[i%len(users)].ID
-		history := MonitorOndutyHistory{
-			OndutyGroupId: 1,
-			DateString:    startDay,
-			OndutyUserId:  userId,
+	// 值班历史
+	//num = 10
+	//ago := 0
+	//users, _ = GetUserAll()
+	//for i := 0; i < num; i++ {
+	//	startDay := common.GetDayAgoDate(ago)
+	//	userId := users[i%len(users)].ID
+	//	history := MonitorOndutyHistory{
+	//		OndutyGroupId: 1,
+	//		DateString:    startDay,
+	//		OndutyUserId:  userId,
+	//	}
+	//	_ = history.CreateOne()
+	//	ago += 1
+	//}
+	num = 5
+	day1 := "2026-07-10"
+	day2 := "2026-07-09"
+	for i := 1; i <= num; i++ {
+		h1 := MonitorOndutyHistory{
+			OndutyGroupId: uint(i),
+			DateString:    day1,
+			OndutyUserId:  1,
 		}
-		_ = history.CreateOne()
-		ago += 1
+		_ = h1.CreateOne()
+		h2 := MonitorOndutyHistory{
+			OndutyGroupId: uint(i),
+			DateString:    day2,
+			OndutyUserId:  1,
+		}
+		_ = h2.CreateOne()
 	}
+
 }
