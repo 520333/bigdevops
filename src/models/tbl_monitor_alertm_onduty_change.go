@@ -12,7 +12,7 @@ import (
 
 type MonitorOndutyChange struct {
 	Model
-	Name string `json:"name,omitempty" validate:"required,min=1,max=50" gorm:"type:varchar(100);comment:换班说明"`
+	Remark string `json:"name,omitempty" validate:"required,min=1,max=50" gorm:"type:varchar(100);comment:换班说明"`
 
 	OndutyGroupId uint
 	UserId        uint

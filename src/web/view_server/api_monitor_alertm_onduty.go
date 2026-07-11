@@ -290,7 +290,7 @@ func getMonitorOndutyGroupFuturePlan(c *gin.Context) {
 			if user.RealName != "" {
 				node.User = user
 				node.OriginUser = oriUser.RealName
-				node.Remark = dbChange.Name
+				node.Remark = dbChange.Remark
 			}
 		}
 

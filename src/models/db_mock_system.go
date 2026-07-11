@@ -40,6 +40,7 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		{Name: "MonitorScrapeJob", Title: "采集任务管理", Icon: "ant-design:api-outlined", Type: "1", Show: "1", OrderNo: 42, Component: "monitor/scrape/index", Pid: 21, Path: "scrape"},
 		{Name: "MonitorOnDutyGroup", Title: "值班组设置", Icon: "ant-design:ungroup-outlined", Type: "1", Show: "1", OrderNo: 43, Component: "monitor/ondutygroup/index", Pid: 21, Path: "ondutygroup"},
 		{Name: "MonitorOnDutyGroupPlan", Title: "轮值排班表", Icon: "ant-design:calendar-outlined", Type: "1", Show: "1", OrderNo: 44, Component: "monitor/plan/index", Pid: 21, Path: "plan"},
+		{Name: "MonitorSendGroup", Title: "发送组管理", Icon: "ant-design:dingding-outlined", Type: "1", Show: "1", OrderNo: 45, Component: "monitor/sendgroup/index", Pid: 21, Path: "sendgroup"},
 	}
 
 	apis := []*Api{
