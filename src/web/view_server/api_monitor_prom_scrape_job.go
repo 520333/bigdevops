@@ -230,6 +230,7 @@ func setScrapeJobStatus(c *gin.Context) {
 
 	common.OkWithMessage("状态修改成功", c)
 }
+
 func deleteMonitorScrapeJob(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")

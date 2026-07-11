@@ -17,6 +17,7 @@ type MonitorOndutyGroup struct {
 
 	UserID uint
 
+	Enable int `json:"enable" gorm:"comment:是否被开启 1正常 2禁用"`
 	// 发送逻辑
 	Members                   []*User  `json:"members" gorm:"many2many:monitor_onduty_users;comment:值班人列表"`
 	ShiftDays                 int      `json:"shiftDays" gorm:"comment:轮班周期：天、周"`
@@ -175,9 +176,9 @@ func (obj *MonitorOndutyGroup) UpdateEnable() error {
 	return Db.Model(obj).Select("Enable").Updates(obj).Error
 }
 
-//// SetOnDutyGroupStatus 快捷更新开启状态
-//func SetOnDutyGroupStatus(id uint, enable int) error {
-//	// 假设你的全局数据库对象是 global.DB 或 common.DB，请根据你的项目实际情况调整
-//	err := Db.Model(&MonitorOndutyGroup{}).Where("id = ?", id).Update("enable", enable).Error
-//	return err
-//}
+// SetOnDutyGroupStatus 快捷更新开启状态
+func SetOnDutyGroupStatus(id uint, enable int) error {
+	// 假设你的全局数据库对象是 global.DB 或 common.DB，请根据你的项目实际情况调整
+	err := Db.Model(&MonitorOndutyGroup{}).Where("id = ?", id).Update("enable", enable).Error
+	return err
+}

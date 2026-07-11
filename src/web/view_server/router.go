@@ -169,7 +169,7 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.GET("/getMonitorOndutyGroupFuturePlan/:id", getMonitorOndutyGroupFuturePlan)
 		monitorApiGroup.GET("/getMonitorOndutyGroupOne/:id", getMonitorOndutyGroupOne)
 		monitorApiGroup.POST("/createMonitorOndutyChange", createMonitorOndutyChange)
-
+		monitorApiGroup.POST("/setOnDutyStatus", setOnDutyStatus)
 	}
 }
 

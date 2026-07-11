@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 )
 
@@ -34,11 +35,16 @@ func getMonitorOndutyGroupList(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
 	searchUserID := c.DefaultQuery("UserID", "")
-	//searchEnable := c.DefaultQuery("enable", "")
-
 	searchUserIDInt, _ := strconv.Atoi(searchUserID)
+
 	searchTitle := c.DefaultQuery("name", "")
-	//searchEnableInt, _ := strconv.Atoi(searchEnable)
+
+	searchEnable := c.DefaultQuery("enable", "")
+	searchEnableInt, _ := strconv.Atoi(searchEnable)
+
+	shiftDays := c.DefaultQuery("shiftDays", "")
+	searchShiftDaysInt, _ := strconv.Atoi(shiftDays)
+
 	searchCreateUserName := c.DefaultQuery("createUserName", "")
 
 	offset := 0
@@ -59,9 +65,9 @@ func getMonitorOndutyGroupList(c *gin.Context) {
 		if searchUserID != "" && int(obj.UserID) != searchUserIDInt {
 			continue
 		}
-		//if searchEnable != "" && obj.Enable != searchEnableInt {
-		//	continue
-		//}
+		if searchEnable != "" && obj.Enable != searchEnableInt {
+			continue
+		}
 
 		if searchTitle != "" && !strings.Contains(obj.Name, searchTitle) {
 			continue
@@ -72,6 +78,9 @@ func getMonitorOndutyGroupList(c *gin.Context) {
 
 		// 🚀 修复 1：对比的应该是刚填充好的 CreateUserName 字段，而不是 UserID
 		if searchCreateUserName != "" && !strings.Contains(obj.CreateUserName, searchCreateUserName) {
+			continue
+		}
+		if shiftDays != "" && int(obj.ShiftDays) != searchShiftDaysInt {
 			continue
 		}
 
@@ -404,7 +413,7 @@ func updateMonitorOndutyGroup(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
-// setScrapeJobEnableReq 请求参数结构体
+// setMonitorOndutyGroupEnableReq 请求参数结构体
 type setMonitorOndutyGroupEnableReq struct {
 	Id     uint `json:"id" validate:"required"`
 	Enable int  `json:"enable" validate:"required,oneof=1 2"` // 假设 1=启用 2=禁用
@@ -608,4 +617,47 @@ func createMonitorOndutyChange(c *gin.Context) {
 	}
 
 	common.OkWithMessage("创建成功", c)
+}
+
+// setOnDutyStatus 设置采集任务的启用/禁用状态
+func setOnDutyStatus(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+
+	var reqObj setMonitorOndutyGroupEnableReq
+	err := c.ShouldBindJSON(&reqObj)
+	if err != nil {
+		sc.Logger.Error("解析值班组状态请求失败", zap.Any("req", reqObj), zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	// 结构体数据校验
+	err = validate.Struct(&reqObj)
+	if err != nil {
+		if errors, ok := err.(validator.ValidationErrors); ok {
+			common.ReqBadFailWithDetailed(errors.Translate(trans), "请求出错", c)
+			return
+		}
+	}
+
+	// 1. 查询数据库中原有的记录
+	dbJob, err := models.GetMonitorOndutyGroupById(int(reqObj.Id))
+	if err != nil {
+		sc.Logger.Error("根据id查找值班组错误", zap.Any("req", reqObj), zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	// 2. 内存中修改状态
+	dbJob.Enable = reqObj.Enable
+
+	// 3. 执行更新
+	err = dbJob.UpdateEnable()
+	if err != nil {
+		sc.Logger.Error("更新值班组状态错误", zap.Any("req", reqObj), zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	common.OkWithMessage("状态修改成功", c)
 }
