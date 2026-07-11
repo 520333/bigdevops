@@ -180,9 +180,11 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 	// 值班组
 	users, _ := GetUserAll()
 	num = 5
+	g := []string{"中间件组", "平台运维组", "数据库组", "存储组", "安全", "网络"}
 	for i := 0; i < num; i++ {
 		dutyGroup := &MonitorOndutyGroup{
-			Name:           fmt.Sprintf("值班组-%v", i+1),
+			//Name:           fmt.Sprintf("值班组-%v", i+1),
+			Name:           fmt.Sprintf("%v", g[i]),
 			UserID:         1,
 			Members:        users,
 			ShiftDays:      i + 2,
