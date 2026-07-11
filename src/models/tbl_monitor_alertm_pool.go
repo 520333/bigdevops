@@ -3,6 +3,7 @@ package models
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -11,18 +12,19 @@ import (
 // MonitorAlertManagerPool alertManager实例和机器的关系
 type MonitorAlertManagerPool struct {
 	Model
-	Name string `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:alertManager实例名称"`
-	// 有可能通过Gossip组成集群
-	AlertManagerInstanceId StringArray `json:"alertManagerInstanceId,omitempty"`
+	Name                  string      `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:alertManager实例名称"`
+	AlertManagerInstances StringArray `json:"alertManagerInstances,omitempty"`
 
 	UserID uint
+	//ExternalLabels StringArray `json:"externalLabels" gorm:"comment:remote_write的时候添加的标签组 key=v"`
+	ResolveTimeout string `json:"resolveTimeout" gorm:"comment:默认恢复时间"`
+	GroupWait      string `json:"groupWait" gorm:"comment:默认分组第一次等待时间"`
+	GroupInterval  string `json:"groupInterval" gorm:"comment:默认分组间隔"`
 
-	ResolveTimeout string      `json:"resolveTimeout" gorm:"comment:默认恢复时间"`
-	GroupWait      string      `json:"groupWait" gorm:"comment:默认分组第一次等待时间"`
-	GroupInterval  string      `json:"groupInterval" gorm:"comment:默认分组间隔"`
-	RepeatInterval string      `json:"repeatInterval" gorm:"comment:默认重复发送间隔"`
-	Receiver       string      `json:"receiver" gorm:"comment:兜底接收者"`
-	GroupBy        StringArray `json:"groupBy" gorm:"comment:分组标签"`
+	RepeatInterval string `json:"repeatInterval" gorm:"comment:默认重复发送间隔"`
+
+	GroupBy  StringArray `json:"groupBy" gorm:"comment:分组标签"`
+	Receiver string      `json:"receiver" gorm:"comment:兜底接收者"`
 
 	ExternalLabelsFront string `json:"externalLabelsFront" gorm:"-"`
 	Key                 string `json:"key" gorm:"-"` // 前端表格使用
@@ -74,10 +76,10 @@ func (obj *MonitorAlertManagerPool) CheckInstanceIpExists() bool {
 		if p.Name == obj.Name {
 			continue
 		}
-		for _, ip := range p.AlertManagerInstanceId {
+		for _, ip := range p.AlertManagerInstances {
 			ipMap[ip] = ip
 		}
-		for _, ip := range obj.AlertManagerInstanceId {
+		for _, ip := range obj.AlertManagerInstances {
 			_, ok := ipMap[ip]
 			if ok {
 				return true
@@ -111,7 +113,7 @@ func (obj *MonitorAlertManagerPool) FillFrontAllData() {
 	if dbUser != nil {
 		obj.CreateUserName = fmt.Sprintf("%s(%s)", dbUser.Username, dbUser.RealName)
 	}
-	//obj.ExternalLabelsFront = strings.Join(obj.ExternalLabels, "\n")
+	obj.ExternalLabelsFront = strings.Join(obj.GroupBy, "\n")
 	obj.Key = fmt.Sprintf("%d", obj.ID)
 }
 

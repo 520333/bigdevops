@@ -35,12 +35,13 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		{Name: "JobExecScript", Title: "脚本管理", Icon: "ant-design:code-outlined", Type: "1", Show: "1", OrderNo: 31, Component: "jobExec/script/index", Pid: 18, Path: "script"},
 		{Name: "JobExecTask", Title: "任务管理", Icon: "ant-design:schedule-outlined", Type: "1", Show: "1", OrderNo: 32, Component: "jobExec/task/index", Pid: 18, Path: "task"},
 
-		{Name: "PrometheusMonitor", Title: "监控中心", Icon: "ant-design:dashboard-outlined", Type: "0", Show: "1", OrderNo: 40, Component: "LAYOUT", Path: "/monitor", Redirect: "/monitor/scrape/index"},
-		{Name: "MonitorPool", Title: "采集实例管理", Icon: "ant-design:database-outlined", Type: "1", Show: "1", OrderNo: 41, Component: "monitor/pool/index", Pid: 21, Path: "pool"},
+		{Name: "Monitor", Title: "监控中心", Icon: "ant-design:dashboard-outlined", Type: "0", Show: "1", OrderNo: 40, Component: "LAYOUT", Path: "/monitor", Redirect: "/monitor/scrape/index"},
+		{Name: "MonitorPromPool", Title: "采集实例管理", Icon: "ant-design:database-outlined", Type: "1", Show: "1", OrderNo: 41, Component: "monitor/pool/index", Pid: 21, Path: "pool"},
 		{Name: "MonitorScrapeJob", Title: "采集任务管理", Icon: "ant-design:api-outlined", Type: "1", Show: "1", OrderNo: 42, Component: "monitor/scrape/index", Pid: 21, Path: "scrape"},
-		{Name: "MonitorOnDutyGroup", Title: "值班组设置", Icon: "ant-design:ungroup-outlined", Type: "1", Show: "1", OrderNo: 43, Component: "monitor/ondutygroup/index", Pid: 21, Path: "ondutygroup"},
-		{Name: "MonitorOnDutyGroupPlan", Title: "轮值排班表", Icon: "ant-design:calendar-outlined", Type: "1", Show: "1", OrderNo: 44, Component: "monitor/plan/index", Pid: 21, Path: "plan"},
-		{Name: "MonitorSendGroup", Title: "发送组管理", Icon: "ant-design:dingding-outlined", Type: "1", Show: "1", OrderNo: 45, Component: "monitor/sendgroup/index", Pid: 21, Path: "sendgroup"},
+		{Name: "MonitorAlertPool", Title: "告警实例管理", Icon: "ant-design:alert-outlined", Type: "1", Show: "1", OrderNo: 43, Component: "monitor/alertmanager/index", Pid: 21, Path: "alertmanager"},
+		{Name: "MonitorSendGroup", Title: "告警发送组管理", Icon: "ant-design:dingding-outlined", Type: "1", Show: "1", OrderNo: 44, Component: "monitor/sendgroup/index", Pid: 21, Path: "sendgroup"},
+		{Name: "MonitorOnDutyGroup", Title: "值班组设置", Icon: "ant-design:ungroup-outlined", Type: "1", Show: "1", OrderNo: 45, Component: "monitor/ondutygroup/index", Pid: 21, Path: "ondutygroup"},
+		{Name: "MonitorOnDutyGroupPlan", Title: "轮值排班表", Icon: "ant-design:calendar-outlined", Type: "1", Show: "1", OrderNo: 46, Component: "monitor/plan/index", Pid: 21, Path: "plan"},
 	}
 
 	apis := []*Api{

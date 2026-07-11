@@ -164,15 +164,15 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 	//ips := []string{"192.168.50.200", "192.168.50.201"}
 	for i := 0; i < num; i++ {
 		r := MonitorAlertManagerPool{
-			Name:                   fmt.Sprintf("online-%v", i+1),
-			AlertManagerInstanceId: ips,
-			UserID:                 1,
-			ResolveTimeout:         "30m",
-			GroupWait:              "5s",
-			GroupInterval:          "50s",
-			RepeatInterval:         "15s",
-			Receiver:               "发送组-1",
-			GroupBy:                []string{"alertname"},
+			Name:                  fmt.Sprintf("online-%v", i+1),
+			AlertManagerInstances: ips,
+			UserID:                1,
+			ResolveTimeout:        "30m",
+			GroupWait:             "5s",
+			GroupInterval:         "50s",
+			RepeatInterval:        "15s",
+			Receiver:              "发送组-1",
+			GroupBy:               []string{"alertname=1", "k=v"},
 		}
 		_ = r.CreateOne()
 	}

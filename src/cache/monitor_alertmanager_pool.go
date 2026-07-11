@@ -106,7 +106,7 @@ func (mc *MonitorCache) GenerateAlertManagerMainConfigYaml(ctx context.Context) 
 		//fileName := fmt.Sprintf("alertmanager_%s.yaml", pool.Name)
 		//_ = os.WriteFile(fileName, []byte(outStr), 0666)
 
-		for _, ip := range pool.AlertManagerInstanceId {
+		for _, ip := range pool.AlertManagerInstances {
 			mainConfigMap[ip] = outStr
 		}
 	}
@@ -131,19 +131,12 @@ func (mc *MonitorCache) GenerateAlertManagerMainConfigOneYaml(pool *models.Monit
 			GroupWait:      &groupWait,
 			GroupInterval:  &groupInterval,
 			RepeatInterval: &repeatInterval,
+			GroupByStr:     pool.GroupBy,
 		},
 	}
 	//for _, l := range pool.GroupBy {
-	//	labelName := pm.LabelName(l)
-	//	if !labelName.IsValid() {
-	//		continue
-	//	}
-	//	//pc.Route.GroupBy = append(pc.Route.GroupBy, labelName)
 	//	pc.Route.GroupByStr = append(pc.Route.GroupByStr, l)
 	//}
-	for _, l := range pool.GroupBy {
-		pc.Route.GroupByStr = append(pc.Route.GroupByStr, l)
-	}
 	if pc.Route.Receiver != "" {
 		//pc.Receivers = []ac.Receiver{}
 		pc.Receivers = append(pc.Receivers, ac.Receiver{

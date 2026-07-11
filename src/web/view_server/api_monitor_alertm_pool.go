@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func getMonitorScrapePoolList(c *gin.Context) {
+func getMonitorAlertManagerPoolList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
@@ -30,10 +30,10 @@ func getMonitorScrapePoolList(c *gin.Context) {
 		offset = (currentPage - 1) * limit
 	}
 
-	objs, err := models.GetMonitorScrapePoolAll()
+	objs, err := models.GetMonitorAlertManagerPoolAll()
 	if err != nil {
-		sc.Logger.Error("去数据库中拿所有的采集池执行错误", zap.Error(err))
-		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的采集池执行错误：%v", err.Error()), c)
+		sc.Logger.Error("去数据库中拿所有的集群执行错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的集群执行错误：%v", err.Error()), c)
 		return
 	}
 	allIds := []int{}
@@ -61,17 +61,17 @@ func getMonitorScrapePoolList(c *gin.Context) {
 	// 如果过滤后没有数据，直接返回空列表
 	if len(allIds) == 0 {
 		common.OkWithDetailed(gin.H{
-			"items": []models.MonitorScrapePool{},
+			"items": []models.MonitorAlertManagerPool{},
 			"total": 0,
 		}, "ok", c)
 		return
 	}
 
 	// 根据过滤后的 ID 进行分页查询
-	pagedObjs, err := models.GetMonitorScrapePoolByIdsWithLimitOffset(allIds, limit, offset)
+	pagedObjs, err := models.GetMonitorAlertManagerPoolByIdsWithLimitOffset(allIds, limit, offset)
 	if err != nil {
-		sc.Logger.Error("limit-offset 去数据库中拿所有的采集池执行错误", zap.Error(err))
-		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的采集池执行错误：%v", err.Error()), c)
+		sc.Logger.Error("limit-offset 去数据库中拿所有的集群执行错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的集群执行错误：%v", err.Error()), c)
 		return
 	}
 
@@ -86,15 +86,15 @@ func getMonitorScrapePoolList(c *gin.Context) {
 	}, "ok", c)
 }
 
-func getMonitorScrapePoolOne(c *gin.Context) {
+func getMonitorAlertManagerPoolOne(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
-	sc.Logger.Info("采集池实例", zap.Any("id", id))
+	sc.Logger.Info("集群实例", zap.Any("id", id))
 	intVar, _ := strconv.Atoi(id)
 
 	dbObj, err := models.GetJobTaskById(intVar)
 	if err != nil {
-		sc.Logger.Error("根据id找采集池实例错误", zap.Any("采集池实例", id), zap.Error(err))
+		sc.Logger.Error("根据id找集群实例错误", zap.Any("集群实例", id), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
@@ -103,13 +103,13 @@ func getMonitorScrapePoolOne(c *gin.Context) {
 	common.OkWithDetailed(dbObj, "ok", c)
 }
 
-func createMonitorScrapePool(c *gin.Context) {
+func createMonitorAlertManagerPool(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
-	var reqObj models.MonitorScrapePool
+	var reqObj models.MonitorAlertManagerPool
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
-		sc.Logger.Error("解析新增采集池执行请求失败", zap.Error(err))
+		sc.Logger.Error("解析新增集群执行请求失败", zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
@@ -118,7 +118,7 @@ func createMonitorScrapePool(c *gin.Context) {
 	userName := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)
 	dbUser, err := models.GetUserByUsername(userName)
 	if reqObj.CheckInstanceIpExists() {
-		msg := "ip和其他采集池重复"
+		msg := "ip和其他集群重复"
 		sc.Logger.Error(msg, zap.Error(err))
 		common.FailWithMessage(msg, c)
 		return
@@ -126,11 +126,12 @@ func createMonitorScrapePool(c *gin.Context) {
 	if err == nil && dbUser != nil {
 		reqObj.UserID = dbUser.ID
 	}
+
 	reqObj.FillDefaultData()
 	// 存入数据库
 	err = reqObj.CreateOne()
 	if err != nil {
-		sc.Logger.Error("新增采集池执行数据库失败", zap.Error(err))
+		sc.Logger.Error("新增集群执行数据库失败", zap.Error(err))
 		common.FailWithMessage("存入数据库失败: "+err.Error(), c)
 		return
 	}
@@ -138,34 +139,34 @@ func createMonitorScrapePool(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
-func updateMonitorScrapePool(c *gin.Context) {
+func updateMonitorAlertManagerPool(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
 	// 🚀 致命修复：同上
-	var reqObj models.MonitorScrapePool
+	var reqObj models.MonitorAlertManagerPool
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
-		sc.Logger.Error("解析更新采集池请求失败", zap.Error(err))
+		sc.Logger.Error("解析更新集群请求失败", zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
 	if reqObj.CheckInstanceIpExists() {
-		msg := "ip和其他采集池重复"
+		msg := "ip和其他集群重复"
 		sc.Logger.Error(msg, zap.Error(err))
 		common.FailWithMessage(msg, c)
 		return
 	}
 	// 检查是否存在
-	_, err = models.GetMonitorScrapePoolById(int(reqObj.ID))
+	_, err = models.GetMonitorAlertManagerPoolById(int(reqObj.ID))
 	if err != nil {
-		common.FailWithMessage("采集池不存在", c)
+		common.FailWithMessage("集群不存在", c)
 		return
 	}
 
 	// 更新
 	err = reqObj.UpdateOne()
 	if err != nil {
-		sc.Logger.Error("更新采集池执行错误", zap.Error(err))
+		sc.Logger.Error("更新集群执行错误", zap.Error(err))
 		common.FailWithMessage("更新失败: "+err.Error(), c)
 		return
 	}
@@ -173,34 +174,34 @@ func updateMonitorScrapePool(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
-func deleteMonitorScrapePool(c *gin.Context) {
+func deleteMonitorAlertManagerPool(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
 	intVar, _ := strconv.Atoi(id)
 
-	dbObj, err := models.GetMonitorScrapePoolById(intVar)
+	dbObj, err := models.GetMonitorAlertManagerPoolById(intVar)
 	if err != nil {
-		common.FailWithMessage("采集池不存在", c)
+		common.FailWithMessage("集群不存在", c)
 		return
 	}
 
-	jobs, err := models.GetMonitorScrapeJobByPoolId(uint(intVar))
+	jobs, err := models.GetMonitorAlertManagerSendGroupByPoolId(uint(intVar))
 	if err != nil {
-		sc.Logger.Error("查询关联采集任务失败", zap.Error(err))
-		common.FailWithMessage("查询关联采集任务失败: "+err.Error(), c)
+		sc.Logger.Error("查询关联发送组失败", zap.Error(err))
+		common.FailWithMessage("查询关联发送组失败: "+err.Error(), c)
 		return
 	}
 
 	// 🚀 2. 核心修复：如果查出来的任务数量大于 0，说明有关联任务，绝对禁止删除！
 	if len(jobs) > 0 {
-		sc.Logger.Warn("该采集池已绑定采集任务，禁止直接删除！", zap.Any("采集池ID", id))
-		common.FailWithMessage("该采集池下存在关联的采集任务，禁止直接删除！请先转移或清理任务。", c)
+		sc.Logger.Warn("该集群已绑定发送组，禁止直接删除！", zap.Any("集群ID", id))
+		common.FailWithMessage("该集群下存在关联的发送组，禁止直接删除！请先转移或清理任务。", c)
 		return
 	}
 
 	err = dbObj.DeleteOne()
 	if err != nil {
-		sc.Logger.Error("删除采集池执行错误", zap.Error(err))
+		sc.Logger.Error("删除集群执行错误", zap.Error(err))
 		common.FailWithMessage("删除失败: "+err.Error(), c)
 		return
 	}
@@ -208,22 +209,22 @@ func deleteMonitorScrapePool(c *gin.Context) {
 	common.OkWithMessage("删除成功", c)
 }
 
-func actionMonitorScrapePoolOne(c *gin.Context) {
+func actionMonitorAlertManagerPoolOne(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
-	sc.Logger.Info("采集池动作", zap.Any("id", id))
+	sc.Logger.Info("集群动作", zap.Any("id", id))
 	intVar, _ := strconv.Atoi(id)
 
 	dbObj, err := models.GetJobTaskById(intVar)
 	if err != nil {
-		sc.Logger.Error("根据id找采集池执行错误", zap.Any("采集池执行", id), zap.Error(err))
+		sc.Logger.Error("根据id找集群执行错误", zap.Any("集群执行", id), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
 	action := c.Query("action")
 	nextStatus, exist := common.JOB_ACTION_NEXT_STATUS_MAP[action]
 	if !exist {
-		sc.Logger.Error("传入的动作错误", zap.Any("采集池执行", id), zap.Error(err))
+		sc.Logger.Error("传入的动作错误", zap.Any("集群执行", id), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
@@ -233,7 +234,7 @@ func actionMonitorScrapePoolOne(c *gin.Context) {
 	}
 
 	// ==========================================
-	// 💡 补充记录采集池流 到 ActualFlowData json
+	// 💡 补充记录集群流 到 ActualFlowData json
 	// ==========================================
 
 	// 1. 获取当前执行操作的用户
@@ -246,8 +247,8 @@ func actionMonitorScrapePoolOne(c *gin.Context) {
 	actionNameMap := map[string]string{
 		common.AGENT_TASK_ACTION_START:  "手动下发执行",
 		common.AGENT_TASK_ACTION_KILL:   "强行Kill终止",
-		common.AGENT_TASK_ACTION_PAUSE:  "手动暂停采集池",
-		common.AGENT_TASK_ACTION_RESUME: "恢复执行采集池",
+		common.AGENT_TASK_ACTION_PAUSE:  "手动暂停集群",
+		common.AGENT_TASK_ACTION_RESUME: "恢复执行集群",
 		common.AGENT_TASK_ACTION_STOP:   "手动标记停止",
 	}
 	actionName := actionNameMap[action]
@@ -282,12 +283,12 @@ func actionMonitorScrapePoolOne(c *gin.Context) {
 
 	// ==========================================
 
-	sc.Logger.Info("采集池动作", zap.Any("id", id), zap.Any("动作", action), zap.Any("nextStatus", nextStatus))
+	sc.Logger.Info("集群动作", zap.Any("id", id), zap.Any("动作", action), zap.Any("nextStatus", nextStatus))
 
 	dbObj.Status = nextStatus
 	err = dbObj.UpdateOne()
 	if err != nil {
-		sc.Logger.Error("更新采集池执行错误", zap.Any("采集池执行", id), zap.Error(err))
+		sc.Logger.Error("更新集群执行错误", zap.Any("集群执行", id), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}

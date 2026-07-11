@@ -160,8 +160,6 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.GET("/getMonitorScrapeJobOne", getMonitorScrapeJobOne)
 		monitorApiGroup.POST("/setScrapeJobStatus", setScrapeJobStatus)
 
-		monitorApiGroup.GET("/getMonitorAlertManagerYamlOne", getMonitorAlertManagerYamlOne)
-
 		monitorApiGroup.GET("/getMonitorOndutyGroupList", getMonitorOndutyGroupList)
 		monitorApiGroup.POST("/createMonitorOndutyGroup", createMonitorOndutyGroup)
 		monitorApiGroup.POST("/updateMonitorOndutyGroup", updateMonitorOndutyGroup)
@@ -170,6 +168,12 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.GET("/getMonitorOndutyGroupOne/:id", getMonitorOndutyGroupOne)
 		monitorApiGroup.POST("/createMonitorOndutyChange", createMonitorOndutyChange)
 		monitorApiGroup.POST("/setOnDutyStatus", setOnDutyStatus)
+
+		monitorApiGroup.GET("/getMonitorAlertManagerPoolList", getMonitorAlertManagerPoolList)
+		monitorApiGroup.POST("/createMonitorAlertManagerPool", createMonitorAlertManagerPool)
+		monitorApiGroup.POST("/updateMonitorAlertManagerPool", updateMonitorAlertManagerPool)
+		monitorApiGroup.DELETE("/deleteMonitorAlertManagerPool/:id", deleteMonitorAlertManagerPool)
+		monitorApiGroup.GET("/getMonitorAlertManagerYamlOne", getMonitorAlertManagerYamlOne)
 	}
 }
 
