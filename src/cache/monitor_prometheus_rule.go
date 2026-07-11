@@ -52,7 +52,7 @@ func (mc *MonitorCache) GeneratePrometheusRuleConfigYaml(ctx context.Context) {
 }
 
 func (mc *MonitorCache) GeneratePrometheusRuleConfigYamlOnePool(pool *models.MonitorScrapePool) map[string]string {
-	rules, err := models.GetMonitorPromAlertRuleByPoolId(pool.ID)
+	rules, err := models.GetMonitorAlertRuleByPoolId(pool.ID)
 	if err != nil {
 		mc.Sc.Logger.Error("[监控模块]根据采集池id查找所有的rule规则错误", zap.Error(err), zap.Any("池子", pool.Name))
 		return nil

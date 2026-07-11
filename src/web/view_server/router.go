@@ -174,6 +174,18 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.POST("/updateMonitorAlertManagerPool", updateMonitorAlertManagerPool)
 		monitorApiGroup.DELETE("/deleteMonitorAlertManagerPool/:id", deleteMonitorAlertManagerPool)
 		monitorApiGroup.GET("/getMonitorAlertManagerYamlOne", getMonitorAlertManagerYamlOne)
+
+		monitorApiGroup.GET("/getMonitorAlertManagerSendGroupList", getMonitorAlertManagerSendGroupList)
+		monitorApiGroup.POST("/createMonitorAlertManagerSendGroup", createMonitorAlertManagerSendGroup)
+		monitorApiGroup.POST("/updateMonitorAlertManagerSendGroup", updateMonitorAlertManagerSendGroup)
+		monitorApiGroup.DELETE("/deleteMonitorAlertManagerSendGroup/:id", deleteMonitorAlertManagerSendGroup)
+		monitorApiGroup.POST("/setAlertManagerSendGroupStatus", setAlertManagerSendGroupStatus)
+
+		monitorApiGroup.GET("/getMonitorAlertRuleList", getMonitorAlertRuleList)
+		monitorApiGroup.POST("/createMonitorAlertRule", createMonitorAlertRule)
+		monitorApiGroup.POST("/updateMonitorAlertRule", updateMonitorAlertRule)
+		monitorApiGroup.DELETE("/deleteMonitorAlertRule/:id", deleteMonitorAlertRule)
+		monitorApiGroup.POST("/setAlertRuleStatus", setAlertRuleStatus)
 	}
 }
 

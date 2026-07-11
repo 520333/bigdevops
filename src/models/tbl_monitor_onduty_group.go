@@ -155,12 +155,14 @@ func (obj *MonitorOndutyGroup) FillFrontAllData() {
 		obj.CreateUserName = fmt.Sprintf("%s(%s)", dbUser.Username, dbUser.RealName)
 	}
 
-	var userNames []string
-	for _, user := range obj.Members {
-		user := user
-		userNames = append(userNames, user.Username)
-	}
-	obj.UserNames = userNames
+	//var userNames []string
+	//for _, user := range obj.Members {
+	//	user := user
+	//	userNames = append(userNames, user.Username)
+	//}
+	//
+	//obj.FirstUserNames = userNames
+	obj.UserNames = commonGetUserNamesByUsers(obj.Members)
 	obj.Key = fmt.Sprintf("%d", obj.ID)
 }
 

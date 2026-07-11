@@ -25,7 +25,7 @@ type MonitorAlertEvent struct {
 	Key         string                        `json:"key" gorm:"-"` // 前端表格使用
 	Alert       template.Alert                `json:"alert" gorm:"-"`
 	SendGroup   *MonitorAlertManagerSendGroup `json:"sendGroup" gorm:"-"`
-	Rule        *MonitorPromAlertRule         `json:"rule" gorm:"-"`
+	Rule        *MonitorAlertRule             `json:"rule" gorm:"-"`
 
 	LabelsM      map[string]string `json:"labelsM" gorm:"-"`
 	AnnotationsM map[string]string `json:"annotationsM" gorm:"-"`

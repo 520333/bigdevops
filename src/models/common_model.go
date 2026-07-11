@@ -11,3 +11,13 @@ type EchartsOneItem struct {
 	Name  string `json:"name" gorm:"-"`
 	Value int    `json:"value" gorm:"-"`
 }
+
+func commonGetUserNamesByUsers(users []*User) []string {
+	var userNames []string
+	for _, user := range users {
+		user := user
+		userNames = append(userNames, user.Username)
+	}
+	return userNames
+
+}

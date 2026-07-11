@@ -341,17 +341,18 @@ func createMonitorOndutyGroup(c *gin.Context) {
 		reqObj.UserID = dbUser.ID
 	}
 
+	reqObj.Members = commonGetUsersByNames(reqObj.UserNames, sc.Logger, c)
 	// 转化userName到members
-	for _, userName := range reqObj.UserNames {
-		userName := userName
-		dbUser, err := models.GetUserByUsername(userName)
-		if err != nil {
-			sc.Logger.Error("解析新增值班组执行请求失败", zap.Error(err))
-			common.FailWithMessage(err.Error(), c)
-			return
-		}
-		reqObj.Members = append(reqObj.Members, dbUser)
-	}
+	//for _, userName := range reqObj.FirstUserNames {
+	//	userName := userName
+	//	dbUser, err := models.GetUserByUsername(userName)
+	//	if err != nil {
+	//		sc.Logger.Error("解析新增值班组执行请求失败", zap.Error(err))
+	//		common.FailWithMessage(err.Error(), c)
+	//		return
+	//	}
+	//	reqObj.Members = append(reqObj.Members, dbUser)
+	//}
 
 	// 存入数据库
 	err = reqObj.CreateOne()
@@ -381,27 +382,9 @@ func updateMonitorOndutyGroup(c *gin.Context) {
 		common.FailWithMessage("值班组不存在", c)
 		return
 	}
-	// 转化userName到members
-	var newMembers []*models.User
-	for _, userName := range reqObj.UserNames {
-		userName := userName
-		dbUser, err := models.GetUserByUsername(userName)
-		if err != nil {
-			sc.Logger.Error("解析新增值班组执行请求失败", zap.Error(err))
-			common.FailWithMessage("找不到用户: "+userName, c)
-			return
-		}
-		newMembers = append(newMembers, dbUser)
-	}
 
-	// 更新
-	reqObj.Members = newMembers
-	//err = reqObj.UpdateMembers()
-	//if err != nil {
-	//	sc.Logger.Error("更新值班组-关联members执行错误", zap.Error(err))
-	//	common.FailWithMessage("更新失败: "+err.Error(), c)
-	//	return
-	//}
+	// 转化userName到members
+	reqObj.Members = commonGetUsersByNames(reqObj.UserNames, sc.Logger, c)
 
 	err = reqObj.UpdateOne()
 	if err != nil {

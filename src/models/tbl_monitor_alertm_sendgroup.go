@@ -14,30 +14,35 @@ import (
 
 type MonitorAlertManagerSendGroup struct {
 	Model
-	Name   string `json:"name,omitempty" validate:"required,min=1,max=50" gorm:"uniqueIndex;type:varchar(100);comment:发送任务名称"`
+	Name   string `json:"name,omitempty" validate:"required,min=1,max=50" gorm:"uniqueIndex;type:varchar(100);comment:发送组英文名称"`
 	NameZh string `json:"nameZh,omitempty" validate:"required,min=1,max=50" gorm:"uniqueIndex;type:varchar(100);comment:发送组中文名称"`
 	Enable int    `json:"enable,omitempty" gorm:"comment:是否被开启 1正常 2禁用"`
 
 	UserID uint
 
-	PoolId uint `json:"poolId,omitempty" gorm:"comment:关联哪个alertManager实例"`
+	PoolId        uint `json:"poolId,omitempty" gorm:"comment:关联哪个alertManager实例"`
+	OnDutyGroupId uint `json:"onDutyGroupId,omitempty" gorm:"comment:值班表 在im中发到群组里at值班人或者私聊发送给值班人"`
 
 	// 发送逻辑
 	StaticReceiveUsers  []*User `json:"staticReceiveUsers" gorm:"many2many:static_receive_user;comment:静态配置的接收人列表"`
 	FeiShuQunRobotToken string  `json:"feiShuQunRobotToken" gorm:"comment:im飞书自定义机器人token"`
-	OnDutyGroupId       uint    `json:"onDutyGroupId,omitempty" gorm:"comment:值班表 在im中发到群组里at值班人或者私聊发送给值班人"`
 
-	RepeatInterval     string      `json:"repeatInterval" gorm:"comment:默认重复发送间隔"`
-	SendResolved       int         `json:"sendResolved" gorm:"comment:是否被开启 1=true发送 2=false不发送 "`
-	NotifyMethods      StringArray `json:"notifyMethods,omitempty" gorm:"comment:通知方法：email im phone sms 组合"`
-	FirstUpgradeUsers  []*User     `json:"firstUpgradeUsers" gorm:"many2many:first_upgrade_users;comment:第一升级人列表"`
-	UpgradeMinutes     int         `json:"upgradeMinutes" gorm:"comment:告警多久未恢复就升级"`
-	SecondUpgradeUsers []*User     `json:"secondUpgradeUsers" gorm:"many2many:second_upgrade_users;comment:第二升级人列表"`
+	RepeatInterval string      `json:"repeatInterval" gorm:"comment:默认重复发送间隔"`
+	SendResolved   int         `json:"sendResolved" gorm:"comment:是否被开启 1=true发送 2=false不发送 "`
+	NotifyMethods  StringArray `json:"notifyMethods,omitempty" gorm:"comment:通知方法：email im phone sms 组合"`
 
-	TreeNodeIds    StringArray `json:"treeNodeIds,omitempty" gorm:"comment:如果使用了服务树接口 通过树id获取ip列表"`
-	Key            string      `json:"key,omitempty" gorm:"-"` // 前端表格使用
-	PoolName       string      `json:"poolName,omitempty" gorm:"-"`
-	CreateUserName string      `json:"createUserName,omitempty" gorm:"-"`
+	FirstUpgradeUsers  []*User `json:"firstUpgradeUsers" gorm:"many2many:first_upgrade_users;comment:第一升级人列表"`
+	UpgradeMinutes     int     `json:"upgradeMinutes" gorm:"comment:告警多久未恢复就升级"`
+	SecondUpgradeUsers []*User `json:"secondUpgradeUsers" gorm:"many2many:second_upgrade_users;comment:第二升级人列表"`
+	NeedUpgrade        int     `json:"needUpgrade" gorm:"comment:是否告警升级 1=升级 2=不升级"`
+
+	TreeNodeIds StringArray `json:"treeNodeIds,omitempty" gorm:"comment:如果使用了服务树接口 通过树id获取ip列表"`
+
+	FirstUserNames  []string `json:"firstUserNames,omitempty" gorm:"-"` // 前端使用
+	Key             string   `json:"key,omitempty" gorm:"-"`            // 前端表格使用
+	PoolName        string   `json:"poolName,omitempty" gorm:"-"`
+	OnDutyGroupName string   `json:"onDutyGroupName,omitempty" gorm:"-"`
+	CreateUserName  string   `json:"createUserName,omitempty" gorm:"-"`
 }
 
 func (obj *MonitorAlertManagerSendGroup) Create() error {
@@ -52,6 +57,33 @@ func (obj *MonitorAlertManagerSendGroup) CreateOne() error {
 	return Db.Create(obj).Error
 }
 
+func (obj *MonitorAlertManagerSendGroup) UpdateFirstUpgradeUsers() error {
+	return Db.Model(obj).Association("FirstUpgradeUsers").Replace(obj.FirstUpgradeUsers)
+}
+
+func (obj *MonitorAlertManagerSendGroup) TransactionUpdate(firstUpgradeUsers []*User) error {
+	return Db.Transaction(func(tx *gorm.DB) error {
+		// 1.先删除所有升级人
+		//err := tx.Select(clause.Associations).Unscoped().Delete(obj).Error
+		//if err != nil {
+		//	return err
+		//}
+
+		// 2.更新升级人
+		err := tx.Model(obj).Association("FirstUpgradeUsers").Replace(firstUpgradeUsers)
+		if err != nil {
+			return err
+		}
+
+		// 3.更新自己的字段
+		err = tx.Where("id = ?", obj.ID).Updates(obj).Error
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
 func (obj *MonitorAlertManagerSendGroup) UpdateOne() error {
 	return Db.Where("id = ?", obj.ID).Updates(obj).Error
 }
@@ -62,11 +94,6 @@ func (obj *MonitorAlertManagerSendGroup) IdsConvert() {
 		strIds = append(strIds, fmt.Sprintf("%s", id))
 	}
 }
-
-//func (obj *MonitorAlertManagerSendGroup) ValidateRelabelConfigsYamlString() error {
-//	var relabelConfigsObj []*relabel.Config
-//	return yaml.Unmarshal([]byte(obj.RelabelConfigsYamlString), &relabelConfigsObj)
-//}
 
 func GetMonitorAlertManagerSendGroupById(id int) (*MonitorAlertManagerSendGroup, error) {
 	var dbMonitorAlertManagerSendGroup MonitorAlertManagerSendGroup
@@ -100,15 +127,28 @@ func (obj *MonitorAlertManagerSendGroup) FillFrontAllData() {
 	if dbUser != nil {
 		obj.CreateUserName = fmt.Sprintf("%s(%s)", dbUser.Username, dbUser.RealName)
 	}
-	//dbPool, _ := GetMonitorScrapePoolById(obj.Name)
-	//if dbPool != nil {
-	//	obj.PoolName = dbPool.Name
+	obj.FirstUserNames = commonGetUserNamesByUsers(obj.FirstUpgradeUsers)
+	//dbOnDutyGroup, _ := GetMonitorOndutyGroupById(int(obj.OnDutyGroupId))
+	//if dbOnDutyGroup != nil {
+	//	obj.OnDutyGroupName = dbOnDutyGroup.Name
+	//	// 🚀 强制同步逻辑：
+	//	// 如果需要的话，可以先调一下 dbOnDutyGroup.FillFrontAllData() 确保 Members 被加载
+	//	dbOnDutyGroup.FillFrontAllData()
+	//
+	//	// 让第一升级人永远等于此刻最新的值班组成员
+	//	obj.FirstUpgradeUsers = dbOnDutyGroup.Members
 	//}
+
+	dbPool, _ := GetMonitorAlertManagerPoolById(int(obj.PoolId))
+	if dbPool != nil {
+		obj.PoolName = dbPool.Name
+	}
+
 	obj.Key = fmt.Sprintf("%d", obj.ID)
 }
 
 func GetMonitorAlertManagerSendGroupByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorAlertManagerSendGroup, err error) {
-	err = Db.Where("id in ?", ids).Limit(limit).Offset(offset).Find(&objs).Error
+	err = Db.Preload("FirstUpgradeUsers").Where("id in ?", ids).Limit(limit).Offset(offset).Find(&objs).Error
 	return
 
 }

@@ -198,12 +198,13 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 	num = 1
 	for i := 0; i < num; i++ {
 		sg := MonitorAlertManagerSendGroup{
-			Name:                fmt.Sprintf("发送组-%v", i+1),
+			Name:                fmt.Sprintf("sre-%v", i+1),
 			NameZh:              fmt.Sprintf("运维组-%v", i+1),
 			Enable:              1,
 			UserID:              1,
 			FirstUpgradeUsers:   users,
 			UpgradeMinutes:      20,
+			NeedUpgrade:         1,
 			PoolId:              uint(1),
 			FeiShuQunRobotToken: "aa",
 			RepeatInterval:      "30s",
@@ -238,7 +239,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 		if mIndex >= len(metricsNames) {
 			mIndex = len(metricsNames) - 1
 		}
-		rule := MonitorPromAlertRule{
+		rule := MonitorAlertRule{
 			Name:        ruleNames[mIndex],
 			UserID:      1,
 			Enable:      1,
