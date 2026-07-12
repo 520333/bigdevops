@@ -10,19 +10,21 @@ import (
 )
 
 type ServerConfig struct {
-	HttpAddr             string               `yaml:"http_addr"`
-	MysqlC               *mysql.Config        `yaml:"mysql"` //
-	LogLevel             string               `yaml:"log_level"`
-	LogFilePath          string               `yaml:"log_file_path"`
-	SuperRoleName        string               `yaml:"super_role_name"`
-	PublicCloudSyncC     *PublicCloudSync     `yaml:"public_cloud_sync"`
-	JWTC                 *JWT                 `yaml:"jwt"`
-	WorkOrderAutoActionC *WorkOrderAutoAction `yaml:"work_order_auto_action"`
-	GrpcServerConfig     *GrpcServerConfig    `yaml:"grpc_server_config"`
-	JobExec              *ServerJobExec       `yaml:"job_exec"`
-	MonitorComputeC      *MonitorCompute      `yaml:"monitor_compute"`
-	Logger               *zap.Logger          `yaml:"-"`
-	Domain               string               `yaml:"front_domain"`
+	HttpAddr                        string               `yaml:"http_addr"`
+	HttpRequestGlobalTimeoutSeconds int                  `yaml:"http_request_global_timeout_seconds"`
+	MysqlC                          *mysql.Config        `yaml:"mysql"` //
+	LogLevel                        string               `yaml:"log_level"`
+	LogFilePath                     string               `yaml:"log_file_path"`
+	SuperRoleName                   string               `yaml:"super_role_name"`
+	PublicCloudSyncC                *PublicCloudSync     `yaml:"public_cloud_sync"`
+	JWTC                            *JWT                 `yaml:"jwt"`
+	WorkOrderAutoActionC            *WorkOrderAutoAction `yaml:"work_order_auto_action"`
+	GrpcServerConfig                *GrpcServerConfig    `yaml:"grpc_server_config"`
+	JobExec                         *ServerJobExec       `yaml:"job_exec"`
+	MonitorComputeC                 *MonitorCompute      `yaml:"monitor_compute"`
+	Logger                          *zap.Logger          `yaml:"-"`
+	Domain                          string               `yaml:"front_domain"`
+	ImC                             *IMConfig            `yaml:"im"`
 }
 
 type ServerJobExec struct {

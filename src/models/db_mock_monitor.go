@@ -5,6 +5,8 @@ import (
 	"bigdevops/src/config"
 	"fmt"
 	"math/rand"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -292,6 +294,23 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			OndutyUserId:  1,
 		}
 		_ = h2.CreateOne()
+	}
+
+	num = 20
+	rules, _ := GetMonitorAlertRuleAll()
+	for i := 1; i <= num; i++ {
+		e := MonitorAlertEvent{
+			AlertName:   fmt.Sprintf("mock-告警-%v", i+1),
+			FingerPrint: uuid.New().String(),
+			Status:      common.MONITOR_ALERT_STATUS_ARRAY[i%len(common.MONITOR_ALERT_STATUS_ARRAY)],
+			RuleId:      rules[i%len(rules)].ID,
+			SendGroupId: 1,
+			EventTimes:  i + 20,
+			SilenceID:   uuid.New().String(),
+			Labels:      []string{"l1=v1", "l2=v2"},
+			Key:         "",
+		}
+		_ = e.CreateOne()
 	}
 
 }

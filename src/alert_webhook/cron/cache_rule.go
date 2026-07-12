@@ -15,7 +15,7 @@ func (ac *AlertCache) RenewMapRule(ctx context.Context) {
 			ac.StartFinishRenew = true
 		}
 	}()
-	rules, err := models.GetMonitorPromAlertRuleAll()
+	rules, err := models.GetMonitorAlertRuleAll()
 	if err != nil {
 		ac.Sc.Logger.Error("[缓存刷新模块]扫描数据库中的rules失败", zap.Error(err))
 		return
@@ -24,7 +24,7 @@ func (ac *AlertCache) RenewMapRule(ctx context.Context) {
 		return
 	}
 
-	tmpM := map[string]*models.MonitorPromAlertRule{}
+	tmpM := map[string]*models.MonitorAlertRule{}
 	for _, rule := range rules {
 		rule := rule
 		tmpM[fmt.Sprintf("%d", rule.ID)] = rule
@@ -40,7 +40,7 @@ func (ac *AlertCache) RenewMapRule(ctx context.Context) {
 		zap.Any("上一次数量", lastNum), zap.Any("这一次数量", thiNum),
 	)
 }
-func (ac *AlertCache) GetRuleById(id string) *models.MonitorPromAlertRule {
+func (ac *AlertCache) GetRuleById(id string) *models.MonitorAlertRule {
 	ac.MonitorPromAlertRuleLock.RLock()
 	defer ac.MonitorPromAlertRuleLock.RUnlock()
 	return ac.MonitorPromAlertRuleMap[id]

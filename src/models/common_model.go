@@ -6,6 +6,9 @@ type Model struct {
 	ID        uint `json:"id" gorm:"primarykey"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
+
+	CreatedTime string `json:"createdTime,omitempty" gorm:"-"`
+	UpdatedTime string `json:"updatedTime,omitempty" gorm:"-"`
 }
 type EchartsOneItem struct {
 	Name  string `json:"name" gorm:"-"`

@@ -108,19 +108,19 @@ func (obj *MonitorAlertRule) FillDefaultData() {
 
 	obj.Labels = common.GentStringArrayByChangeLine(obj.LabelsFront)
 	obj.Annotations = common.GentStringArrayByChangeLine(obj.AnnotationsFront)
-	found := false
-	for _, ann := range obj.Annotations {
-		if strings.HasPrefix(ann, common.MONITOR_ALERT_RULE_ANNO_VALUE) {
-			found = true
-			break
-		}
-	}
-	if !found {
-		obj.Annotations = append(obj.Annotations, fmt.Sprintf("%s=%s",
-			common.MONITOR_ALERT_RULE_ANNO_VALUE,
-			"{{ $value }}",
-		))
-	}
+	//found := false
+	//for _, ann := range obj.Annotations {
+	//	if strings.HasPrefix(ann, common.MONITOR_ALERT_RULE_ANNO_VALUE) {
+	//		found = true
+	//		break
+	//	}
+	//}
+	//if !found {
+	//	obj.Annotations = append(obj.Annotations, fmt.Sprintf("%s=%s",
+	//		common.MONITOR_ALERT_RULE_ANNO_VALUE,
+	//		"{{ $value }}",
+	//	))
+	//}
 
 }
 
@@ -156,6 +156,8 @@ func (obj *MonitorAlertRule) FillFrontAllData() {
 	obj.LabelsM[common.MONITOR_ALERT_BIND_NODE_KEY] = obj.NodePath
 
 	obj.AnnotationsM = obj.GenMapFromKvs(obj.Annotations)
+	obj.AnnotationsM[common.MONITOR_ALERT_RULE_ANNO_VALUE] = "{{ $value }}"
+
 }
 
 func GetMonitorAlertRuleByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorAlertRule, err error) {

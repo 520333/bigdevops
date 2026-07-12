@@ -190,6 +190,9 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.POST("/setAlertRuleStatus", setAlertRuleStatus)
 		monitorApiGroup.POST("/setAlertRuleStatusBatch", setAlertRuleStatusBatch)
 		monitorApiGroup.GET("/promqlExprCheck", promqlExprCheck)
+
+		monitorApiGroup.GET("/getMonitorAlertEventList", getMonitorAlertEventList)
+		monitorApiGroup.POST("/AlertEventSilence/:id", AlertEventSilence)
 	}
 }
 

@@ -625,7 +625,7 @@ var (
 }`
 )
 
-func (ac *AlertCache) GenerateFeiShuCardMsgOneAlert(alert template.Alert, event *models.MonitorAlertEvent, rule *models.MonitorPromAlertRule, sendGroup *models.MonitorAlertManagerSendGroup) {
+func (ac *AlertCache) GenerateFeiShuCardMsgOneAlert(alert template.Alert, event *models.MonitorAlertEvent, rule *models.MonitorAlertRule, sendGroup *models.MonitorAlertManagerSendGroup) {
 	//msgQun := fmt.Sprintf(feiShuQunDataQun, alert.Labels[common.MONITOR_ALERT_NAME_KEY]+alert.Fingerprint)
 	//ac.SentFeiShuQun(msgQun)
 

@@ -125,3 +125,10 @@ func GentStringArrayByChangeLine(text string) []string {
 
 	return res
 }
+
+func TimeFormat(t time.Time) string {
+	return t.Format("2006-01-02 15:04:05")
+}
+func TimeNowString() string {
+	return TimeFormat(time.Now())
+}

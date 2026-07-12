@@ -94,7 +94,7 @@ func AlertSilence(c *gin.Context) {
 		Matchers:  amMatchers,
 		StartsAt:  now,
 		EndsAt:    now.Add(time.Duration(hourInt) * time.Hour),
-		CreatedBy: "运维平台快捷静默",
+		CreatedBy: "飞书消息卡片快捷静默按钮",
 		Comment:   fmt.Sprintf("通过快捷按钮屏蔽告警，时长: %d小时", hourInt),
 	}
 

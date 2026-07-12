@@ -42,8 +42,10 @@ func mockSystemData(sc *config.ServerConfig) *User {
 
 		{Name: "MonitorAlertPool", Title: "alert集群实例管理", Icon: "ant-design:alert-outlined", Type: "1", Show: "1", OrderNo: 44, Component: "monitor/alertmanager/index", Pid: 21, Path: "alertmanager"},
 		{Name: "MonitorSendGroup", Title: "alert发送组管理", Icon: "ant-design:dingding-outlined", Type: "1", Show: "1", OrderNo: 45, Component: "monitor/sendgroup/index", Pid: 21, Path: "sendgroup"},
-		{Name: "MonitorOnDutyGroup", Title: "值班组设置", Icon: "ant-design:ungroup-outlined", Type: "1", Show: "1", OrderNo: 46, Component: "monitor/ondutygroup/index", Pid: 21, Path: "ondutygroup"},
-		{Name: "MonitorOnDutyGroupPlan", Title: "轮值排班表", Icon: "ant-design:calendar-outlined", Type: "1", Show: "1", OrderNo: 47, Component: "monitor/plan/index", Pid: 21, Path: "plan"},
+		{Name: "MonitorAlertEvent", Title: "alert告警事件管理", Icon: "ant-design:project-outlined", Type: "1", Show: "1", OrderNo: 46, Component: "monitor/event/index", Pid: 21, Path: "event"},
+
+		{Name: "MonitorOnDutyGroup", Title: "值班组设置", Icon: "ant-design:ungroup-outlined", Type: "1", Show: "1", OrderNo: 47, Component: "monitor/ondutygroup/index", Pid: 21, Path: "ondutygroup"},
+		{Name: "MonitorOnDutyGroupPlan", Title: "轮值排班表", Icon: "ant-design:calendar-outlined", Type: "1", Show: "1", OrderNo: 48, Component: "monitor/plan/index", Pid: 21, Path: "plan"},
 	}
 
 	apis := []*Api{
