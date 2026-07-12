@@ -128,16 +128,16 @@ func (obj *MonitorAlertManagerSendGroup) FillFrontAllData() {
 		obj.CreateUserName = fmt.Sprintf("%s(%s)", dbUser.Username, dbUser.RealName)
 	}
 	obj.FirstUserNames = commonGetUserNamesByUsers(obj.FirstUpgradeUsers)
-	//dbOnDutyGroup, _ := GetMonitorOndutyGroupById(int(obj.OnDutyGroupId))
-	//if dbOnDutyGroup != nil {
-	//	obj.OnDutyGroupName = dbOnDutyGroup.Name
-	//	// 🚀 强制同步逻辑：
-	//	// 如果需要的话，可以先调一下 dbOnDutyGroup.FillFrontAllData() 确保 Members 被加载
-	//	dbOnDutyGroup.FillFrontAllData()
-	//
-	//	// 让第一升级人永远等于此刻最新的值班组成员
-	//	obj.FirstUpgradeUsers = dbOnDutyGroup.Members
-	//}
+	dbOnDutyGroup, _ := GetMonitorOndutyGroupById(int(obj.OnDutyGroupId))
+	if dbOnDutyGroup != nil {
+		obj.OnDutyGroupName = dbOnDutyGroup.Name
+		// 🚀 强制同步逻辑：
+		// 如果需要的话，可以先调一下 dbOnDutyGroup.FillFrontAllData() 确保 Members 被加载
+		//dbOnDutyGroup.FillFrontAllData()
+		//
+		//// 让第一升级人永远等于此刻最新的值班组成员
+		//obj.FirstUpgradeUsers = dbOnDutyGroup.Members
+	}
 
 	dbPool, _ := GetMonitorAlertManagerPoolById(int(obj.PoolId))
 	if dbPool != nil {

@@ -60,11 +60,6 @@ func (obj *MonitorAlertRule) UpdateOne() error {
 	return Db.Where("id = ?", obj.ID).Updates(obj).Error
 }
 
-//func (obj *MonitorAlertRule) ValidateRelabelConfigsYamlString() error {
-//	var relabelConfigsObj []*relabel.Config
-//	return yaml.Unmarshal([]byte(obj.RelabelConfigsYamlString), &relabelConfigsObj)
-//}
-
 func GetMonitorAlertRuleById(id int) (*MonitorAlertRule, error) {
 	var dbMonitorAlertRule MonitorAlertRule
 	err := Db.Where("id = ? ", id).First(&dbMonitorAlertRule).Error
@@ -106,29 +101,52 @@ func (obj *MonitorAlertRule) GenMapFromKvs(kvs []string) map[string]string {
 	return labelsM
 }
 
+func (obj *MonitorAlertRule) FillDefaultData() {
+	if obj.ForTime == "" {
+		obj.ForTime = "1m"
+	}
+
+	obj.Labels = common.GentStringArrayByChangeLine(obj.LabelsFront)
+	obj.Annotations = common.GentStringArrayByChangeLine(obj.AnnotationsFront)
+	found := false
+	for _, ann := range obj.Annotations {
+		if strings.HasPrefix(ann, common.MONITOR_ALERT_RULE_ANNO_VALUE) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		obj.Annotations = append(obj.Annotations, fmt.Sprintf("%s=%s",
+			common.MONITOR_ALERT_RULE_ANNO_VALUE,
+			"{{ $value }}",
+		))
+	}
+
+}
+
 func (obj *MonitorAlertRule) FillFrontAllData() {
 	dbUser, _ := GetUserById(int(obj.UserID))
 	if dbUser != nil {
 		obj.CreateUserName = fmt.Sprintf("%s(%s)", dbUser.Username, dbUser.RealName)
 	}
-	//dbPool, _ := GetMonitorScrapePoolById(int(obj.PoolId))
-	//if dbPool != nil {
-	//	obj.PoolName = dbPool.Name
-	//}
+
 	promM, _ := GetMonitorScrapePoolById(int(obj.PoolId))
 	if promM != nil {
 		obj.PoolName = promM.Name
 	}
-	sengGroup, _ := GetMonitorAlertManagerSendGroupById(int(obj.PoolId))
+	sengGroup, _ := GetMonitorAlertManagerSendGroupById(int(obj.SendGroupId))
 	if sengGroup != nil {
 		obj.SendGroupName = sengGroup.Name
 	}
+
 	node, _ := GetStreeNodeById(int(obj.TreeNodeId))
 	if node != nil {
 		node.FillFrontAllData()
 		obj.NodePath = node.NodePath
 	}
 
+	obj.LabelsFront = strings.Join(obj.Labels, "\n")
+	obj.AnnotationsFront = strings.Join(obj.Annotations, "\n")
 	obj.Key = fmt.Sprintf("%d", obj.ID)
 	obj.LabelsM = obj.GenMapFromKvs(obj.Labels)
 	// 绑定发送组标签
@@ -157,4 +175,18 @@ func SetAlertManagerRuleStatus(id uint, enable int) error {
 	// 假设你的全局数据库对象是 global.DB 或 common.DB，请根据你的项目实际情况调整
 	err := Db.Model(&MonitorAlertRule{}).Where("id = ?", id).Update("enable", enable).Error
 	return err
+}
+
+// UpdateMonitorAlertRuleEnableBatch 批量更新告警规则的开关状态
+func UpdateMonitorAlertRuleEnableBatch(ids []int, enable int) error {
+	// 使用 GORM 的 IN 查询和批量 Update
+	// .Update("enable", enable) 会忽略结构体的零值限制，直接强制更新对应字段
+	err := Db.Model(&MonitorAlertRule{}).Where("id IN ?", ids).Update("enable", enable).Error
+	return err
+}
+
+// DeleteMonitorAlertRuleBatch 批量删除告警规则
+func DeleteMonitorAlertRuleBatch(ids []uint) error {
+	// 使用 Unscoped() 进行硬删除（如果你的逻辑是软删除，去掉 Unscoped() 即可）
+	return Db.Unscoped().Where("id IN ?", ids).Delete(&MonitorAlertRule{}).Error
 }

@@ -152,6 +152,7 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.POST("/updateMonitorScrapePool", updateMonitorScrapePool)
 		monitorApiGroup.DELETE("/deleteMonitorScrapePool/:id", deleteMonitorScrapePool)
 		monitorApiGroup.GET("/getMonitorPrometheusYamlOne", getMonitorPrometheusYamlOne)
+		monitorApiGroup.GET("/getMonitorPrometheusRuleYamlOne", getMonitorPrometheusRuleYamlOne)
 
 		monitorApiGroup.GET("/getMonitorScrapeJobList", getMonitorScrapeJobList)
 		monitorApiGroup.POST("/createMonitorScrapeJob", createMonitorScrapeJob)
@@ -185,7 +186,10 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.POST("/createMonitorAlertRule", createMonitorAlertRule)
 		monitorApiGroup.POST("/updateMonitorAlertRule", updateMonitorAlertRule)
 		monitorApiGroup.DELETE("/deleteMonitorAlertRule/:id", deleteMonitorAlertRule)
+		monitorApiGroup.DELETE("/deleteMonitorAlertRuleBatch", deleteMonitorAlertRuleBatch)
 		monitorApiGroup.POST("/setAlertRuleStatus", setAlertRuleStatus)
+		monitorApiGroup.POST("/setAlertRuleStatusBatch", setAlertRuleStatusBatch)
+		monitorApiGroup.GET("/promqlExprCheck", promqlExprCheck)
 	}
 }
 

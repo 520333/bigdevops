@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/prometheus/prometheus/promql/parser"
 	"go.uber.org/zap"
 )
 
@@ -33,8 +34,8 @@ func getMonitorAlertRuleList(c *gin.Context) {
 	}
 	objs, err := models.GetMonitorAlertRuleAll()
 	if err != nil {
-		sc.Logger.Error("去数据库中拿所有的发送组配置执行错误", zap.Error(err))
-		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的发送组配置执行错误：%v", err.Error()), c)
+		sc.Logger.Error("去数据库中拿所有的告警规则配置执行错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的告警规则配置执行错误：%v", err.Error()), c)
 		return
 	}
 	allIds := []int{}
@@ -74,8 +75,8 @@ func getMonitorAlertRuleList(c *gin.Context) {
 	// 根据过滤后的 ID 进行分页查询
 	pagedObjs, err := models.GetMonitorAlertRuleByIdsWithLimitOffset(allIds, limit, offset)
 	if err != nil {
-		sc.Logger.Error("limit-offset 去数据库中拿所有的发送组配置执行错误", zap.Error(err))
-		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的发送组配置执行错误：%v", err.Error()), c)
+		sc.Logger.Error("limit-offset 去数据库中拿所有的告警规则配置执行错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的告警规则配置执行错误：%v", err.Error()), c)
 		return
 	}
 
@@ -93,12 +94,12 @@ func getMonitorAlertRuleList(c *gin.Context) {
 func getMonitorAlertRuleOne(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
-	sc.Logger.Info("发送组配置实例", zap.Any("id", id))
+	sc.Logger.Info("告警规则配置实例", zap.Any("id", id))
 	intVar, _ := strconv.Atoi(id)
 
 	dbObj, err := models.GetJobTaskById(intVar)
 	if err != nil {
-		sc.Logger.Error("根据id找发送组配置实例错误", zap.Any("发送组配置实例", id), zap.Error(err))
+		sc.Logger.Error("根据id找告警规则配置实例错误", zap.Any("告警规则配置实例", id), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
@@ -113,23 +114,33 @@ func createMonitorAlertRule(c *gin.Context) {
 	var reqObj models.MonitorAlertRule
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
-		sc.Logger.Error("解析新增发送组配置执行请求失败", zap.Error(err))
+		sc.Logger.Error("解析新增告警规则配置执行请求失败", zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
 
 	// 获取当前用户ID
 	userName := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)
+
+	pt := commonPromqlExprCheck(reqObj.Expr)
+
+	if !pt.Success {
+		sc.Logger.Error("promql语法校验失败", zap.Any("promql", pt))
+		common.ReqBadFailWithMessage(fmt.Sprintf("promql语法校验失败: %v", pt.Err), c)
+		return
+	}
+
 	dbUser, err := models.GetUserByUsername(userName)
 
 	if dbUser != nil {
 		reqObj.UserID = dbUser.ID
 	}
-	//reqObj.FirstUpgradeUsers = commonGetUsersByNames(reqObj.FirstUserNames, sc.Logger, c)
+
+	reqObj.FillDefaultData()
 	// 存入数据库
 	err = reqObj.CreateOne()
 	if err != nil {
-		sc.Logger.Error("新增发送组配置执行数据库失败", zap.Error(err))
+		sc.Logger.Error("新增告警规则配置执行数据库失败", zap.Error(err))
 		common.FailWithMessage("存入数据库失败: "+err.Error(), c)
 		return
 	}
@@ -144,25 +155,28 @@ func updateMonitorAlertRule(c *gin.Context) {
 	var reqObj models.MonitorAlertRule
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
-		sc.Logger.Error("解析更新发送组配置请求失败", zap.Error(err))
+		sc.Logger.Error("解析更新告警规则配置请求失败", zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
 	// 检查是否存在
 	dbOld, err := models.GetMonitorAlertRuleById(int(reqObj.ID))
 	if err != nil {
-		common.FailWithMessage("发送组配置不存在", c)
+		common.FailWithMessage("告警规则配置不存在", c)
 		return
 	}
 	reqObj.UserID = dbOld.UserID
+	pt := commonPromqlExprCheck(reqObj.Expr)
+	if !pt.Success {
+		sc.Logger.Error("promql语法校验失败", zap.Any("promql", pt))
+		common.ReqBadFailWithMessage(fmt.Sprintf("promql语法校验失败: %v", pt.Err), c)
+		return
+	}
+	reqObj.FillDefaultData()
 
-	//tmpUsers := commonGetUsersByNames(reqObj.FirstUserNames, sc.Logger, c)
-	//reqObj.FirstUpgradeUsers = commonGetUsersByNames(reqObj.FirstUserNames, sc.Logger, c)
-	// 更新
-	//err = reqObj.TransactionUpdate(tmpUsers)
 	err = reqObj.UpdateOne()
 	if err != nil {
-		sc.Logger.Error("更新发送组配置执行错误", zap.Error(err))
+		sc.Logger.Error("更新告警规则配置执行错误", zap.Error(err))
 		common.FailWithMessage("更新失败: "+err.Error(), c)
 		return
 	}
@@ -177,23 +191,47 @@ func deleteMonitorAlertRule(c *gin.Context) {
 
 	dbObj, err := models.GetMonitorAlertRuleById(intVar)
 	if err != nil {
-		common.FailWithMessage("发送组配置不存在", c)
+		common.FailWithMessage("告警规则配置不存在", c)
 		return
 	}
-	dbPromAlertRule, _ := models.GetMonitorAlertRuleBySendGroupId(uint(intVar))
-	if dbPromAlertRule != nil && len(dbPromAlertRule) > 0 {
-		sc.Logger.Warn("该发送组已经绑定了发送组，禁止直接删除！", zap.Any("", id))
-		common.FailWithMessage("该发送组已经绑定了告警规则，禁止直接删除！", c)
-		return
-	}
+
 	err = dbObj.DeleteOne()
 	if err != nil {
-		sc.Logger.Error("删除发送组配置执行错误", zap.Error(err))
+		sc.Logger.Error("删除告警规则配置执行错误", zap.Error(err))
 		common.FailWithMessage("删除失败: "+err.Error(), c)
 		return
 	}
 
 	common.OkWithMessage("删除成功", c)
+}
+
+// 1. 定义批量删除的请求体
+type deleteAlertRuleBatchReq struct {
+	Ids []uint `json:"ids" validate:"required,min=1"` // 要求至少传 1 个 ID
+}
+
+// 2. 批量删除的处理函数
+func deleteMonitorAlertRuleBatch(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+
+	var reqObj deleteAlertRuleBatchReq
+	err := c.ShouldBindJSON(&reqObj)
+	if err != nil {
+		sc.Logger.Error("解析批量删除告警规则请求失败", zap.Any("req", reqObj), zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	// （可选）如果你需要像单条删除那样检查依赖关系，可以在这里写个 for 循环检查 reqObj.Ids
+	// 为了极致性能，这里直接调用批量删除
+	err = models.DeleteMonitorAlertRuleBatch(reqObj.Ids)
+	if err != nil {
+		sc.Logger.Error("批量删除告警规则执行错误", zap.Any("req", reqObj), zap.Error(err))
+		common.FailWithMessage("批量删除失败: "+err.Error(), c)
+		return
+	}
+
+	common.OkWithMessage(fmt.Sprintf("成功删除了 %d 条告警规则", len(reqObj.Ids)), c)
 }
 
 // setScrapeJobEnableReq 请求参数结构体
@@ -202,14 +240,14 @@ type setAlertRuleEnableReq struct {
 	Enable int  `json:"enable" validate:"required,oneof=1 2"` // 假设 1=启用 2=禁用
 }
 
-// setScrapeJobStatus 设置发送组配置的启用/禁用状态
+// setScrapeJobStatus 设置告警规则配置的启用/禁用状态
 func setAlertRuleStatus(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
 	var reqObj setAlertRuleEnableReq
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
-		sc.Logger.Error("解析修改发送组配置状态请求失败", zap.Any("req", reqObj), zap.Error(err))
+		sc.Logger.Error("修改告警规则状态请求失败", zap.Any("req", reqObj), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
@@ -226,7 +264,7 @@ func setAlertRuleStatus(c *gin.Context) {
 	// 1. 查询数据库中原有的记录
 	dbJob, err := models.GetMonitorAlertRuleById(int(reqObj.Id))
 	if err != nil {
-		sc.Logger.Error("根据id查找发送组配置错误", zap.Any("req", reqObj), zap.Error(err))
+		sc.Logger.Error("根据id查找告警规则配置错误", zap.Any("req", reqObj), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
@@ -237,10 +275,92 @@ func setAlertRuleStatus(c *gin.Context) {
 	// 3. 执行更新
 	err = dbJob.UpdateEnable()
 	if err != nil {
-		sc.Logger.Error("更新发送组配置状态错误", zap.Any("req", reqObj), zap.Error(err))
+		sc.Logger.Error("更新告警规则配置状态错误", zap.Any("req", reqObj), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
 
 	common.OkWithMessage("状态修改成功", c)
 }
+
+func setAlertRuleStatusBatch(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+
+	var reqObj setAlertRuleEnableBatchReq
+	err := c.ShouldBindJSON(&reqObj)
+	if err != nil {
+		sc.Logger.Error("解析批量修改告警规则配置状态请求失败", zap.Any("req", reqObj), zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	// 结构体数据校验
+	err = validate.Struct(&reqObj)
+	if err != nil {
+		if errors, ok := err.(validator.ValidationErrors); ok {
+			common.ReqBadFailWithDetailed(errors.Translate(trans), "请求参数有误", c)
+			return
+		}
+	}
+
+	// 执行数据库批量更新
+	err = models.UpdateMonitorAlertRuleEnableBatch(reqObj.Ids, reqObj.Enable)
+	if err != nil {
+		sc.Logger.Error("批量更新告警规则状态错误", zap.Any("req", reqObj), zap.Error(err))
+		common.FailWithMessage("批量更新失败: "+err.Error(), c)
+		return
+	}
+
+	common.OkWithMessage(fmt.Sprintf("成功修改了 %d 条告警规则的状态", len(reqObj.Ids)), c)
+}
+
+type PromQLCheckResult struct {
+	Success bool   `json:"success"`
+	Err     string `json:"err"`
+}
+
+func commonPromqlExprCheck(ql string) (pt PromQLCheckResult) {
+	pt.Success = true
+	_, err := parser.NewParser(parser.Options{}).ParseExpr(ql)
+	if err != nil {
+		pt.Success = false
+		pt.Err = err.Error()
+	}
+	return
+}
+
+func promqlExprCheck(c *gin.Context) {
+	ql := c.DefaultQuery("ql", "")
+	pt := commonPromqlExprCheck(ql)
+
+	if !pt.Success {
+		sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+		sc.Logger.Warn("前端请求promql语法校验失败", zap.Any("promql", pt))
+
+		common.ReqBadFailWithMessage(fmt.Sprintf("promql语法校验失败: %v", pt.Err), c)
+		return
+	}
+
+	common.OkWithDetailed(pt, "语法校验通过", c)
+}
+
+//func promqlExprCheck(c *gin.Context) {
+//	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+//	ql := c.DefaultQuery("ql", "")
+//	ql = strings.ReplaceAll(ql, "'", "\"")
+//	fmt.Printf("【调试】后端收到的原始字符串: [%s]\n", ql)
+//	fmt.Printf("【调试】字符串字节流: % x\n", ql)
+//	_, err := parser.NewParser(parser.Options{}).ParseExpr(ql)
+//	pt := PromQLCheckResult{
+//		Success: true,
+//		Err:     "",
+//	}
+//	if err != nil {
+//		sc.Logger.Error("promql语法校验失败", zap.Error(err))
+//		pt.Success = false
+//		pt.Err = err.Error()
+//		common.ReqBadFailWithMessage(fmt.Sprintf("promql语法校验失败:%v", err), c)
+//		return
+//	}
+//	common.OkWithDetailed(pt, "ok", c)
+//}

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"bigdevops/src/common"
 	"errors"
 	"fmt"
 	"strings"
@@ -27,6 +28,7 @@ type MonitorAlertManagerPool struct {
 	Receiver string      `json:"receiver" gorm:"comment:兜底接收者"`
 
 	ExternalLabelsFront string `json:"externalLabelsFront" gorm:"-"`
+	GroupByFront        string `json:"groupByFront" gorm:"-"`
 	Key                 string `json:"key" gorm:"-"` // 前端表格使用
 	CreateUserName      string `json:"createUserName" gorm:"-"`
 }
@@ -103,6 +105,7 @@ func (obj *MonitorAlertManagerPool) FillDefaultData() {
 		obj.RepeatInterval = "4h"
 	}
 
+	obj.GroupBy = common.GentStringArrayByChangeLine(obj.GroupByFront)
 	if len(obj.GroupBy) == 0 {
 		obj.GroupBy = []string{"alertname"}
 	}

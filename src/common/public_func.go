@@ -114,3 +114,14 @@ func GentStringArrayByMap(m map[string]string) []string {
 	}
 	return res
 }
+
+func GentStringArrayByChangeLine(text string) []string {
+	res := []string{}
+	lines := strings.Split(text, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		res = append(res, line)
+	}
+
+	return res
+}
