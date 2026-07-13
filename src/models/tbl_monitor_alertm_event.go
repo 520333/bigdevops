@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/prometheus/alertmanager/template"
 	"go.uber.org/zap"
@@ -16,24 +17,27 @@ import (
 
 type MonitorAlertEvent struct {
 	Model
-	AlertName   string      `json:"alertName"`
-	FingerPrint string      `json:"fingerPrint,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:告警unique id eventId"`
-	Status      string      `json:"status" gorm:"comment:告警状态： 告警中|已屏蔽|已认领|已恢复"`
-	RuleId      uint        `json:"ruleId"`
-	SendGroupId uint        `json:"sendGroupId"`
-	EventTimes  int         `json:"eventTimes" gorm:"comment:触发次数"`
-	SilenceID   string      `json:"silenceID" gorm:"comment:alertmanager返回的静默id"`
-	Labels      StringArray `json:"labels" gorm:"comment: 标签组 k=v"`
+	AlertName    string      `json:"alertName"`
+	FingerPrint  string      `json:"fingerPrint,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:告警unique id eventId"`
+	Status       string      `json:"status" gorm:"comment:告警状态： 告警中|已屏蔽|已认领|已恢复"`
+	RuleId       uint        `json:"ruleId"`
+	SendGroupId  uint        `json:"sendGroupId"`
+	EventTimes   int         `json:"eventTimes" gorm:"comment:触发次数"`
+	SilenceID    string      `json:"silenceID" gorm:"comment:alertmanager返回的静默id"`
+	UnsilencedAt *time.Time  `json:"unsilencedAt" gorm:"comment:最近一次解除屏蔽的时间"`
+	ReLingUserId uint        `json:"reLingUserId" gorm:"comment:是谁认领了告警"`
+	Labels       StringArray `json:"labels" gorm:"comment: 标签组 k=v"`
 
 	Key           string                        `json:"key" gorm:"-"` // 前端表格使用
 	AlertRuleName string                        `json:"alertRuleName" gorm:"-"`
 	SendGroupName string                        `json:"sendGroupName" gorm:"-"`
-	Alert         template.Alert                `json:"alert" gorm:"-"`
-	SendGroup     *MonitorAlertManagerSendGroup `json:"sendGroup" gorm:"-"`
-	Rule          *MonitorAlertRule             `json:"rule" gorm:"-"`
+	Alert         template.Alert                `json:"alert,omitempty" gorm:"-"`
+	ReLingUser    *User                         `json:"reLingUser,omitempty" gorm:"-"`
+	SendGroup     *MonitorAlertManagerSendGroup `json:"sendGroup,omitempty" gorm:"-"`
+	Rule          *MonitorAlertRule             `json:"rule,omitempty" gorm:"-"`
 
-	LabelsM      map[string]string `json:"labelsM" gorm:"-"`
-	AnnotationsM map[string]string `json:"annotationsM" gorm:"-"`
+	LabelsM      map[string]string `json:"labelsM,omitempty" gorm:"-"`
+	AnnotationsM map[string]string `json:"annotationsM,omitempty" gorm:"-"`
 }
 
 func (obj *MonitorAlertEvent) Create() error {
@@ -47,20 +51,8 @@ func (obj *MonitorAlertEvent) DeleteOne() error {
 func (obj *MonitorAlertEvent) CreateOne() error {
 	return Db.Create(obj).Error
 }
-func (obj *MonitorAlertEvent) UpdateOrCreateOne() error {
-	//dbobj, err := GetMonitorAlertEventByFingerPrintId(obj.FingerPrint)
-	//if err != nil {
-	//	if errors.Is(err, gorm.ErrRecordNotFound) {
-	//		obj.EventTimes += 1
-	//		return obj.CreateOne()
-	//	}
-	//	return err
-	//}
-	//obj.Status = dbobj.Status
-	//dbobj.EventTimes++
-	//
-	//return dbobj.UpdateOne()
 
+func (obj *MonitorAlertEvent) UpdateOrCreateOne() error {
 	dbobj, err := GetMonitorAlertEventByFingerPrintId(obj.FingerPrint)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -71,15 +63,20 @@ func (obj *MonitorAlertEvent) UpdateOrCreateOne() error {
 		return err
 	}
 
-	// 💡 核心修复 1：把数据库里的历史次数 + 1，赋值给当前正在处理的 obj 对象
-	obj.EventTimes = dbobj.EventTimes + 1
+	if obj.Status != common.MONITOR_ALERT_STATUS_RESOLVED {
+		if dbobj.Status == common.MONITOR_ALERT_STATUS_RENLING || dbobj.Status == common.MONITOR_ALERT_STATUS_SILIENCED {
+			obj.Status = dbobj.Status
+		}
+	}
 
-	// 💡 核心修复 2：继承数据库里的主键 ID，这样 GORM 执行 UpdateOne 才知道更新哪一行
+	// 继承数据库里的关键字段
 	obj.ID = dbobj.ID
+	obj.EventTimes = dbobj.EventTimes + 1
+	obj.ReLingUserId = dbobj.ReLingUserId
+	obj.SilenceID = dbobj.SilenceID
 
-	// 注意：去掉了 obj.Status = dbobj.Status，保留外部传进来的最新状态
+	obj.UnsilencedAt = dbobj.UnsilencedAt
 
-	// 使用当前对象更新数据库
 	return obj.UpdateOne()
 }
 
@@ -126,17 +123,28 @@ func (obj *MonitorAlertEvent) GenMapFromKvs() map[string]string {
 }
 
 func (obj *MonitorAlertEvent) FillFrontAllData() {
-
 	obj.CreatedTime = common.TimeFormat(obj.CreatedAt)
 	obj.UpdatedTime = common.TimeFormat(obj.UpdatedAt)
-
 	obj.Key = fmt.Sprintf("%d", obj.ID)
+
 	alertRule, _ := GetMonitorAlertRuleById(int(obj.RuleId))
 	sendGroup, _ := GetMonitorAlertManagerSendGroupById(int(obj.SendGroupId))
-	obj.SendGroup = sendGroup
-	obj.AlertRuleName = alertRule.Name
-	obj.SendGroupName = sendGroup.Name
 
+	// 🚀 核心修复 1：把之前注释掉的认领人查询打开，并赋值给虚拟字段 ReLingUser！
+	if obj.ReLingUserId > 0 {
+		renLingUser, _ := GetUserById(int(obj.ReLingUserId))
+		if renLingUser != nil {
+			obj.ReLingUser = renLingUser
+		}
+	}
+
+	if alertRule != nil {
+		obj.AlertRuleName = alertRule.Name
+	}
+	if sendGroup != nil {
+		obj.SendGroupName = sendGroup.Name
+		obj.SendGroup = sendGroup
+	}
 }
 
 func GetMonitorAlertEventByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorAlertEvent, err error) {

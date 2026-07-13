@@ -1,7 +1,6 @@
 package models
 
 import (
-	"bigdevops/src/common"
 	"errors"
 	"fmt"
 	"strings"
@@ -24,13 +23,13 @@ type MonitorAlertManagerPool struct {
 
 	RepeatInterval string `json:"repeatInterval" gorm:"comment:默认重复发送间隔"`
 
-	GroupBy  StringArray `json:"groupBy" gorm:"comment:分组标签"`
-	Receiver string      `json:"receiver" gorm:"comment:兜底接收者"`
+	GroupBy  StringArray `json:"groupBy,omitempty" gorm:"comment:分组标签"`
+	Receiver string      `json:"receiver,omitempty" gorm:"comment:兜底接收者"`
 
-	ExternalLabelsFront string `json:"externalLabelsFront" gorm:"-"`
-	GroupByFront        string `json:"groupByFront" gorm:"-"`
-	Key                 string `json:"key" gorm:"-"` // 前端表格使用
-	CreateUserName      string `json:"createUserName" gorm:"-"`
+	ExternalLabelsFront string `json:"externalLabelsFront,omitempty" gorm:"-"`
+	GroupByFront        string `json:"groupByFront,omitempty" gorm:"-"`
+	Key                 string `json:"key,omitempty" gorm:"-"` // 前端表格使用
+	CreateUserName      string `json:"createUserName,omitempty" gorm:"-"`
 }
 
 func (obj *MonitorAlertManagerPool) Create() error {
@@ -104,11 +103,12 @@ func (obj *MonitorAlertManagerPool) FillDefaultData() {
 	if obj.RepeatInterval == "" {
 		obj.RepeatInterval = "4h"
 	}
-
-	obj.GroupBy = common.GentStringArrayByChangeLine(obj.GroupByFront)
-	if len(obj.GroupBy) == 0 {
-		obj.GroupBy = []string{"alertname"}
-	}
+	obj.ExternalLabelsFront = strings.Join(obj.GroupBy, "\n")
+	obj.Key = fmt.Sprintf("%d", obj.ID)
+	//obj.GroupBy = common.GentStringArrayByChangeLine(obj.GroupByFront)
+	//if len(obj.GroupBy) == 0 {
+	//	obj.GroupBy = []string{"alertname"}
+	//}
 }
 
 func (obj *MonitorAlertManagerPool) FillFrontAllData() {

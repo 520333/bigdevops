@@ -4,11 +4,9 @@ import (
 	"bigdevops/src/common"
 	"bigdevops/src/config"
 	"bigdevops/src/models"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -84,23 +82,6 @@ func getMonitorScrapePoolList(c *gin.Context) {
 		"items": pagedObjs,
 		"total": len(allIds),
 	}, "ok", c)
-}
-
-func getMonitorScrapePoolOne(c *gin.Context) {
-	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	id := c.Param("id")
-	sc.Logger.Info("采集池实例", zap.Any("id", id))
-	intVar, _ := strconv.Atoi(id)
-
-	dbObj, err := models.GetJobTaskById(intVar)
-	if err != nil {
-		sc.Logger.Error("根据id找采集池实例错误", zap.Any("采集池实例", id), zap.Error(err))
-		common.FailWithMessage(err.Error(), c)
-		return
-	}
-	dbObj.FillFrontAllData()
-
-	common.OkWithDetailed(dbObj, "ok", c)
 }
 
 func createMonitorScrapePool(c *gin.Context) {
@@ -206,91 +187,4 @@ func deleteMonitorScrapePool(c *gin.Context) {
 	}
 
 	common.OkWithMessage("删除成功", c)
-}
-
-func actionMonitorScrapePoolOne(c *gin.Context) {
-	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	id := c.Param("id")
-	sc.Logger.Info("采集池动作", zap.Any("id", id))
-	intVar, _ := strconv.Atoi(id)
-
-	dbObj, err := models.GetJobTaskById(intVar)
-	if err != nil {
-		sc.Logger.Error("根据id找采集池执行错误", zap.Any("采集池执行", id), zap.Error(err))
-		common.FailWithMessage(err.Error(), c)
-		return
-	}
-	action := c.Query("action")
-	nextStatus, exist := common.JOB_ACTION_NEXT_STATUS_MAP[action]
-	if !exist {
-		sc.Logger.Error("传入的动作错误", zap.Any("采集池执行", id), zap.Error(err))
-		common.FailWithMessage(err.Error(), c)
-		return
-	}
-
-	if action == common.AGENT_TASK_ACTION_KILL {
-		dbObj.Action = common.AGENT_TASK_ACTION_KILL
-	}
-
-	// ==========================================
-	// 💡 补充记录采集池流 到 ActualFlowData json
-	// ==========================================
-
-	// 1. 获取当前执行操作的用户
-	userName := "系统"
-	if claimUser, exists := c.Get(common.GIN_CTX_JWT_USER_NAME); exists {
-		userName = claimUser.(string)
-	}
-
-	// 2. 动作中文映射 (提升前端时间轴的易读性)
-	actionNameMap := map[string]string{
-		common.AGENT_TASK_ACTION_START:  "手动下发执行",
-		common.AGENT_TASK_ACTION_KILL:   "强行Kill终止",
-		common.AGENT_TASK_ACTION_PAUSE:  "手动暂停采集池",
-		common.AGENT_TASK_ACTION_RESUME: "恢复执行采集池",
-		common.AGENT_TASK_ACTION_STOP:   "手动标记停止",
-	}
-	actionName := actionNameMap[action]
-	if actionName == "" {
-		actionName = action
-	}
-
-	// 3. 反序列化原有的历史流程记录
-	var flowNodes []map[string]interface{}
-	if dbObj.ActualFlowData != "" {
-		err := json.Unmarshal([]byte(dbObj.ActualFlowData), &flowNodes)
-		if err != nil {
-			sc.Logger.Warn("解析原有的 ActualFlowData 失败，将初始化为空", zap.Error(err))
-			flowNodes = []map[string]interface{}{}
-		}
-	}
-
-	// 4. 构建新的时间轴节点
-	// 属性命名与你在 Vue 前端 timeline 期望的字段完全对齐
-	newNode := map[string]interface{}{
-		"type":              actionName,                                    // 节点标题
-		"endTime":           time.Now().Format("2006-01-02 15:04:05"),      // 操作时间
-		"actualUser":        userName,                                      // 执行人
-		"isPassOrIsSuccess": true,                                          // 渲染蓝色/绿色Tag
-		"outPut":            fmt.Sprintf("指令下发成功，状态扭转为: [%s]", nextStatus), // 详情描述
-	}
-
-	// 5. 追加并重新序列化为 JSON 字符串
-	flowNodes = append(flowNodes, newNode)
-	flowBytes, _ := json.Marshal(flowNodes)
-	dbObj.ActualFlowData = string(flowBytes)
-
-	// ==========================================
-
-	sc.Logger.Info("采集池动作", zap.Any("id", id), zap.Any("动作", action), zap.Any("nextStatus", nextStatus))
-
-	dbObj.Status = nextStatus
-	err = dbObj.UpdateOne()
-	if err != nil {
-		sc.Logger.Error("更新采集池执行错误", zap.Any("采集池执行", id), zap.Error(err))
-		common.FailWithMessage(err.Error(), c)
-		return
-	}
-	common.OkWithMessage("更新成功", c)
-
 }

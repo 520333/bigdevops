@@ -90,23 +90,6 @@ func getMonitorAlertManagerSendGroupList(c *gin.Context) {
 	}, "ok", c)
 }
 
-func getMonitorAlertManagerSendGroupOne(c *gin.Context) {
-	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	id := c.Param("id")
-	sc.Logger.Info("发送组配置实例", zap.Any("id", id))
-	intVar, _ := strconv.Atoi(id)
-
-	dbObj, err := models.GetJobTaskById(intVar)
-	if err != nil {
-		sc.Logger.Error("根据id找发送组配置实例错误", zap.Any("发送组配置实例", id), zap.Error(err))
-		common.FailWithMessage(err.Error(), c)
-		return
-	}
-	dbObj.FillFrontAllData()
-
-	common.OkWithDetailed(dbObj, "ok", c)
-}
-
 func createMonitorAlertManagerSendGroup(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 

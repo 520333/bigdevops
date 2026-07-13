@@ -5,8 +5,6 @@ import (
 	"bigdevops/src/config"
 	"fmt"
 	"math/rand"
-
-	"github.com/google/uuid"
 )
 
 var (
@@ -72,9 +70,11 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			RemoteTimeoutSeconds: 5,
 			UserID:               1,
 			SupperAlert:          common.GORM_ENABLE_RES_YES,
+			SupperRecord:         common.GORM_ENABLE_RES_YES,
 			RemoteReadUrl:        "http://192.168.50.200:8428/api/v1/read",
 			AlertManagerUrl:      "192.168.50.200:9093",
 			RuleFilePath:         "/opt/app/prometheus/rule.yml",
+			RecordFilePath:       "/opt/app/prometheus/record.yml",
 		}
 		_ = p.CreateOne()
 	}
@@ -173,7 +173,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			GroupWait:             "5s",
 			GroupInterval:         "50s",
 			RepeatInterval:        "15s",
-			Receiver:              "发送组-1",
+			Receiver:              "sre-1",
 			GroupBy:               []string{"alertname=1", "k=v"},
 		}
 		_ = r.CreateOne()
@@ -208,7 +208,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			UpgradeMinutes:      20,
 			NeedUpgrade:         1,
 			PoolId:              uint(1),
-			FeiShuQunRobotToken: "aa",
+			FeiShuQunRobotToken: "c5a63034-7a00-43e5-84c2-31b0661cc0ea",
 			RepeatInterval:      "30s",
 			OnDutyGroupId:       1,
 			SendResolved:        1,
@@ -263,6 +263,29 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 		_ = rule.CreateOne()
 	}
 
+	// record 预聚合规则
+	num = 3
+	abc := []string{"a", "b", "c"}
+	for i := 0; i < num; i++ {
+		mIndex := i
+		if mIndex >= len(metricsNames) {
+			mIndex = len(metricsNames) - 1
+		}
+		record := MonitorRecordRule{
+			Name:       fmt.Sprintf("mock-record-%v", abc[mIndex]),
+			RecordName: fmt.Sprintf("node_avg_cpu_usage_%v", abc[mIndex]),
+			UserID:     1,
+			Enable:     1,
+			PoolId:     1,
+			TreeNodeId: uint(i + 1),
+
+			Expr:        `avg by (instance) (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[2m]))) * 100`,
+			Labels:      []string{fmt.Sprintf("%s=%s", "env", abc[mIndex])},
+			Annotations: []string{"description_value=描述"},
+		}
+		_ = record.CreateOne()
+	}
+
 	// 值班历史
 	//num = 10
 	//ago := 0
@@ -296,21 +319,21 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 		_ = h2.CreateOne()
 	}
 
-	num = 20
-	rules, _ := GetMonitorAlertRuleAll()
-	for i := 1; i <= num; i++ {
-		e := MonitorAlertEvent{
-			AlertName:   fmt.Sprintf("mock-告警-%v", i+1),
-			FingerPrint: uuid.New().String(),
-			Status:      common.MONITOR_ALERT_STATUS_ARRAY[i%len(common.MONITOR_ALERT_STATUS_ARRAY)],
-			RuleId:      rules[i%len(rules)].ID,
-			SendGroupId: 1,
-			EventTimes:  i + 20,
-			SilenceID:   uuid.New().String(),
-			Labels:      []string{"l1=v1", "l2=v2"},
-			Key:         "",
-		}
-		_ = e.CreateOne()
-	}
+	//num = 20
+	//rules, _ := GetMonitorAlertRuleAll()
+	//for i := 1; i <= num; i++ {
+	//	e := MonitorAlertEvent{
+	//		AlertName:   fmt.Sprintf("mock-告警-%v", i+1),
+	//		FingerPrint: uuid.New().String(),
+	//		Status:      common.MONITOR_ALERT_STATUS_ARRAY[i%len(common.MONITOR_ALERT_STATUS_ARRAY)],
+	//		RuleId:      rules[i%len(rules)].ID,
+	//		SendGroupId: 1,
+	//		EventTimes:  i + 20,
+	//		SilenceID:   uuid.New().String(),
+	//		Labels:      []string{"l1=v1", "l2=v2"},
+	//		Key:         "",
+	//	}
+	//	_ = e.CreateOne()
+	//}
 
 }

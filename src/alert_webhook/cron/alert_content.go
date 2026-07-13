@@ -626,9 +626,6 @@ var (
 )
 
 func (ac *AlertCache) GenerateFeiShuCardMsgOneAlert(alert template.Alert, event *models.MonitorAlertEvent, rule *models.MonitorAlertRule, sendGroup *models.MonitorAlertManagerSendGroup) {
-	//msgQun := fmt.Sprintf(feiShuQunDataQun, alert.Labels[common.MONITOR_ALERT_NAME_KEY]+alert.Fingerprint)
-	//ac.SentFeiShuQun(msgQun)
-
 	// 时间格式化 utc+8
 	locName := ac.Sc.AlertTimezone
 	if locName == "" {
@@ -688,12 +685,22 @@ func (ac *AlertCache) GenerateFeiShuCardMsgOneAlert(alert template.Alert, event 
 
 	// 判断告警升级
 	msgUpgrade := "**⬆️升级状态：**\\n未升级"
-	if alert.Status == common.MONITOR_ALERT_STATUS_FIRING && sendGroup.FirstUpgradeUsers != nil && len(sendGroup.FirstUpgradeUsers) > 0 {
-		// 判断时间 当前时间 - 第一次触发时间 > upgrade时间
+	if event.Status == common.MONITOR_ALERT_STATUS_RENLING {
+		msgUpgrade = "**⬆️升级状态：**\\n<font color='green'>已认领，终止升级</font>"
+	} else if event.Status == common.MONITOR_ALERT_STATUS_SILIENCED {
+		msgUpgrade = "**⬆️升级状态：**\\n<font color='grey'>已屏蔽，终止升级</font>"
+	} else if alert.Status == common.MONITOR_ALERT_STATUS_FIRING && sendGroup.FirstUpgradeUsers != nil && len(sendGroup.FirstUpgradeUsers) > 0 {
+		// 只有真正还在 firing，且没被认领、没被屏蔽的告警，才进入超时升级判定
 		if sendGroup.UpgradeMinutes == 0 {
 			sendGroup.UpgradeMinutes = 30
 		}
-		if time.Now().Sub(alert.StartsAt) > time.Minute*time.Duration(sendGroup.UpgradeMinutes) {
+
+		effectiveStartTime := alert.StartsAt
+		if event.UnsilencedAt != nil && event.UnsilencedAt.After(alert.StartsAt) {
+			effectiveStartTime = *event.UnsilencedAt
+		}
+		// 判断超时
+		if time.Now().Sub(effectiveStartTime) > time.Minute*time.Duration(sendGroup.UpgradeMinutes) {
 			upgredeUserNames := ""
 			upgredeUserAtIds := ""
 			for _, user := range sendGroup.FirstUpgradeUsers {
@@ -712,8 +719,19 @@ func (ac *AlertCache) GenerateFeiShuCardMsgOneAlert(alert template.Alert, event 
 				onDutyGroupUrl,
 				upgredeUserAtIds,
 			)
+			event.Status = common.MONITOR_ALERT_STATUS_UPGRADED
+			_ = event.UpdateOne()
 		}
-
+	}
+	// 判断认领：
+	if event.ReLingUser != nil {
+		msgOnduty = fmt.Sprintf("**👥值班组 [%s](%s)**\\n 认领人:%s user_id=%s<at id=%s></at>",
+			onDutyGroup.Name,
+			onDutyGroupUrl,
+			event.ReLingUser.RealName,
+			event.ReLingUser.FeiShuUserId,
+			event.ReLingUser.FeiShuUserId,
+		)
 	}
 
 	// 发送组

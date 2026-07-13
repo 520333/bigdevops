@@ -23,9 +23,11 @@ type MonitorScrapePool struct {
 
 	// 告警段
 	SupperAlert     int    `json:"supperAlert" gorm:"comment:是否支持告警 1支持 2不支持"`
+	SupperRecord    int    `json:"supperRecord" gorm:"comment:是否支持record 1支持 2不支持"`
 	RemoteReadUrl   string `json:"remoteReadUrl" gorm:"comment:远程读取的地址"`
 	AlertManagerUrl string `json:"alertManagerUrl" gorm:"comment:alertManager地址"`
-	RuleFilePath    string `json:"ruleFilePath" gorm:"comment:rule文件路径"`
+	RuleFilePath    string `json:"ruleFilePath" gorm:"comment:rule告警规则文件路径"`
+	RecordFilePath  string `json:"recordFilePath" gorm:"comment:record预聚合的文件路径"`
 
 	// remote_write段
 	RemoteWriteUrl       string `json:"remoteWriteUrl" gorm:"comment:tsdb远程写入的地址"`
@@ -72,6 +74,11 @@ func GetMonitorScrapePoolAll() (ps []*MonitorScrapePool, err error) {
 
 func GetMonitorScrapePoolSupportAlertAll() (ps []*MonitorScrapePool, err error) {
 	err = Db.Where("supper_alert = 1 ").Find(&ps).Error
+	return
+}
+
+func GetMonitorScrapePoolSupportRecordAll() (ps []*MonitorScrapePool, err error) {
+	err = Db.Where("supper_record = 1 ").Find(&ps).Error
 	return
 }
 

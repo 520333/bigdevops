@@ -1,10 +1,8 @@
 package models
 
 import (
-	"errors"
 	"fmt"
 
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -41,29 +39,6 @@ func (obj *MonitorOndutyHistory) UpdateOne() error {
 	return Db.Where("id = ?", obj.ID).Updates(obj).Error
 }
 
-func GetMonitorOnDutyHistoryById(id int) (*MonitorOndutyHistory, error) {
-	var dbObj MonitorOndutyHistory
-	err := Db.Where("id = ? ", id).First(&dbObj).Error
-
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("MonitorScrapePool不存在")
-		}
-		return nil, fmt.Errorf("数据库错误%v", err)
-	}
-	return &dbObj, nil
-}
-
-func GetMonitorOnDutyHistoryByPoolId(poolId uint) (ps []*MonitorOndutyHistory, err error) {
-	err = Db.Where("enable = 1 AND pool_id = ? ", poolId).Find(&ps).Error
-	return
-}
-
-func GetMonitorOnDutyHistoryAll() (ps []*MonitorOndutyHistory, err error) {
-	err = Db.Find(&ps).Error
-	return
-}
-
 func (obj *MonitorOndutyHistory) FillFrontAllData() {
 
 	obj.Key = fmt.Sprintf("%d", obj.ID)
@@ -78,21 +53,9 @@ func GetMonitorOnDutyHistoryByOnDutyGroupIdAndDay(onDutyGroupId uint, dateString
 	err = Db.Where("onduty_group_id = ? AND date_string = ?", onDutyGroupId, dateString).First(&obj).Error
 	return
 }
-func GetMonitorOnDutyHistoryByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorOndutyHistory, err error) {
-	err = Db.Where("id in ?", ids).Limit(limit).Offset(offset).Find(&objs).Error
-	return
-
-}
 
 // UpdateEnable 更新发送任务的开关状态
 func (obj *MonitorOndutyHistory) UpdateEnable() error {
 	// 推荐使用 Select 显式指定更新 enable 字段，这样既安全又能避免潜在的零值过滤问题
 	return Db.Model(obj).Select("Enable").Updates(obj).Error
 }
-
-//// SetOnDutyGroupStatus 快捷更新开启状态
-//func SetOnDutyGroupStatus(id uint, enable int) error {
-//	// 假设你的全局数据库对象是 global.DB 或 common.DB，请根据你的项目实际情况调整
-//	err := Db.Model(&MonitorOnDutyHistory{}).Where("id = ?", id).Update("enable", enable).Error
-//	return err
-//}

@@ -172,13 +172,6 @@ func (obj *MonitorAlertRule) UpdateEnable() error {
 	return Db.Model(obj).Select("Enable").Updates(obj).Error
 }
 
-// SetAlertManagerRuleStatus 快捷更新开启状态
-func SetAlertManagerRuleStatus(id uint, enable int) error {
-	// 假设你的全局数据库对象是 global.DB 或 common.DB，请根据你的项目实际情况调整
-	err := Db.Model(&MonitorAlertRule{}).Where("id = ?", id).Update("enable", enable).Error
-	return err
-}
-
 // UpdateMonitorAlertRuleEnableBatch 批量更新告警规则的开关状态
 func UpdateMonitorAlertRuleEnableBatch(ids []int, enable int) error {
 	// 使用 GORM 的 IN 查询和批量 Update

@@ -21,6 +21,7 @@ func (mc *MonitorCache) GetAlertManagerMainConfigYamlByIp(ip string) string {
 	return mc.AlertManagerMainConfigMap[ip]
 }
 
+// GenerateAlertManagerMainConfigYaml 主配置文件
 func (mc *MonitorCache) GenerateAlertManagerMainConfigYaml(ctx context.Context) {
 	pools, err := models.GetMonitorAlertManagerPoolAll()
 	if err != nil {
@@ -115,7 +116,6 @@ func (mc *MonitorCache) GenerateAlertManagerMainConfigYaml(ctx context.Context) 
 	mc.Unlock()
 }
 
-// GenerateAlertManagerMainConfigOneYaml 主配置文件
 func (mc *MonitorCache) GenerateAlertManagerMainConfigOneYaml(pool *models.MonitorAlertManagerPool) *ac.Config {
 	rt, _ := pm.ParseDuration(pool.ResolveTimeout)
 	groupWait, _ := pm.ParseDuration(pool.GroupWait)

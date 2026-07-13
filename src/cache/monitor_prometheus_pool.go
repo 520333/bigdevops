@@ -35,6 +35,11 @@ type MonitorCache struct {
 	RecordRuleMap             map[string]string
 	Sc                        *config.ServerConfig
 	sync.RWMutex
+	MainLock   sync.RWMutex
+	RecordLock sync.RWMutex
+	AlertLock  sync.RWMutex
+
+	AlertManagerLock sync.RWMutex
 }
 
 func NewMonitorCache(sc *config.ServerConfig) *MonitorCache {
@@ -44,22 +49,26 @@ func NewMonitorCache(sc *config.ServerConfig) *MonitorCache {
 		RecordRuleMap:           map[string]string{},
 		Sc:                      sc,
 		RWMutex:                 sync.RWMutex{},
+		MainLock:                sync.RWMutex{},
+		RecordLock:              sync.RWMutex{},
+		AlertLock:               sync.RWMutex{},
 	}
 	return mc
 }
 
 func (mc *MonitorCache) MonitorCacheManager(ctx context.Context) error {
 	go wait.UntilWithContext(ctx, mc.GeneratePrometheusMainConfigYaml, time.Duration(mc.Sc.MonitorComputeC.RunIntervalSeconds)*time.Second)
+	go wait.UntilWithContext(ctx, mc.GeneratePrometheusAlertRuleConfigYaml, time.Duration(mc.Sc.MonitorComputeC.RunIntervalSeconds)*time.Second)
+	go wait.UntilWithContext(ctx, mc.GeneratePrometheusRecordRuleConfigYaml, time.Duration(mc.Sc.MonitorComputeC.RunIntervalSeconds)*time.Second)
 	go wait.UntilWithContext(ctx, mc.GenerateAlertManagerMainConfigYaml, time.Duration(mc.Sc.MonitorComputeC.RunIntervalSeconds)*time.Second)
-	go wait.UntilWithContext(ctx, mc.GeneratePrometheusRuleConfigYaml, time.Duration(mc.Sc.MonitorComputeC.RunIntervalSeconds)*time.Second)
 	<-ctx.Done()
 	mc.Sc.Logger.Info("SyncCache 收到其他任务退出信号")
 	return nil
 }
 
 func (mc *MonitorCache) GetPrometheusMainConfigYamlByIp(ip string) string {
-	mc.RLock()
-	defer mc.RUnlock()
+	mc.MainLock.RLock()
+	defer mc.MainLock.RUnlock()
 	return mc.PrometheusMainConfigMap[ip]
 }
 
@@ -209,9 +218,9 @@ func (mc *MonitorCache) GeneratePrometheusMainConfigYaml(ctx context.Context) {
 
 	}
 
-	mc.Lock()
+	mc.MainLock.Lock()
 	mc.PrometheusMainConfigMap = mainConfigMap
-	mc.Unlock()
+	mc.MainLock.Unlock()
 
 }
 
@@ -313,7 +322,13 @@ func (mc *MonitorCache) GeneratePrometheusMainConfigYamlOnePool(pool *models.Mon
 				alt,
 			},
 		}
+		//all.RuleFiles = append(all.RuleFiles, pool.RuleFilePath)
 
+	}
+	switch pool.SupperRecord {
+	case common.GORM_ENABLE_RES_YES:
+
+		all.RuleFiles = append(all.RuleFiles, pool.RecordFilePath)
 	}
 	return all
 }

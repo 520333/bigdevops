@@ -42,18 +42,6 @@ func (obj *MonitorOndutyGroup) CreateOne() error {
 	return Db.Create(obj).Error
 }
 
-//	func (obj *MonitorOndutyGroup) FillToDayOndutyUser() {
-//		toDayString := common.GetDayAgoDate(0)
-//		dbHistoryToday, _ := GetMonitorOnDutyHistoryByOnDutyGroupIdAndDay(obj.ID, toDayString)
-//		if dbHistoryToday.OndutyUserId > 0 {
-//			user, _ := GetUserById(int(dbHistoryToday.OndutyUserId))
-//			if user.ID > 0 {
-//				obj.ToDayOnDutyUser = user
-//			}
-//		} else {
-//			obj.ToDayOnDutyUser = obj.Members[0]
-//		}
-//	}
 func (m *MonitorOndutyGroup) FillToDayOndutyUser() {
 	if len(m.Members) == 0 {
 		return
@@ -101,10 +89,6 @@ func (m *MonitorOndutyGroup) FillToDayOndutyUser() {
 	m.ToDayOnDutyUser = m.Members[memberIndex]
 }
 
-//func (obj *MonitorOndutyGroup) UpdateOne() error {
-//	return Db.Where("id = ?", obj.ID).Updates(obj).Error
-//}
-
 func (obj *MonitorOndutyGroup) UpdateMembers() error {
 	return Db.Model(obj).Association("Members").Replace(obj.Members)
 }
@@ -139,11 +123,6 @@ func GetMonitorOndutyGroupById(id int) (*MonitorOndutyGroup, error) {
 	return &dbObj, nil
 }
 
-func GetMonitorSendGroupByPoolId(poolId uint) (ps []*MonitorOndutyGroup, err error) {
-	err = Db.Where("enable = 1 AND pool_id = ? ", poolId).Find(&ps).Error
-	return
-}
-
 func GetMonitorOndutyGroupAll() (ps []*MonitorOndutyGroup, err error) {
 	err = Db.Preload("Members").Find(&ps).Error
 	return
@@ -176,11 +155,4 @@ func GetMonitorOndutyGroupByIdsWithLimitOffset(ids []int, limit, offset int) (ob
 func (obj *MonitorOndutyGroup) UpdateEnable() error {
 	// 推荐使用 Select 显式指定更新 enable 字段，这样既安全又能避免潜在的零值过滤问题
 	return Db.Model(obj).Select("Enable").Updates(obj).Error
-}
-
-// SetOnDutyGroupStatus 快捷更新开启状态
-func SetOnDutyGroupStatus(id uint, enable int) error {
-	// 假设你的全局数据库对象是 global.DB 或 common.DB，请根据你的项目实际情况调整
-	err := Db.Model(&MonitorOndutyGroup{}).Where("id = ?", id).Update("enable", enable).Error
-	return err
 }

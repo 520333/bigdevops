@@ -27,7 +27,7 @@ func getMonitorPrometheusYamlOne(c *gin.Context) {
 	common.OkWithData(mainConfigYaml, c)
 }
 
-// ==========  alertmanager配置 ===========
+// ==========  alertmanager 配置 ===========
 func fetchAlertManagerMainConfigYaml(c *gin.Context) string {
 	mc := c.MustGet(common.GIN_CTX_MONITOR_CACHE).(*cache.MonitorCache)
 	ip := c.Query("ip")
@@ -48,19 +48,37 @@ func getMonitorAlertManagerYamlOne(c *gin.Context) {
 }
 
 // ==========  rule告警规则 ===========
-func fetchPrometheusRuleMainConfigYaml(c *gin.Context) string {
+func fetchPrometheusAlertRuleMainConfigYaml(c *gin.Context) string {
 	mc := c.MustGet(common.GIN_CTX_MONITOR_CACHE).(*cache.MonitorCache)
 	ip := c.Query("ip")
-	mainConfigYaml := mc.GetPrometheusRuleConfigYamlByIp(ip)
+	mainConfigYaml := mc.GetPrometheusAlertRuleConfigYamlByIp(ip)
 	return mainConfigYaml
 }
 
-func downloadPrometheusRuleMainConfigYaml(c *gin.Context) {
-	mainConfigYaml := fetchPrometheusRuleMainConfigYaml(c)
+func downloadPrometheusAlertRuleMainConfigYaml(c *gin.Context) {
+	mainConfigYaml := fetchPrometheusAlertRuleMainConfigYaml(c)
 	c.String(200, mainConfigYaml)
 }
 
-func getMonitorPrometheusRuleYamlOne(c *gin.Context) {
-	mainConfigYaml := fetchPrometheusRuleMainConfigYaml(c)
+func getMonitorPrometheusAlertRuleYamlOne(c *gin.Context) {
+	mainConfigYaml := fetchPrometheusAlertRuleMainConfigYaml(c)
+	common.OkWithData(mainConfigYaml, c)
+}
+
+// ==========  record 预聚合规则 ===========
+func fetchPrometheusRecordRuleMainConfigYaml(c *gin.Context) string {
+	mc := c.MustGet(common.GIN_CTX_MONITOR_CACHE).(*cache.MonitorCache)
+	ip := c.Query("ip")
+	mainConfigYaml := mc.GetPrometheusRecordRuleConfigYamlByIp(ip)
+	return mainConfigYaml
+}
+
+func downloadPrometheusRecordRuleMainConfigYaml(c *gin.Context) {
+	mainConfigYaml := fetchPrometheusRecordRuleMainConfigYaml(c)
+	c.String(200, mainConfigYaml)
+}
+
+func getMonitorPrometheusRecordRuleYamlOne(c *gin.Context) {
+	mainConfigYaml := fetchPrometheusRecordRuleMainConfigYaml(c)
 	common.OkWithData(mainConfigYaml, c)
 }

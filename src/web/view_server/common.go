@@ -14,6 +14,11 @@ type setAlertRuleEnableBatchReq struct {
 	Enable int   `json:"enable" validate:"required,oneof=1 2"` // 1=启用 2=禁用}
 }
 
+type setRecordRuleEnableBatchReq struct {
+	Ids    []int `json:"ids" validate:"required,min=1"`        // 接收一个 ID 数组，要求至少有 1 个元素
+	Enable int   `json:"enable" validate:"required,oneof=1 2"` // 1=启用 2=禁用}
+}
+
 func commonGetUsersByNames(userNames []string, logger *zap.Logger, c *gin.Context) (res []*models.User) {
 	for _, userName := range userNames {
 		userName := userName

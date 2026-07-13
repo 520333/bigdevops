@@ -25,6 +25,7 @@ type ServerConfig struct {
 	Logger                          *zap.Logger          `yaml:"-"`
 	Domain                          string               `yaml:"front_domain"`
 	ImC                             *IMConfig            `yaml:"im"`
+	AlertManagerApi                 string               `yaml:"alert_manager_api"`
 }
 
 type ServerJobExec struct {

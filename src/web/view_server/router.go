@@ -18,9 +18,10 @@ func ConfigRouter(r *gin.Engine) {
 
 	noAuth := r.Group("/noAuth")
 	{
-		noAuth.GET("/downloadPrometheusMainConfigYaml", downloadPrometheusMainConfigYaml) //给prometheus使用的
-		noAuth.GET("/downloadPrometheusRuleMainConfigYaml", downloadPrometheusRuleMainConfigYaml)
-		noAuth.GET("/downloadAlertManagerMainConfigYaml", downloadAlertManagerMainConfigYaml)
+		noAuth.GET("/downloadPrometheusMainConfigYaml", downloadPrometheusMainConfigYaml) //prometheus主配置文件
+		noAuth.GET("/downloadPrometheusAlertRuleMainConfigYaml", downloadPrometheusAlertRuleMainConfigYaml)
+		noAuth.GET("/downloadPrometheusRecordRuleMainConfigYaml", downloadPrometheusRecordRuleMainConfigYaml)
+		noAuth.GET("/downloadAlertManagerMainConfigYaml", downloadAlertManagerMainConfigYaml) //alertManager主配置文件
 		noAuth.GET("/getLeafStreeNodeBindIps", getLeafStreeNodeBindIps)
 		noAuth.GET("/getMonitorOndutyGroupFuturePlan/:id", getMonitorOndutyGroupFuturePlan)
 	}
@@ -147,13 +148,16 @@ func ConfigRouter(r *gin.Engine) {
 
 	monitorApiGroup := afterLoginApiGroup.Group("/monitor")
 	{
+		// prometheus 集群
 		monitorApiGroup.GET("/getMonitorScrapePoolList", getMonitorScrapePoolList)
 		monitorApiGroup.POST("/createMonitorScrapePool", createMonitorScrapePool)
 		monitorApiGroup.POST("/updateMonitorScrapePool", updateMonitorScrapePool)
 		monitorApiGroup.DELETE("/deleteMonitorScrapePool/:id", deleteMonitorScrapePool)
 		monitorApiGroup.GET("/getMonitorPrometheusYamlOne", getMonitorPrometheusYamlOne)
-		monitorApiGroup.GET("/getMonitorPrometheusRuleYamlOne", getMonitorPrometheusRuleYamlOne)
+		monitorApiGroup.GET("/getMonitorPrometheusAlertRuleYamlOne", getMonitorPrometheusAlertRuleYamlOne)
+		monitorApiGroup.GET("/getMonitorPrometheusRecordRuleYamlOne", getMonitorPrometheusRecordRuleYamlOne)
 
+		// prometheus 采集任务
 		monitorApiGroup.GET("/getMonitorScrapeJobList", getMonitorScrapeJobList)
 		monitorApiGroup.POST("/createMonitorScrapeJob", createMonitorScrapeJob)
 		monitorApiGroup.POST("/updateMonitorScrapeJob", updateMonitorScrapeJob)
@@ -161,6 +165,7 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.GET("/getMonitorScrapeJobOne", getMonitorScrapeJobOne)
 		monitorApiGroup.POST("/setScrapeJobStatus", setScrapeJobStatus)
 
+		// 值班组
 		monitorApiGroup.GET("/getMonitorOndutyGroupList", getMonitorOndutyGroupList)
 		monitorApiGroup.POST("/createMonitorOndutyGroup", createMonitorOndutyGroup)
 		monitorApiGroup.POST("/updateMonitorOndutyGroup", updateMonitorOndutyGroup)
@@ -170,18 +175,21 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.POST("/createMonitorOndutyChange", createMonitorOndutyChange)
 		monitorApiGroup.POST("/setOnDutyStatus", setOnDutyStatus)
 
+		// alertManager 集群
 		monitorApiGroup.GET("/getMonitorAlertManagerPoolList", getMonitorAlertManagerPoolList)
 		monitorApiGroup.POST("/createMonitorAlertManagerPool", createMonitorAlertManagerPool)
 		monitorApiGroup.POST("/updateMonitorAlertManagerPool", updateMonitorAlertManagerPool)
 		monitorApiGroup.DELETE("/deleteMonitorAlertManagerPool/:id", deleteMonitorAlertManagerPool)
 		monitorApiGroup.GET("/getMonitorAlertManagerYamlOne", getMonitorAlertManagerYamlOne)
 
+		// alertManager 发送组
 		monitorApiGroup.GET("/getMonitorAlertManagerSendGroupList", getMonitorAlertManagerSendGroupList)
 		monitorApiGroup.POST("/createMonitorAlertManagerSendGroup", createMonitorAlertManagerSendGroup)
 		monitorApiGroup.POST("/updateMonitorAlertManagerSendGroup", updateMonitorAlertManagerSendGroup)
 		monitorApiGroup.DELETE("/deleteMonitorAlertManagerSendGroup/:id", deleteMonitorAlertManagerSendGroup)
 		monitorApiGroup.POST("/setAlertManagerSendGroupStatus", setAlertManagerSendGroupStatus)
 
+		// prometheus 告警规则
 		monitorApiGroup.GET("/getMonitorAlertRuleList", getMonitorAlertRuleList)
 		monitorApiGroup.POST("/createMonitorAlertRule", createMonitorAlertRule)
 		monitorApiGroup.POST("/updateMonitorAlertRule", updateMonitorAlertRule)
@@ -191,8 +199,23 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.POST("/setAlertRuleStatusBatch", setAlertRuleStatusBatch)
 		monitorApiGroup.GET("/promqlExprCheck", promqlExprCheck)
 
+		// prometheus 预聚合规则
+		monitorApiGroup.GET("/getMonitorRecordRuleList", getMonitorRecordRuleList)
+		monitorApiGroup.POST("/createMonitorRecordRule", createMonitorRecordRule)
+		monitorApiGroup.POST("/updateMonitorRecordRule", updateMonitorRecordRule)
+		monitorApiGroup.DELETE("/deleteMonitorRecordRule/:id", deleteMonitorRecordRule)
+		monitorApiGroup.DELETE("/deleteMonitorRecordRuleBatch", deleteMonitorRecordRuleBatch)
+		monitorApiGroup.POST("/setRecordRuleStatus", setRecordRuleStatus)
+		monitorApiGroup.POST("/setRecordRuleStatusBatch", setRecordRuleStatusBatch)
+		monitorApiGroup.GET("/recordRulePromqlExprCheck", recordRulePromqlExprCheck)
+
+		// alertManager 告警事件
 		monitorApiGroup.GET("/getMonitorAlertEventList", getMonitorAlertEventList)
-		monitorApiGroup.POST("/AlertEventSilence/:id", AlertEventSilence)
+		monitorApiGroup.POST("/alertEventSilence/:id", alertEventSilence)
+		monitorApiGroup.POST("/alertEventUnSilence/:id", alertEventUnSilence)
+		monitorApiGroup.POST("/alertEventBatchSilence", alertEventBatchSilence)
+		monitorApiGroup.POST("/alertEventBatchUnSilence", alertEventBatchUnSilence)
+		monitorApiGroup.POST("/alertEventReLing/:id", alertEventReLing)
 	}
 }
 

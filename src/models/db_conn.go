@@ -106,6 +106,7 @@ func MigrateTable() error {
 		&MonitorScrapePool{},
 		&MonitorScrapeJob{},
 		&MonitorAlertRule{},
+		&MonitorRecordRule{},
 
 		&MonitorAlertManagerPool{},
 		&MonitorAlertManagerSendGroup{},
