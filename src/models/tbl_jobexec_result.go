@@ -2,10 +2,7 @@ package models
 
 import (
 	"bigdevops/src/common"
-	"errors"
-	"fmt"
 
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -80,48 +77,13 @@ func (obj *JobResult) UpdateFlowNodes(nodes []WorkOrderFlowNode) error {
 	return Db.Model(obj).Association("FlowNodes").Replace(nodes)
 }
 
-func GetJobResultTotal() (obj []*JobResult, err error) {
-	err = Db.Preload("FlowNodes").Find(&obj).Error
-	return
-}
-
-func GetJobResultAllWithLimitOffset(limit, offset int) (obj []*JobResult, err error) {
-	err = Db.Preload("FlowNodes").Limit(limit).Offset(offset).Find(&obj).Error
-	return
-}
-
 func GetJobResultByJobId(jobId int) (obj []*JobResult, err error) {
 	err = Db.Where("job_id = ?", jobId).Find(&obj).Error
 	return
 }
 
-func GetJobTaskResultByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*JobTask, err error) {
-	err = Db.Where("id in ?", ids).Limit(limit).Offset(offset).Find(&objs).Error
-	return
-}
-
 func GetJobResultByJobIdAndHostIp(jobId int, hostIp string) (obj *JobResult, err error) {
 	err = Db.Where("job_id = ? and host_ip = ?", jobId, hostIp).First(&obj).Error
-	return
-}
-
-func GetJobResultById(id int) (*JobResult, error) {
-	var dbJobResult JobResult
-
-	// 💡 修复：将 load_balancer_id = ? 改为 id = ?
-	err := Db.Where("id = ? ", id).Preload("FlowNodes").First(&dbJobResult).Error
-
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("JobResult不存在")
-		}
-		return nil, fmt.Errorf("数据库错误%v", err)
-	}
-	return &dbJobResult, nil
-}
-
-func GetJobExecResultByJobId(jobId int) (obj *JobResult, err error) {
-	err = Db.Where("job_id = ? ", jobId).First(&obj).Error
 	return
 }
 
@@ -147,73 +109,4 @@ func GetJobResultsByFilters(jobId int, status, ip string, limit, offset int) (ob
 	// 再查分页数据
 	err = query.Limit(limit).Offset(offset).Find(&objs).Error
 	return
-}
-func GetJobResultByInstanceId(instanceId string) (*JobResult, error) {
-	var dbJobResult JobResult
-	// FIXED: Changed from load_balancer_id to db_instance_id
-	err := Db.Where("db_instance_id = ? ", instanceId).Preload("BindNodes").First(&dbJobResult).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("JobResult不存在") // Fixed error message
-		}
-		return nil, fmt.Errorf("数据库错误%v", err)
-	}
-	return &dbJobResult, nil
-}
-
-// GetJobResultCountByName 查询总数
-func GetJobResultCountByName(name string) (int64, error) {
-	var count int64
-	query := Db.Model(&JobResult{})
-	if name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
-	}
-	err := query.Count(&count).Error
-	return count, err
-}
-
-// GetJobResultListByName 分页查询
-func GetJobResultListByName(name string, limit, offset int) (obj []*JobResult, err error) {
-	query := Db.Preload("FlowNodes")
-	if name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
-	}
-	err = query.Limit(limit).Offset(offset).Find(&obj).Error
-	return
-}
-
-// GetJobResultListByNameAndCreator 分页查询，支持按名称和创建人模糊查询
-func GetJobResultListByNameAndCreator(name, creator string, limit, offset int) (obj []*JobResult, err error) {
-	query := Db.Model(&JobResult{}).Preload("FlowNodes")
-
-	// 1. 按名称模糊查询
-	if name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
-	}
-
-	// 2. 按创建人模糊查询 (关联 User 表)
-	if creator != "" {
-		// 使用 LEFT JOIN 关联 users 表进行模糊搜索
-		query = query.Joins("left join users on users.id = work_order_JobResultes.user_id").
-			Where("users.username LIKE ? OR users.real_name LIKE ?", "%"+creator+"%", "%"+creator+"%")
-	}
-
-	err = query.Limit(limit).Offset(offset).Find(&obj).Error
-	return
-}
-
-// GetJobResultCountByNameAndCreator 对应统计总数
-func GetJobResultCountByNameAndCreator(name, creator string) (int64, error) {
-	var count int64
-	query := Db.Model(&JobResult{}).Joins("left join users on users.id = work_order_JobResultes.user_id")
-
-	if name != "" {
-		query = query.Where("work_order_JobResultes.name LIKE ?", "%"+name+"%")
-	}
-	if creator != "" {
-		query = query.Where("users.username LIKE ? OR users.real_name LIKE ?", "%"+creator+"%", "%"+creator+"%")
-	}
-
-	err := query.Count(&count).Error
-	return count, err
 }

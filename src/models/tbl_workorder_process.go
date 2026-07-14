@@ -91,16 +91,6 @@ func (obj *WorkOrderProcess) UpdateWithNodes() error {
 	})
 }
 
-func GetProcessTotal() (obj []*WorkOrderProcess, err error) {
-	err = Db.Preload("FlowNodes").Find(&obj).Error
-	return
-}
-
-func GetProcessAllWithLimitOffset(limit, offset int) (obj []*WorkOrderProcess, err error) {
-	err = Db.Preload("FlowNodes").Limit(limit).Offset(offset).Find(&obj).Error
-	return
-}
-
 func GetProcessById(id int) (*WorkOrderProcess, error) {
 	var dbProcess WorkOrderProcess
 
@@ -110,19 +100,6 @@ func GetProcessById(id int) (*WorkOrderProcess, error) {
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("process不存在")
-		}
-		return nil, fmt.Errorf("数据库错误%v", err)
-	}
-	return &dbProcess, nil
-}
-
-func GetProcessByInstanceId(instanceId string) (*WorkOrderProcess, error) {
-	var dbProcess WorkOrderProcess
-	// FIXED: Changed from load_balancer_id to db_instance_id
-	err := Db.Where("db_instance_id = ? ", instanceId).Preload("BindNodes").First(&dbProcess).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("Process不存在") // Fixed error message
 		}
 		return nil, fmt.Errorf("数据库错误%v", err)
 	}
@@ -142,27 +119,6 @@ func (obj *WorkOrderProcess) FillFrontAllData() {
 		nodeNames = append(nodeNames, oneNode)
 	}
 	obj.FlowNodeStr = strings.Join(nodeNames, " -> ")
-}
-
-// GetProcessByName 查询总数
-func GetProcessCountByName(name string) (int64, error) {
-	var count int64
-	query := Db.Model(&WorkOrderProcess{})
-	if name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
-	}
-	err := query.Count(&count).Error
-	return count, err
-}
-
-// GetProcessListByName 分页查询
-func GetProcessListByName(name string, limit, offset int) (obj []*WorkOrderProcess, err error) {
-	query := Db.Preload("FlowNodes")
-	if name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
-	}
-	err = query.Limit(limit).Offset(offset).Find(&obj).Error
-	return
 }
 
 // GetProcessListByNameAndCreator 分页查询，支持按名称和创建人模糊查询

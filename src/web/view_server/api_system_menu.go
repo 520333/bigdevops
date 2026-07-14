@@ -127,62 +127,6 @@ func getMenuList(c *gin.Context) {
 
 }
 
-//	func getMenuListAll(c *gin.Context) {
-//		sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-//		// 数据库中拿到所有的menu列表
-//		menus, err := models.GetMenuAll()
-//		if err != nil {
-//			sc.Logger.Error("去数据库中拿所有的菜单错误", zap.Error(err))
-//			common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的菜单错误：%v", err.Error()), c)
-//			return
-//		}
-//
-//		fatherMenuMap := make(map[uint]*models.Menu)
-//		for _, menu := range menus {
-//			menu := menu
-//			// 拼接前端依赖的字段
-//			menu.Meta = &models.MenuMeta{}
-//			menu.Meta.Icon = menu.Icon
-//			menu.Meta.Title = menu.Title
-//			//menu.Meta.ShowMenu = common.COMMON_SHOW_MAP[menu.Show]
-//			showBool := common.COMMON_SHOW_MAP[menu.Show]
-//			menu.Meta.ShowMenu = showBool
-//			menu.Meta.HideMenu = !showBool
-//
-//			//if menu.ParentMenu == "" {
-//			//	menu.Id = fmt.Sprintf("%v", menu.ID)
-//			//	fatherMenuMap[menu.ID] = menu
-//			//	continue
-//			//} else {
-//			//	menu.Id = fmt.Sprintf("%s-%v", menu.ParentMenu, menu.ID)
-//			//}
-//			fatherMenuId, _ := strconv.Atoi(menu.ParentMenu)
-//			fatherMenu, err := models.GetMenuById(fatherMenuId)
-//			if err != nil {
-//				sc.Logger.Error("通过ParentMenu找menu错误", zap.Error(err))
-//				continue
-//			}
-//
-//			load, ok := fatherMenuMap[fatherMenu.ID]
-//			if !ok {
-//				fatherMenu.Children = make([]*models.Menu, 0)
-//				fatherMenu.Children = append(fatherMenu.Children, menu)
-//				fatherMenuMap[fatherMenu.ID] = fatherMenu
-//			} else {
-//				load.Children = append(load.Children, menu)
-//			}
-//		}
-//
-//		finalMenus := make([]*models.Menu, 0)
-//		// 最终遍历fatherMenuMap
-//		for _, m := range fatherMenuMap {
-//			m := m
-//			finalMenus = append(finalMenus, m)
-//		}
-//
-//		common.OkWithDetailed(finalMenus, "ok", c)
-//
-// }
 func getMenuListAll(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	// 数据库中拿到所有的menu列表

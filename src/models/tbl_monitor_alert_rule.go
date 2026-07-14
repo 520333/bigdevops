@@ -77,6 +77,7 @@ func GetMonitorAlertRuleByPoolId(poolId uint) (ps []*MonitorAlertRule, err error
 	err = Db.Where("enable = 1 AND pool_id = ? ", poolId).Find(&ps).Error
 	return
 }
+
 func GetMonitorAlertRuleBySendGroupId(sendGroupId uint) (ps []*MonitorAlertRule, err error) {
 	err = Db.Where("send_group_id = ? ", sendGroupId).Find(&ps).Error
 	return

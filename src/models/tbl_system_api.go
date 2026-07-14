@@ -10,7 +10,7 @@ import (
 type Api struct {
 	Model
 	Type   string `json:"type" gorm:"type:varchar(5);comment:类型 0=父级 1=子级"`
-	Path   string `json:"path" gorm:"type:varchar(50);comment:路由路径"`
+	Path   string `json:"path" gorm:"type:varchar(100);comment:路由路径"`
 	Method string `json:"method" gorm:"type:varchar(50);comment:http请求方法"`
 	Pid    int    `json:"pId" gorm:"comment:父级ID 为了给树用的"`
 	//Name   string `json:"name" gorm:"type:varchar(100);uniqueIndex;comment:名称"`
@@ -51,14 +51,4 @@ func (obj *Api) CreateOne() error {
 
 func (obj *Api) UpdateOne() error {
 	return Db.Updates(obj).Error
-}
-
-// CheckHasChildren 检查指定的节点ID是否有子节点
-func CheckHasChildren(id int) (bool, error) {
-	var count int64
-	err := Db.Model(&Api{}).Where("pid = ?", id).Count(&count).Error
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
 }

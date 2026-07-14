@@ -13,54 +13,6 @@ import (
 	"go.uber.org/zap"
 )
 
-//func getFormDesignList(c *gin.Context) {
-//	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-//	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-//	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-//
-//	searchUserID := c.DefaultQuery("UserID", "")
-//	searchUserIDInt, _ := strconv.Atoi(searchUserID)
-//	searchName := c.DefaultQuery("name", "")
-//	offset := 0
-//	limit := 0
-//	limit = pageSize
-//	if currentPage > 1 {
-//		offset = (currentPage - 1) * limit
-//	}
-//
-//	// 数据库中拿到所有的formDesign列表
-//	objs, err := models.GetFormDesignAll()
-//	if err != nil {
-//		sc.Logger.Error("去数据库中拿所有的表单设计错误", zap.Error(err))
-//		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的表单设计错误：%v", err.Error()), c)
-//		return
-//	}
-//	allIds := []int{}
-//
-//	for _, obj := range objs {
-//		obj := obj
-//		if searchUserID != "" && int(obj.UserID) != searchUserIDInt {
-//			continue
-//		}
-//		if searchName != "" && obj.Name != searchName {
-//			continue
-//		}
-//		allIds = append(allIds, int(obj.ID))
-//		//obj.FillFrontAllData()
-//	}
-//
-//	objs, err = models.GetFormDesignByIdsWithLimitOffset(allIds, limit, offset)
-//	if err != nil {
-//		sc.Logger.Error("limit-offset 去数据库中拿所有的表单设计错误", zap.Error(err))
-//		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的表单设计错误：%v", err.Error()), c)
-//	}
-//	for _, obj := range objs {
-//		obj := obj
-//		obj.FillFrontAllData()
-//	}
-//	common.OkWithDetailed(objs, "ok", c)
-//}
-
 func getFormDesignList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -132,6 +84,7 @@ func getFormDesignList(c *gin.Context) {
 		"total": len(allIds),
 	}, "ok", c)
 }
+
 func createFormDesign(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj models.WorkOrderFormDesign

@@ -76,17 +76,6 @@ func (obj *User) CreateOne() error {
 	return Db.Create(obj).Error
 }
 
-//	func (obj *User) UpdateMenus(roles []*Role) error {
-//		err1 := Db.Updates(obj).Error
-//
-//		err2 := Db.Model(obj).Association("Roles").Replace(roles)
-//		if err1 == nil && err2 == nil {
-//			return nil
-//		} else {
-//			return fmt.Errorf("更新本体%w 更新关联%w", err1, err2)
-//		}
-//	}
-
 func (obj *User) UpdateOne(roles []*Role) error {
 	// 使用事务确保两步操作“同生共死”
 	return Db.Transaction(func(tx *gorm.DB) error {
@@ -142,4 +131,8 @@ func GetUserByName(name string) (*User, error) {
 
 func (obj *User) DeleteOne() error {
 	return Db.Select(clause.Associations).Unscoped().Delete(obj).Error
+}
+
+func (obj *User) UpdateEnable() error {
+	return Db.Model(obj).Select("Enable").Updates(obj).Error
 }

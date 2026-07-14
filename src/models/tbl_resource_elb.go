@@ -64,10 +64,7 @@ func (obj *ResourceElb) Create() error {
 func (obj *ResourceElb) DeleteOne() error {
 	return Db.Select(clause.Associations).Unscoped().Delete(obj).Error
 }
-func DeleteResourceOneByLbInstanceId(iid string) error {
-	return Db.Select(clause.Associations).Unscoped().Where("load_balancer_id = ?", iid).Delete(&ResourceElb{}).Error
 
-}
 func (obj *ResourceElb) CreateOne() error {
 	return Db.Create(obj).Error
 }
@@ -100,18 +97,6 @@ func GetResourceLbByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*Re
 	return
 
 }
-
-//func GetResourceELBById(id string) (*ResourceElb, error) {
-//	var dbResourceLb ResourceElb
-//	err := Db.Where("load_balancer_id = ? ", id).Preload("BindNodes").First(&dbResourceLb).Error
-//	if err != nil {
-//		if err == gorm.ErrRecordNotFound {
-//			return nil, fmt.Errorf("ResourceLb不存在")
-//		}
-//		return nil, fmt.Errorf("数据库错误%v", err)
-//	}
-//	return &dbResourceLb, nil
-//}
 
 func GetResourceELBById(id string) (*ResourceElb, error) {
 	var dbResourceLb ResourceElb
@@ -154,6 +139,7 @@ func GetResourceLbUidAndHash() (map[string]string, error) {
 	return m, nil
 
 }
+
 func GetResourceElbByDnsName(dnsName string) (*ResourceElb, error) {
 	var elb ResourceElb
 	// 使用精确匹配，因为 ELB 的 dns_name 是唯一的
@@ -163,6 +149,7 @@ func GetResourceElbByDnsName(dnsName string) (*ResourceElb, error) {
 	}
 	return &elb, nil
 }
+
 func GetResourceElbByIp(ip string) (*ResourceElb, error) {
 	var elb ResourceElb
 	// ELB 表中对应的字段也是 PublicIpAddresses 和 PrivateIpAddress

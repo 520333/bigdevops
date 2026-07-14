@@ -472,6 +472,7 @@ func getWorkOrderInstanceList(c *gin.Context) {
 		}, "ok", c)
 	}
 }
+
 func getWorkOrderInstanceDetail(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")

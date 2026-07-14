@@ -1,0 +1,45 @@
+http_addr: 0.0.0.0:8085
+log_file_path: alert_webhook.log
+log_level: INFO
+
+alert_receive_queue_size: 500
+common_map_renew_interval_seconds: 20
+
+#### 前端webui
+front_domain: "http://localhost:3100/#"
+
+#### 本webhook
+backend_domain: "http://localhost:8085"
+
+#### alertManager地址
+alert_manager_api: http://192.168.50.200:9093
+
+#### 告警时间格式化 加上后时间将从UTC加上该时区
+alert_timezone: "Asia/Shanghai"
+
+#### webhook 对外部请求全局超时时间
+http_request_global_timeout_seconds: 2
+
+#### 数据库连接配置
+mysql:
+  dsn: "root:123456@tcp(192.168.50.100:3306)/bigdevops?charset=utf8mb4&parseTime=True&loc=Local"
+
+
+#### IM工具
+im:
+  feishu:
+    enabled: true
+    webhook: "https://open.feishu.cn/open-apis/bot/v2/hook/xxx"
+    secret: "xxx"
+    tenant_access_token_api: "https://open.feishu.cn/open-apis/im/v1/messages"
+    app_id: cli_aac67c3c60781be9
+    app_secret: 8CuHU2OlSlTx3tBOKwShbhCRMZJa1itD
+
+    request_timeout_seconds: 5
+#  dingding:
+#    enabled: false
+#    webhook: "https://oapi.dingtalk.com/robot/send?access_token=..."
+#    secret: "SECxxxx"
+#  qywx:
+#    enabled: false
+#    webhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."

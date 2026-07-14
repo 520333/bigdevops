@@ -24,59 +24,6 @@ type tmpNode struct {
 	Level    int        `json:"level"`
 }
 
-func getStreeNodeListMock(c *gin.Context) {
-	//sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	f1 := &tmpNode{
-		Title:    "infra",
-		Key:      "infra",
-		Children: []*tmpNode{},
-		Level:    1,
-	}
-	f2 := &tmpNode{
-		Title:    "data",
-		Key:      "data",
-		Children: []*tmpNode{},
-		Level:    1,
-	}
-	nodes := []*tmpNode{}
-	for i := 0; i < 3; i++ {
-		n1 := &tmpNode{
-			Title:    fmt.Sprintf("infra-%d", i+1),
-			Key:      fmt.Sprintf("infra-%d", i+1),
-			Children: []*tmpNode{},
-			Level:    2,
-		}
-		n2 := &tmpNode{
-			Title:    fmt.Sprintf("data-%d", i+1),
-			Key:      fmt.Sprintf("data-%d", i+1),
-			Children: []*tmpNode{},
-			Level:    2,
-		}
-		for j := 0; j < 3; j++ { // 💡 内层循环改用 j
-			n11 := &tmpNode{
-				// 💡 拼接外层的 i 和内层的 j，确保全局唯一 (如: infra-1-n111)
-				Title:    fmt.Sprintf("infra-%d-n11%d", i+1, j+1),
-				Key:      fmt.Sprintf("infra-%d-n11%d", i+1, j+1),
-				Children: []*tmpNode{},
-			}
-			n22 := &tmpNode{
-				// 💡 同理 (如: data-1-n211)
-				Title:    fmt.Sprintf("data-%d-n21%d", i+1, j+1),
-				Key:      fmt.Sprintf("data-%d-n21%d", i+1, j+1),
-				Children: []*tmpNode{},
-			}
-			n1.Children = append(n1.Children, n11)
-			n2.Children = append(n2.Children, n22)
-		}
-		f1.Children = append(f1.Children, n1)
-		f2.Children = append(f2.Children, n2)
-	}
-	nodes = append(nodes, f1)
-	nodes = append(nodes, f2)
-	common.OkWithDetailed(nodes, "ok", c)
-
-}
-
 func getStreeNodeList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	streeNodes, err := models.GetStreeNodeAll()
@@ -141,22 +88,6 @@ func getStreeNodeList(c *gin.Context) {
 
 	common.OkWithDetailed(finalNodes, "ok", c)
 }
-
-//func getStreeNodeSelect(c *gin.Context) {
-//	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-//	streeNodes, err := models.GetStreeNodeAll()
-//	if err != nil {
-//		sc.Logger.Error("去数据库中拿所有的树节点错误", zap.Error(err))
-//		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的树节点错误：%v", err.Error()), c)
-//		return
-//	}
-//	for _, streeNode := range streeNodes {
-//		streeNode := streeNode
-//		streeNode.Key = streeNode.ID
-//	}
-//	common.OkWithDetailed(streeNodes, "ok", c)
-//
-//}
 
 func getStreeNodeSelect(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)

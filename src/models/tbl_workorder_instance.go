@@ -99,20 +99,11 @@ func (obj *WorkOrderInstance) FillFrontAllData() {
 	obj.Key = fmt.Sprintf("%d", obj.ID)
 }
 
-func GetWorkOrderInstanceByCreateUserIdWithLimitOffset(userId uint, limit, offset int) (objs []*WorkOrderInstance, err error) {
-	err = Db.Where("user_id = ?", userId).Limit(limit).Offset(offset).Find(&objs).Error
-	return
-}
-
 func GetWorkOrderInstanceByStatusAndCurrentFlowNodes(status string, currentFlowNodes []string, limit, offset int) (objs []*WorkOrderInstance, err error) {
 	err = Db.Where("status = ? and current_flow_node IN ?", status, currentFlowNodes).Limit(limit).Offset(offset).Find(&objs).Error
 	return
 }
 
-func GetWorkOrderInstanceByStatusAndUid(status string, userId uint) (objs []*WorkOrderInstance, count int64, err error) {
-	err = Db.Where("status = ? and user_id ?", status, userId).Find(&objs).Limit(-1).Offset(-1).Count(&count).Error
-	return
-}
 func GetWorkOrderInstanceByStatusAndCurrentNode(status string, currentNode string) (objs []*WorkOrderInstance, count int64, err error) {
 	query := Db.Model(&WorkOrderInstance{}).Where("status = ? AND current_flow_node = ?", status, currentNode)
 

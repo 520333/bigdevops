@@ -40,6 +40,7 @@ func (ac *AlertCache) RenewMapRule(ctx context.Context) {
 		zap.Any("上一次数量", lastNum), zap.Any("这一次数量", thiNum),
 	)
 }
+
 func (ac *AlertCache) GetRuleById(id string) *models.MonitorAlertRule {
 	ac.MonitorPromAlertRuleLock.RLock()
 	defer ac.MonitorPromAlertRuleLock.RUnlock()

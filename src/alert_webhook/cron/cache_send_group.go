@@ -47,6 +47,7 @@ func (ac *AlertCache) RenewMapSendGroup(ctx context.Context) {
 	)
 
 }
+
 func (ac *AlertCache) GetSendGroupById(id string) *models.MonitorAlertManagerSendGroup {
 	ac.SendGroupLock.RLock()
 	defer ac.SendGroupLock.RUnlock()

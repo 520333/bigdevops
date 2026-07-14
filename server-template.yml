@@ -1,13 +1,15 @@
 http_addr: 0.0.0.0:8080
-log_level: debug
+http_request_global_timeout_seconds: 5  # 服务端对外请求全局超时时间
+log_level: INFO
 log_file_path: json.log
-
+grpc_server_config:
+  addr: 0.0.0.0:8083
 jwt:
   signing_key: dawn
   expires_time: 3h # 过期时间
   buffer_time: 2h # 缓冲时间 在此期间刷新页面自动刷新token
   issuer: dawn # 签发者
-
+alert_manager_api: http://192.168.50.200:9093
 # CREATE DATABASE IF NOT EXISTS bigdevops default charset utf8 COLLATE utf8_general_ci;
 # GRANT all privileges on *.* to root@'%' identified by '123456' with grant option;
 # flush privileges;
@@ -19,46 +21,82 @@ mysql:
 # 超管角色名称
 super_role_name: super
 
+# 自动工单机器人
+work_order_auto_action:
+  service_account: auto_order_robot
+  run_interval_seconds: 60
+  batch_num: 5
+  auto_template_name_buy_ecs: "虚拟机购买"
+  auto_template_name_rm_ecs: "虚拟机下线"
+  enable: false
 
+job_exec:
+  #  enable: true
+  execTimeoutSeconds: 5
+  run_interval_seconds: 15
 
 public_cloud_sync:
   # 从公有云同步到本地间隔 单位秒
   run_interval_seconds: 3600
+  #  enable: true
+  godaddy_dns:
+    access_key_id: xxx
+    access_key_secret: xxx
+    enable: true
+    domains:
+      - "xxx.com"
+      - "xxx.net"
+    dynadot_dns:    # 暂不支持
+      access_key_id: xxx
+      access_key_secret: xxx
   ali_cloud:
-    ### 个人
     - region_id: "cn-hangzhou"
       access_key_id: "xxx"
       access_key_secret: "xxx"
       enable: true
-      account_name: "个人"
-    ### 海淘
+      account_name: "xxx"
     - region_id: "us-west-1"
       access_key_id: "xxx"
       access_key_secret: "xxx"
-      enable: true   # enable不写默认不同步
-      account_name: "海淘"
+      enable: true
+      account_name: "xxx"
 
   aws_cloud:
     - region_id: "ap-east-1"
       access_key_id: "xxx"
       secret_access_key: "xxx"
       enable: true
-      account_name: "花花卡"
+      account_name: "xxx"
 
     - region_id: "ap-south-1"
       access_key_id: "xxx"
       secret_access_key: "xxx"
       enable: true
-      account_name: "印度"
+      account_name: "xxx"
 
-    - region_id: "ap-southeast-1"
-      access_key_id: "xxx"
-      secret_access_key: "xxx"
-      enable: true
-      account_name: "印度"
 
-    - region_id: "ap-east-1"
-      access_key_id: "xxx"
-      secret_access_key: "xxx"
-      enable: true
-      account_name: "印度"
+monitor_compute:
+  enable: true
+  exec_timeout_seconds: 5
+  run_interval_seconds: 30
+  http_sd_api: http://192.168.50.1:8080/noAuth/getLeafStreeNodeBindIps
+  alert_web_hook_addr: http://192.168.50.1:8085/receive
+
+#### IM工具
+im:
+  feishu:
+    enabled: true
+    webhook: "https://open.feishu.cn/open-apis/bot/v2/hook"
+    secret: "xxx"
+    tenant_access_token_api: "https://open.feishu.cn/open-apis/im/v1/messages"
+    app_id: xxx
+    app_secret: xxx
+
+    request_timeout_seconds: 5
+  dingding:
+    enabled: false
+    webhook: "https://oapi.dingtalk.com/robot/send?access_token=..."
+    secret: "SECxxxx"
+  qywx:
+    enabled: false
+    webhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."

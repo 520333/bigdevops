@@ -168,9 +168,6 @@ func updateRole(c *gin.Context) {
 		return
 	}
 
-	// ================= 新增：同步权限给 Casbin =================
-	// 1. 先清理掉该角色之前在 Casbin 中的所有旧权限
-	// 这里的 0 表示匹配 Casbin 规则中的第 0 个元素 (v0，即 RoleValue)
 	models.CasbinEnforcer.RemoveFilteredPolicy(0, reqRole.RoleValue)
 
 	// 2. 将这次新勾选的 API 组装成 Casbin 需要的格式并批量添加

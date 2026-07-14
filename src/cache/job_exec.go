@@ -34,6 +34,7 @@ func NewTaskCache(sc *config.ServerConfig) *TaskCache {
 	}
 	return tc
 }
+
 func (tc *TaskCache) TaskCacheManager(ctx context.Context) error {
 	go wait.UntilWithContext(ctx, tc.SyncCache, time.Duration(tc.Sc.JobExec.RunIntervalSeconds)*time.Second)
 	<-ctx.Done()

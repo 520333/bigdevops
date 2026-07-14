@@ -303,6 +303,7 @@ func (cm *CronManager) ConvertEcsCloudAli(ins ecs.Instance, eniEipMap map[string
 	return dbIns
 	//return nil
 }
+
 func (cm *CronManager) RunSyncOneCloudEcsAli(alic *config.AliCloud, allEcs *sync.Map) {
 	cm.Sc.Logger.Info("ECS 同步阿里云开始",
 		zap.Any("地区", alic.RegionId),
@@ -541,6 +542,7 @@ func (cm *CronManager) ConvertEc2CloudAws(ins types.Instance, diskMap map[string
 	dbIns.Hash = dbIns.GenHash()
 	return dbIns
 }
+
 func (cm *CronManager) RunSyncOneCloudEc2Aws(ctx context.Context, awsConf *config.AwsCloud, allEcs *sync.Map) {
 	cm.Sc.Logger.Info("EC2 同步AWS开始",
 		zap.Any("地区", awsConf.RegionId),

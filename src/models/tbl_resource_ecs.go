@@ -88,10 +88,7 @@ func (obj *ResourceEcs) Create() error {
 func (obj *ResourceEcs) DeleteOne() error {
 	return Db.Select(clause.Associations).Unscoped().Delete(obj).Error
 }
-func DeleteResourceOneByEcsInstanceId(iid string) error {
-	return Db.Select(clause.Associations).Unscoped().Where("instance_id = ?", iid).Delete(&ResourceEcs{}).Error
 
-}
 func (obj *ResourceEcs) CreateOne() error {
 	return Db.Create(obj).Error
 }

@@ -430,6 +430,7 @@ func (mc *MonitorCache) GeneratePrometheusScrapeConfigYamlOnePool(pool *models.M
 	}
 	return scrapeConfigs
 }
+
 func mustParseURL(u string) *pcc.URL {
 	parsed, err := url.Parse(u)
 	if err != nil {

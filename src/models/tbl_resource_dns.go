@@ -23,8 +23,6 @@ type ResourceDns struct {
 	EcsInstanceId        string `json:"ecs_instance_id" gorm:"index"`        // 关联的 ECS 实例 ID (修改后) // 关联的 ECS/ELB ID
 }
 
-// GenHash 生成 Hash，用于增量同步对比
-// 包含决定资源唯一性和内容的核心字段
 func (r *ResourceDns) GenHash() string {
 	raw := fmt.Sprintf("%s-%s-%s-%s-%d", r.Domain, r.Name, r.Type, r.Value, r.TTL)
 	hash := sha256.Sum256([]byte(raw))

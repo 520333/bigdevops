@@ -7,23 +7,6 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-//	{
-//		path: '/system',
-//		name: 'System',
-//		component: 'LAYOUT',
-//		redirect: '/system/account',
-//		// meta: {
-//		//   icon: 'ion:settings-outline',
-//		//   title: 'routes.demo.system.moduleName',
-//		// },
-//		icon: 'ion:settings-outline',
-//		title: '系统管理',
-//		id: '1',
-//		dbId: '1',
-//		orderNo: 1,
-//		type: '0',
-//		show: 1,
-//	},
 type Menu struct {
 	Model
 	Name  string `json:"name" gorm:"type:varchar(100);uniqueIndex;comment:英文名称"`

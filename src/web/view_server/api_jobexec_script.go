@@ -98,6 +98,7 @@ func getJobExecScriptList(c *gin.Context) {
 		"total": len(allIds),
 	}, "ok", c)
 }
+
 func getJobExecScriptSelect(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 

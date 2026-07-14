@@ -25,6 +25,7 @@ func GetRoleAll() (roles []*Role, err error) {
 	err = Db.Preload("Apis").Preload("Menus").Preload("Users").Find(&roles).Error
 	return
 }
+
 func GetRoleByRoleValue(roleValue string) (*Role, error) {
 	var dbRole Role
 	err := Db.Where("role_value = ?", roleValue).Preload("Apis").Preload("Menus").First(&dbRole).Error
@@ -40,6 +41,7 @@ func GetRoleByRoleValue(roleValue string) (*Role, error) {
 func (obj *Role) CreateOne() error {
 	return Db.Create(obj).Error
 }
+
 func GetRoleById(id int) (*Role, error) {
 	var dbRole Role
 	err := Db.Where("id = ? ", id).Preload("Menus").First(&dbRole).Error
@@ -52,15 +54,6 @@ func GetRoleById(id int) (*Role, error) {
 	return &dbRole, nil
 }
 
-//	func (obj *Role) UpdateMenus(menus []*Menu) error {
-//		err1 := Db.Where("id = ?", obj.ID).Updates(obj).Error
-//		err2 := Db.Model(obj).Association("Menus").Replace(menus)
-//		if err1 == nil && err2 == nil {
-//			return nil
-//		} else {
-//			return fmt.Errorf("更新本体%w 更新关联%w", err1, err2)
-//		}
-//	}
 func (obj *Role) UpdateMenus(menus []*Menu) error {
 	return Db.Transaction(func(tx *gorm.DB) error {
 		// 1. 更新角色基本信息

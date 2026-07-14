@@ -123,10 +123,3 @@ func (obj *MonitorScrapeJob) UpdateEnable() error {
 	// 推荐使用 Select 显式指定更新 enable 字段，这样既安全又能避免潜在的零值过滤问题
 	return Db.Model(obj).Select("Enable").Updates(obj).Error
 }
-
-// SetScrapeJobStatus 快捷更新开启状态
-func SetScrapeJobStatus(id uint, enable int) error {
-	// 假设你的全局数据库对象是 global.DB 或 common.DB，请根据你的项目实际情况调整
-	err := Db.Model(&MonitorScrapeJob{}).Where("id = ?", id).Update("enable", enable).Error
-	return err
-}

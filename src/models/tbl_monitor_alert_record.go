@@ -1,6 +1,7 @@
 package models
 
 import (
+	"bigdevops/src/common"
 	"errors"
 	"fmt"
 	"strings"
@@ -99,8 +100,8 @@ func (obj *MonitorRecordRule) FillDefaultData() {
 	//	obj.ForTime = "1m"
 	//}
 
-	//obj.Labels = common.GentStringArrayByChangeLine(obj.LabelsFront)
-	//obj.Annotations = common.GentStringArrayByChangeLine(obj.AnnotationsFront)
+	obj.Labels = common.GentStringArrayByChangeLine(obj.LabelsFront)
+	obj.Annotations = common.GentStringArrayByChangeLine(obj.AnnotationsFront)
 
 }
 

@@ -123,42 +123,6 @@ func updateProcess(c *gin.Context) {
 
 	common.OkWithMessage("更新成功", c)
 }
-func setProcessStatus(c *gin.Context) {
-	// 校验menu字段
-	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	var reqRole models.SetRoleStatusReq
-	err := c.ShouldBindJSON(&reqRole)
-	if err != nil {
-		sc.Logger.Error("解析新增流程请求失败", zap.Any("流程", reqRole), zap.Error(err))
-		common.FailWithMessage(err.Error(), c)
-		return
-	}
-
-	err = validate.Struct(&reqRole)
-	if err != nil {
-		if errors, ok := err.(validator.ValidationErrors); ok {
-			common.ReqBadFailWithDetailed(errors.Translate(trans), "请求出错", c)
-			return
-		}
-	}
-
-	dbRole, err := models.GetRoleById(reqRole.Id)
-	if err != nil {
-		sc.Logger.Error("根据id找流程错误", zap.Any("流程", reqRole), zap.Error(err))
-		common.FailWithMessage(err.Error(), c)
-		return
-	}
-	dbRole.Status = reqRole.Status
-
-	// 更新
-	err = dbRole.UpdateMenus(dbRole.Menus)
-	if err != nil {
-		sc.Logger.Error("跟新流程和关联菜单错误", zap.Any("流程", reqRole), zap.Error(err))
-		common.FailWithMessage(err.Error(), c)
-		return
-	}
-	common.OkWithMessage("创建成功", c)
-}
 
 func deleteProcess(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)

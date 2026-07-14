@@ -294,10 +294,6 @@ func getAccountList(c *gin.Context) {
 		return
 	}
 
-	//for i := 0; i < len(users); i++ {
-	//
-	//}
-
 	common.OkWithDetailed(users, "ok", c)
 }
 
@@ -388,4 +384,47 @@ func getAllUserAndRoles(c *gin.Context) {
 	}
 
 	common.OkWithDetailed(res, "ok", c)
+}
+
+type setAccountEnableReq struct {
+	Id     uint `json:"id" validate:"required"`
+	Enable int  `json:"enable" validate:"required,oneof=1 2"` // 假设 1=启用 2=禁用
+}
+
+func setAccountStatus(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+
+	var reqObj setAccountEnableReq
+	err := c.ShouldBindJSON(&reqObj)
+	if err != nil {
+		sc.Logger.Error("修改用户状态请求失败", zap.Any("req", reqObj), zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	err = validate.Struct(&reqObj)
+	if err != nil {
+		if errors, ok := err.(validator.ValidationErrors); ok {
+			common.ReqBadFailWithDetailed(errors.Translate(trans), "请求出错", c)
+			return
+		}
+	}
+
+	dbJob, err := models.GetUserById(int(reqObj.Id))
+	if err != nil {
+		sc.Logger.Error("根据id查找用户错误", zap.Any("req", reqObj), zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	dbJob.Enable = reqObj.Enable
+
+	err = dbJob.UpdateEnable()
+	if err != nil {
+		sc.Logger.Error("更新用户启停状态错误", zap.Any("req", reqObj), zap.Error(err))
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	common.OkWithMessage("状态修改成功", c)
 }

@@ -28,7 +28,11 @@ func ConfigRouter(r *gin.Engine) {
 
 	// 以下开始需要认证
 	afterLoginApiGroup := r.Group("/api")
-	afterLoginApiGroup.Use(middleware.JWTAuthMiddleWare()).Use(middleware.CasBinRbacMiddleware())
+	afterLoginApiGroup.
+		Use(middleware.JWTAuthMiddleWare()).    // jwt中间件
+		Use(middleware.UserStatusMiddleware()). // 用户状态中间件
+		Use(middleware.CasBinRbacMiddleware())  // rbac	中间件
+
 	{
 		afterLoginApiGroup.GET("/getUserInfo", getUserAfterLogin)
 		afterLoginApiGroup.GET("/getPermCode", getPermCode)
@@ -54,6 +58,8 @@ func ConfigRouter(r *gin.Engine) {
 		systemApiGroup.POST("/updateAccount", updateAccount)
 		systemApiGroup.POST("/accountExist", accountExist)
 		systemApiGroup.DELETE("/deleteAccount/:id", deleteAccount)
+		systemApiGroup.POST("/setAccountStatus", setAccountStatus)
+
 		systemApiGroup.GET("/getAccountList", getAccountList)
 		systemApiGroup.POST("/changePassword", changePassword)
 		systemApiGroup.GET("/getAllUserAndRoles", getAllUserAndRoles)
@@ -165,30 +171,6 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.GET("/getMonitorScrapeJobOne", getMonitorScrapeJobOne)
 		monitorApiGroup.POST("/setScrapeJobStatus", setScrapeJobStatus)
 
-		// 值班组
-		monitorApiGroup.GET("/getMonitorOndutyGroupList", getMonitorOndutyGroupList)
-		monitorApiGroup.POST("/createMonitorOndutyGroup", createMonitorOndutyGroup)
-		monitorApiGroup.POST("/updateMonitorOndutyGroup", updateMonitorOndutyGroup)
-		monitorApiGroup.DELETE("/deleteMonitorOndutyGroup/:id", deleteMonitorOndutyGroup)
-		monitorApiGroup.GET("/getMonitorOndutyGroupFuturePlan/:id", getMonitorOndutyGroupFuturePlan)
-		monitorApiGroup.GET("/getMonitorOndutyGroupOne/:id", getMonitorOndutyGroupOne)
-		monitorApiGroup.POST("/createMonitorOndutyChange", createMonitorOndutyChange)
-		monitorApiGroup.POST("/setOnDutyStatus", setOnDutyStatus)
-
-		// alertManager 集群
-		monitorApiGroup.GET("/getMonitorAlertManagerPoolList", getMonitorAlertManagerPoolList)
-		monitorApiGroup.POST("/createMonitorAlertManagerPool", createMonitorAlertManagerPool)
-		monitorApiGroup.POST("/updateMonitorAlertManagerPool", updateMonitorAlertManagerPool)
-		monitorApiGroup.DELETE("/deleteMonitorAlertManagerPool/:id", deleteMonitorAlertManagerPool)
-		monitorApiGroup.GET("/getMonitorAlertManagerYamlOne", getMonitorAlertManagerYamlOne)
-
-		// alertManager 发送组
-		monitorApiGroup.GET("/getMonitorAlertManagerSendGroupList", getMonitorAlertManagerSendGroupList)
-		monitorApiGroup.POST("/createMonitorAlertManagerSendGroup", createMonitorAlertManagerSendGroup)
-		monitorApiGroup.POST("/updateMonitorAlertManagerSendGroup", updateMonitorAlertManagerSendGroup)
-		monitorApiGroup.DELETE("/deleteMonitorAlertManagerSendGroup/:id", deleteMonitorAlertManagerSendGroup)
-		monitorApiGroup.POST("/setAlertManagerSendGroupStatus", setAlertManagerSendGroupStatus)
-
 		// prometheus 告警规则
 		monitorApiGroup.GET("/getMonitorAlertRuleList", getMonitorAlertRuleList)
 		monitorApiGroup.POST("/createMonitorAlertRule", createMonitorAlertRule)
@@ -209,6 +191,20 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.POST("/setRecordRuleStatusBatch", setRecordRuleStatusBatch)
 		monitorApiGroup.GET("/recordRulePromqlExprCheck", recordRulePromqlExprCheck)
 
+		// alertManager 集群
+		monitorApiGroup.GET("/getMonitorAlertManagerPoolList", getMonitorAlertManagerPoolList)
+		monitorApiGroup.POST("/createMonitorAlertManagerPool", createMonitorAlertManagerPool)
+		monitorApiGroup.POST("/updateMonitorAlertManagerPool", updateMonitorAlertManagerPool)
+		monitorApiGroup.DELETE("/deleteMonitorAlertManagerPool/:id", deleteMonitorAlertManagerPool)
+		monitorApiGroup.GET("/getMonitorAlertManagerYamlOne", getMonitorAlertManagerYamlOne)
+
+		// alertManager 发送组
+		monitorApiGroup.GET("/getMonitorAlertManagerSendGroupList", getMonitorAlertManagerSendGroupList)
+		monitorApiGroup.POST("/createMonitorAlertManagerSendGroup", createMonitorAlertManagerSendGroup)
+		monitorApiGroup.POST("/updateMonitorAlertManagerSendGroup", updateMonitorAlertManagerSendGroup)
+		monitorApiGroup.DELETE("/deleteMonitorAlertManagerSendGroup/:id", deleteMonitorAlertManagerSendGroup)
+		monitorApiGroup.POST("/setAlertManagerSendGroupStatus", setAlertManagerSendGroupStatus)
+
 		// alertManager 告警事件
 		monitorApiGroup.GET("/getMonitorAlertEventList", getMonitorAlertEventList)
 		monitorApiGroup.POST("/alertEventSilence/:id", alertEventSilence)
@@ -216,6 +212,16 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.POST("/alertEventBatchSilence", alertEventBatchSilence)
 		monitorApiGroup.POST("/alertEventBatchUnSilence", alertEventBatchUnSilence)
 		monitorApiGroup.POST("/alertEventReLing/:id", alertEventReLing)
+
+		// 值班组
+		monitorApiGroup.GET("/getMonitorOndutyGroupList", getMonitorOndutyGroupList)
+		monitorApiGroup.POST("/createMonitorOndutyGroup", createMonitorOndutyGroup)
+		monitorApiGroup.POST("/updateMonitorOndutyGroup", updateMonitorOndutyGroup)
+		monitorApiGroup.DELETE("/deleteMonitorOndutyGroup/:id", deleteMonitorOndutyGroup)
+		monitorApiGroup.GET("/getMonitorOndutyGroupFuturePlan/:id", getMonitorOndutyGroupFuturePlan)
+		monitorApiGroup.GET("/getMonitorOndutyGroupOne/:id", getMonitorOndutyGroupOne)
+		monitorApiGroup.POST("/createMonitorOndutyChange", createMonitorOndutyChange)
+		monitorApiGroup.POST("/setOnDutyStatus", setOnDutyStatus)
 	}
 }
 

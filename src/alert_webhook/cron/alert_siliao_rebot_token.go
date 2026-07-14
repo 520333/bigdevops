@@ -40,6 +40,7 @@ func (ac *AlertCache) RefreshPrivateChatToken(ctx context.Context) {
 	ac.RobotToken = res.TenantAccessToken
 	ac.RobotTokenLock.Unlock()
 }
+
 func (ac *AlertCache) GetPrivateChatToken() string {
 	ac.RobotTokenLock.RLock()
 	defer ac.RobotTokenLock.RUnlock()

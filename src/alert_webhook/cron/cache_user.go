@@ -40,6 +40,7 @@ func (ac *AlertCache) RenewMapUser(ctx context.Context) {
 		zap.Any("上一次数量", lastNum), zap.Any("这一次数量", thiNum),
 	)
 }
+
 func (ac *AlertCache) GetUserById(id uint) *models.User {
 	ac.UserLock.RLock()
 	defer ac.UserLock.RUnlock()

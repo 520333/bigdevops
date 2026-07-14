@@ -44,36 +44,3 @@ func getJobExecResultByJobId(c *gin.Context) {
 		"total": total,
 	}, "ok", c)
 }
-
-func getJobExecResultOne(c *gin.Context) {
-	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	id := c.Param("id")
-	intVar, _ := strconv.Atoi(id)
-
-	dbObj, err := models.GetJobResultById(intVar)
-	if err != nil {
-		sc.Logger.Error("根据id找脚本模板错误", zap.Any("脚本模板", id), zap.Error(err))
-		common.FailWithMessage(err.Error(), c)
-		return
-	}
-
-	common.OkWithDetailed(dbObj, "ok", c)
-
-}
-
-func getJobExecResultDetail(c *gin.Context) {
-	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	id := c.Param("id")
-	sc.Logger.Info("脚本模板", zap.Any("id", id))
-	intVar, _ := strconv.Atoi(id)
-
-	dbObj, err := models.GetJobResultById(intVar)
-	if err != nil {
-		sc.Logger.Error("根据id找脚本模板错误", zap.Any("脚本模板", id), zap.Error(err))
-		common.FailWithMessage(err.Error(), c)
-		return
-	}
-	//dbObj.FillFrontAllData()
-
-	common.OkWithDetailed(dbObj, "ok", c)
-}

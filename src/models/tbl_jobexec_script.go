@@ -33,6 +33,7 @@ func (obj *JobScript) CreateOne() error {
 func (obj *JobScript) UpdateOne() error {
 	return Db.Where("id = ?", obj.ID).Updates(obj).Error
 }
+
 func GetJobScriptById(id int) (*JobScript, error) {
 	var dbJobScript JobScript
 	err := Db.Where("id = ? ", id).First(&dbJobScript).Error
