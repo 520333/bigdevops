@@ -56,7 +56,10 @@ func InitCasBin(sc *config.ServerConfig) error {
 		e = some(where (p.eft == allow))
 		
 		[matchers]
-		m = r.sub == p.sub && KeyMatch2(r.obj, p.obj) && r.act == p.act
+		# m = r.sub == p.sub && KeyMatch2(r.obj, p.obj) && r.act == p.act
+		# ====== 核心修改点：允许 p.act 为 ALL 或 * ======
+		m = r.sub == p.sub && KeyMatch2(r.obj, p.obj) && (r.act == p.act || p.act == "ALL")
+		# m = r.sub == p.sub && KeyMatch2(r.obj, p.obj) && (r.act == p.act || p.act == "ALL" || p.act == "*")
 		`
 	m, err := model.NewModelFromString(modelText)
 	if err != nil {

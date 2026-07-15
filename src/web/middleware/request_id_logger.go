@@ -18,15 +18,6 @@ func NewGinZapLogger(logger *zap.Logger) gin.HandlerFunc {
 			if requestID := c.Writer.Header().Get("X-Request-Id"); requestID != "" {
 				fields = append(fields, zap.String("request_id", requestID))
 			}
-			//var body []byte
-			//var buf bytes.Buffer
-			//tee := io.TeeReader(c.Request.Body, &buf)
-			//body, err := io.ReadAll(tee)
-			//fmt.Printf("读取body错误: %v\n", err)
-			//c.Request.Body = io.NopCloser(&buf)
-			//authHeader := c.Request.Header.Get("Authorization")
-			//fields = append(fields, zap.String("body", string(body)))
-			//fields = append(fields, zap.String("Authorization", string(authHeader)))
 			return fields
 		}),
 	})

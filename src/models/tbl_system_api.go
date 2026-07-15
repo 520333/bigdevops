@@ -45,6 +45,7 @@ func GetApiById(id int) (*Api, error) {
 func (obj *Api) DeleteOne() error {
 	return Db.Select(clause.Associations).Unscoped().Delete(obj).Error
 }
+
 func (obj *Api) CreateOne() error {
 	return Db.Create(obj).Error
 }
