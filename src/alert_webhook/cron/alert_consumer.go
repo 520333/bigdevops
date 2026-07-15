@@ -67,7 +67,7 @@ func (ac *AlertCache) DealWithOneAlertReceive(alert template.Alert) {
 	//	status = common.MONITOR_ALERT_STATUS_UPGRADED
 	//}
 
-	event := &models.MonitorAlertEvent{
+	event := &models.MonitorAlertManagerEvent{
 		AlertName:   alert.Labels[common.MONITOR_ALERT_NAME_KEY],
 		FingerPrint: alert.Fingerprint,
 		Status:      alert.Status,

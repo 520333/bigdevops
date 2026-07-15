@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func getMonitorAlertRuleList(c *gin.Context) {
+func getMonitorPromAlertRuleList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
@@ -32,7 +32,7 @@ func getMonitorAlertRuleList(c *gin.Context) {
 	if currentPage > 1 {
 		offset = (currentPage - 1) * limit
 	}
-	objs, err := models.GetMonitorAlertRuleAll()
+	objs, err := models.GetMonitorPromAlertRuleAll()
 	if err != nil {
 		sc.Logger.Error("去数据库中拿所有的告警规则配置执行错误", zap.Error(err))
 		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的告警规则配置执行错误：%v", err.Error()), c)
@@ -66,14 +66,14 @@ func getMonitorAlertRuleList(c *gin.Context) {
 	// 如果过滤后没有数据，直接返回空列表
 	if len(allIds) == 0 {
 		common.OkWithDetailed(gin.H{
-			"items": []models.MonitorAlertRule{},
+			"items": []models.MonitorPromAlertRule{},
 			"total": 0,
 		}, "ok", c)
 		return
 	}
 
 	// 根据过滤后的 ID 进行分页查询
-	pagedObjs, err := models.GetMonitorAlertRuleByIdsWithLimitOffset(allIds, limit, offset)
+	pagedObjs, err := models.GetMonitorPromAlertRuleByIdsWithLimitOffset(allIds, limit, offset)
 	if err != nil {
 		sc.Logger.Error("limit-offset 去数据库中拿所有的告警规则配置执行错误", zap.Error(err))
 		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的告警规则配置执行错误：%v", err.Error()), c)
@@ -91,10 +91,10 @@ func getMonitorAlertRuleList(c *gin.Context) {
 	}, "ok", c)
 }
 
-func createMonitorAlertRule(c *gin.Context) {
+func createMonitorPromAlertRule(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
-	var reqObj models.MonitorAlertRule
+	var reqObj models.MonitorPromAlertRule
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
 		sc.Logger.Error("解析新增告警规则配置执行请求失败", zap.Error(err))
@@ -131,11 +131,11 @@ func createMonitorAlertRule(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
-func updateMonitorAlertRule(c *gin.Context) {
+func updateMonitorPromAlertRule(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
 	// 🚀 致命修复：同上
-	var reqObj models.MonitorAlertRule
+	var reqObj models.MonitorPromAlertRule
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
 		sc.Logger.Error("解析更新告警规则配置请求失败", zap.Error(err))
@@ -143,7 +143,7 @@ func updateMonitorAlertRule(c *gin.Context) {
 		return
 	}
 	// 检查是否存在
-	dbOld, err := models.GetMonitorAlertRuleById(int(reqObj.ID))
+	dbOld, err := models.GetMonitorPromAlertById(int(reqObj.ID))
 	if err != nil {
 		common.FailWithMessage("告警规则配置不存在", c)
 		return
@@ -167,12 +167,12 @@ func updateMonitorAlertRule(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
-func deleteMonitorAlertRule(c *gin.Context) {
+func deleteMonitorPromAlertRule(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
 	intVar, _ := strconv.Atoi(id)
 
-	dbObj, err := models.GetMonitorAlertRuleById(intVar)
+	dbObj, err := models.GetMonitorPromAlertById(intVar)
 	if err != nil {
 		common.FailWithMessage("告警规则配置不存在", c)
 		return
@@ -189,15 +189,15 @@ func deleteMonitorAlertRule(c *gin.Context) {
 }
 
 // 1. 定义批量删除的请求体
-type deleteAlertRuleBatchReq struct {
+type deleteMonitorPromAlertRuleBatchReq struct {
 	Ids []uint `json:"ids" validate:"required,min=1"` // 要求至少传 1 个 ID
 }
 
 // 2. 批量删除的处理函数
-func deleteMonitorAlertRuleBatch(c *gin.Context) {
+func deleteMonitorPromAlertRuleBatch(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
-	var reqObj deleteAlertRuleBatchReq
+	var reqObj deleteMonitorPromAlertRuleBatchReq
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
 		sc.Logger.Error("解析批量删除告警规则请求失败", zap.Any("req", reqObj), zap.Error(err))
@@ -207,7 +207,7 @@ func deleteMonitorAlertRuleBatch(c *gin.Context) {
 
 	// （可选）如果你需要像单条删除那样检查依赖关系，可以在这里写个 for 循环检查 reqObj.Ids
 	// 为了极致性能，这里直接调用批量删除
-	err = models.DeleteMonitorAlertRuleBatch(reqObj.Ids)
+	err = models.DeleteMonitorPromAlertRuleBatch(reqObj.Ids)
 	if err != nil {
 		sc.Logger.Error("批量删除告警规则执行错误", zap.Any("req", reqObj), zap.Error(err))
 		common.FailWithMessage("批量删除失败: "+err.Error(), c)
@@ -217,17 +217,17 @@ func deleteMonitorAlertRuleBatch(c *gin.Context) {
 	common.OkWithMessage(fmt.Sprintf("成功删除了 %d 条告警规则", len(reqObj.Ids)), c)
 }
 
-// setScrapeJobEnableReq 请求参数结构体
-type setAlertRuleEnableReq struct {
+// setMonitorPromAlertRuleEnableReq 请求参数结构体
+type setMonitorPromAlertRuleEnableReq struct {
 	Id     uint `json:"id" validate:"required"`
 	Enable int  `json:"enable" validate:"required,oneof=1 2"` // 假设 1=启用 2=禁用
 }
 
-// setScrapeJobStatus 设置告警规则配置的启用/禁用状态
-func setAlertRuleStatus(c *gin.Context) {
+// setMonitorPromAlertRuleStatus 设置告警规则配置的启用/禁用状态
+func setMonitorPromAlertRuleStatus(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
-	var reqObj setAlertRuleEnableReq
+	var reqObj setMonitorPromAlertRuleEnableReq
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
 		sc.Logger.Error("修改告警规则状态请求失败", zap.Any("req", reqObj), zap.Error(err))
@@ -245,7 +245,7 @@ func setAlertRuleStatus(c *gin.Context) {
 	}
 
 	// 1. 查询数据库中原有的记录
-	dbJob, err := models.GetMonitorAlertRuleById(int(reqObj.Id))
+	dbJob, err := models.GetMonitorPromAlertById(int(reqObj.Id))
 	if err != nil {
 		sc.Logger.Error("根据id查找告警规则配置错误", zap.Any("req", reqObj), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
@@ -266,7 +266,7 @@ func setAlertRuleStatus(c *gin.Context) {
 	common.OkWithMessage("状态修改成功", c)
 }
 
-func setAlertRuleStatusBatch(c *gin.Context) {
+func setMonitorPromAlertRuleStatusBatch(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
 	var reqObj setAlertRuleEnableBatchReq
@@ -287,7 +287,7 @@ func setAlertRuleStatusBatch(c *gin.Context) {
 	}
 
 	// 执行数据库批量更新
-	err = models.UpdateMonitorAlertRuleEnableBatch(reqObj.Ids, reqObj.Enable)
+	err = models.UpdateMonitorPromAlertRuleEnableBatch(reqObj.Ids, reqObj.Enable)
 	if err != nil {
 		sc.Logger.Error("批量更新告警规则状态错误", zap.Any("req", reqObj), zap.Error(err))
 		common.FailWithMessage("批量更新失败: "+err.Error(), c)

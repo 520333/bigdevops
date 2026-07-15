@@ -9,8 +9,8 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// MonitorScrapePool 采集池和机器的关系
-type MonitorScrapePool struct {
+// MonitorPromScrapePool 采集池和机器的关系
+type MonitorPromScrapePool struct {
 	Model
 	Name                string      `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:采集池名称"`
 	PrometheusInstances StringArray `json:"prometheus_instances,omitempty"`
@@ -38,24 +38,24 @@ type MonitorScrapePool struct {
 	CreateUserName      string `json:"createUserName" gorm:"-"`
 }
 
-func (obj *MonitorScrapePool) Create() error {
+func (obj *MonitorPromScrapePool) Create() error {
 	return Db.Create(obj).Error
 }
 
-func (obj *MonitorScrapePool) DeleteOne() error {
+func (obj *MonitorPromScrapePool) DeleteOne() error {
 	return Db.Select(clause.Associations).Unscoped().Delete(obj).Error
 }
 
-func (obj *MonitorScrapePool) CreateOne() error {
+func (obj *MonitorPromScrapePool) CreateOne() error {
 	return Db.Create(obj).Error
 }
 
-func (obj *MonitorScrapePool) UpdateOne() error {
+func (obj *MonitorPromScrapePool) UpdateOne() error {
 	return Db.Where("id = ? ", obj.ID).Updates(obj).Error
 }
 
-func GetMonitorScrapePoolById(id int) (*MonitorScrapePool, error) {
-	var dbMonitorScrapePool MonitorScrapePool
+func GetMonitorPromScrapePoolById(id int) (*MonitorPromScrapePool, error) {
+	var dbMonitorScrapePool MonitorPromScrapePool
 	err := Db.Where("id = ? ", id).First(&dbMonitorScrapePool).Error
 
 	if err != nil {
@@ -67,23 +67,23 @@ func GetMonitorScrapePoolById(id int) (*MonitorScrapePool, error) {
 	return &dbMonitorScrapePool, nil
 }
 
-func GetMonitorScrapePoolAll() (ps []*MonitorScrapePool, err error) {
+func GetMonitorPromScrapePoolAll() (ps []*MonitorPromScrapePool, err error) {
 	err = Db.Find(&ps).Error
 	return
 }
 
-func GetMonitorScrapePoolSupportAlertAll() (ps []*MonitorScrapePool, err error) {
+func GetMonitorPromScrapePoolSupportAlertAll() (ps []*MonitorPromScrapePool, err error) {
 	err = Db.Where("supper_alert = 1 ").Find(&ps).Error
 	return
 }
 
-func GetMonitorScrapePoolSupportRecordAll() (ps []*MonitorScrapePool, err error) {
+func GetMonitorPromScrapePoolSupportRecordAll() (ps []*MonitorPromScrapePool, err error) {
 	err = Db.Where("supper_record = 1 ").Find(&ps).Error
 	return
 }
 
-func (obj *MonitorScrapePool) CheckInstanceIpExists() bool {
-	all, err := GetMonitorScrapePoolAll()
+func (obj *MonitorPromScrapePool) CheckInstanceIpExists() bool {
+	all, err := GetMonitorPromScrapePoolAll()
 	if err != nil {
 		return true
 	}
@@ -106,7 +106,7 @@ func (obj *MonitorScrapePool) CheckInstanceIpExists() bool {
 	return false
 }
 
-func (obj *MonitorScrapePool) FillDefaultData() {
+func (obj *MonitorPromScrapePool) FillDefaultData() {
 	if obj.ScrapeInterval == 0 {
 		obj.ScrapeInterval = 15
 	}
@@ -118,7 +118,7 @@ func (obj *MonitorScrapePool) FillDefaultData() {
 	}
 }
 
-func (obj *MonitorScrapePool) FillFrontAllData() {
+func (obj *MonitorPromScrapePool) FillFrontAllData() {
 	dbUser, _ := GetUserById(int(obj.UserID))
 	if dbUser != nil {
 		obj.CreateUserName = fmt.Sprintf("%s(%s)", dbUser.Username, dbUser.RealName)
@@ -127,7 +127,7 @@ func (obj *MonitorScrapePool) FillFrontAllData() {
 	obj.Key = fmt.Sprintf("%d", obj.ID)
 }
 
-func GetMonitorScrapePoolByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorScrapePool, err error) {
+func GetMonitorPromScrapePoolByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorPromScrapePool, err error) {
 	err = Db.Where("id in ? ", ids).Limit(limit).Offset(offset).Find(&objs).Error
 	return
 

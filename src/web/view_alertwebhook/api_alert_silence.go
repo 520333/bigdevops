@@ -50,7 +50,7 @@ func AlertSilence(c *gin.Context) {
 		return
 	}
 
-	event, err := models.GetMonitorAlertEventByFingerPrintId(fingerprint)
+	event, err := models.GetMonitorAlertManagerEventByFingerPrintId(fingerprint)
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("通过fingerprint去查询event错误 %s", err.Error()))
 		return
@@ -151,7 +151,7 @@ func AlertUnSilence(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.AlertWebhookConfig)
 	fingerprint := c.DefaultQuery("fingerprint", "")
 
-	event, err := models.GetMonitorAlertEventByFingerPrintId(fingerprint)
+	event, err := models.GetMonitorAlertManagerEventByFingerPrintId(fingerprint)
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("通过fingerprint去查询event错误 %s", err.Error()))
 		return

@@ -40,7 +40,7 @@ type SilenceResponse struct {
 	SilenceID string `json:"silenceID"`
 }
 
-func getMonitorAlertEventList(c *gin.Context) {
+func getMonitorAlertManagerEventList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
@@ -56,7 +56,7 @@ func getMonitorAlertEventList(c *gin.Context) {
 		offset = (currentPage - 1) * limit
 	}
 
-	objs, err := models.GetMonitorAlertEventAll()
+	objs, err := models.GetMonitorAlertManagerEventAll()
 	if err != nil {
 		sc.Logger.Error("去数据库中拿所有的集群执行错误", zap.Error(err))
 		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的集群执行错误：%v", err.Error()), c)
@@ -87,14 +87,14 @@ func getMonitorAlertEventList(c *gin.Context) {
 	// 如果过滤后没有数据，直接返回空列表
 	if len(allIds) == 0 {
 		common.OkWithDetailed(gin.H{
-			"items": []models.MonitorAlertEvent{},
+			"items": []models.MonitorAlertManagerEvent{},
 			"total": 0,
 		}, "ok", c)
 		return
 	}
 
 	// 根据过滤后的 ID 进行分页查询
-	pagedObjs, err := models.GetMonitorAlertEventByIdsWithLimitOffset(allIds, limit, offset)
+	pagedObjs, err := models.GetMonitorAlertManagerEventByIdsWithLimitOffset(allIds, limit, offset)
 	if err != nil {
 		sc.Logger.Error("limit-offset 去数据库中拿所有的集群执行错误", zap.Error(err))
 		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的集群执行错误：%v", err.Error()), c)
@@ -112,12 +112,12 @@ func getMonitorAlertEventList(c *gin.Context) {
 	}, "ok", c)
 }
 
-func alertEventReLing(c *gin.Context) {
+func alertManagerEventReLing(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
 	intId, _ := strconv.Atoi(id)
 
-	event, err := models.GetMonitorAlertEventById(intId)
+	event, err := models.GetMonitorAlertManagerEventById(intId)
 	if err != nil {
 		common.ReqBadFailWithMessage(fmt.Sprintf("通过id去查询event错误%v", err), c)
 		return
@@ -154,7 +154,7 @@ func alertEventReLing(c *gin.Context) {
 }
 
 func doUnSilence(sc *config.ServerConfig, eventID int, user *models.User) error {
-	event, err := models.GetMonitorAlertEventById(eventID)
+	event, err := models.GetMonitorAlertManagerEventById(eventID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch event (ID: %d): %v", eventID, err)
 	}
@@ -194,7 +194,7 @@ func doUnSilence(sc *config.ServerConfig, eventID int, user *models.User) error 
 
 // --- Helper for Silence ---
 func doSilence(sc *config.ServerConfig, eventID int, timeString string, sdr time.Duration, byNameBool bool, user *models.User) error {
-	event, err := models.GetMonitorAlertEventById(eventID)
+	event, err := models.GetMonitorAlertManagerEventById(eventID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch event (ID: %d): %v", eventID, err)
 	}
@@ -289,8 +289,8 @@ type BatchUnSilenceRequest struct {
 	EventIDs []int `json:"eventIds" binding:"required"`
 }
 
-// alertEventBatchSilence handles silencing multiple alerts at once
-func alertEventBatchSilence(c *gin.Context) {
+// alertManagerEventBatchSilence handles silencing multiple alerts at once
+func alertManagerEventBatchSilence(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
 	var reqObj BatchSilenceRequest
@@ -334,8 +334,8 @@ func alertEventBatchSilence(c *gin.Context) {
 	common.OkWithMessage("批量静默成功", c)
 }
 
-// alertEventBatchUnSilence handles removing silences for multiple alerts
-func alertEventBatchUnSilence(c *gin.Context) {
+// alertManagerEventBatchUnSilence handles removing silences for multiple alerts
+func alertManagerEventBatchUnSilence(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
 	var reqObj BatchUnSilenceRequest
@@ -373,7 +373,7 @@ func alertEventBatchUnSilence(c *gin.Context) {
 	common.OkWithMessage("批量解除屏蔽成功", c)
 }
 
-func alertEventSilence(c *gin.Context) {
+func alertManagerEventSilence(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
 	var reqObj SilenceRequest
@@ -407,7 +407,7 @@ func alertEventSilence(c *gin.Context) {
 	common.OkWithMessage("静默成功", c)
 }
 
-func alertEventUnSilence(c *gin.Context) {
+func alertManagerEventUnSilence(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
 	id := c.Param("id")

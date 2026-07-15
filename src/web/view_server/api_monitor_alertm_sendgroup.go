@@ -158,7 +158,7 @@ type setAlertManagerSendGroupEnableReq struct {
 	Enable int  `json:"enable" validate:"required,oneof=1 2"` // 假设 1=启用 2=禁用
 }
 
-// setScrapeJobStatus 设置发送组配置的启用/禁用状态
+// setMonitorPromScrapeJobStatus 设置发送组配置的启用/禁用状态
 func setAlertManagerSendGroupStatus(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -211,7 +211,7 @@ func deleteMonitorAlertManagerSendGroup(c *gin.Context) {
 		common.FailWithMessage("发送组配置不存在", c)
 		return
 	}
-	dbPromAlertRule, _ := models.GetMonitorAlertRuleBySendGroupId(uint(intVar))
+	dbPromAlertRule, _ := models.GetMonitorPromAlertRuleBySendGroupId(uint(intVar))
 	if dbPromAlertRule != nil && len(dbPromAlertRule) > 0 {
 		sc.Logger.Warn("该发送组已经绑定了发送组，禁止直接删除！", zap.Any("", id))
 		common.FailWithMessage("该发送组已经绑定了告警规则，禁止直接删除！", c)

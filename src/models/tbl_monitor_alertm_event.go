@@ -13,9 +13,9 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// MonitorAlertEvent 采集任务Job对象
+// MonitorAlertManagerEvent 采集任务Job对象
 
-type MonitorAlertEvent struct {
+type MonitorAlertManagerEvent struct {
 	Model
 	AlertName    string      `json:"alertName"`
 	FingerPrint  string      `json:"fingerPrint,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:告警unique id eventId"`
@@ -34,26 +34,26 @@ type MonitorAlertEvent struct {
 	Alert         template.Alert                `json:"alert,omitempty" gorm:"-"`
 	ReLingUser    *User                         `json:"reLingUser,omitempty" gorm:"-"`
 	SendGroup     *MonitorAlertManagerSendGroup `json:"sendGroup,omitempty" gorm:"-"`
-	Rule          *MonitorAlertRule             `json:"rule,omitempty" gorm:"-"`
+	Rule          *MonitorPromAlertRule         `json:"rule,omitempty" gorm:"-"`
 
 	LabelsM      map[string]string `json:"labelsM,omitempty" gorm:"-"`
 	AnnotationsM map[string]string `json:"annotationsM,omitempty" gorm:"-"`
 }
 
-func (obj *MonitorAlertEvent) Create() error {
+func (obj *MonitorAlertManagerEvent) Create() error {
 	return Db.Create(obj).Error
 }
 
-func (obj *MonitorAlertEvent) DeleteOne() error {
+func (obj *MonitorAlertManagerEvent) DeleteOne() error {
 	return Db.Select(clause.Associations).Unscoped().Delete(obj).Error
 }
 
-func (obj *MonitorAlertEvent) CreateOne() error {
+func (obj *MonitorAlertManagerEvent) CreateOne() error {
 	return Db.Create(obj).Error
 }
 
-func (obj *MonitorAlertEvent) UpdateOrCreateOne() error {
-	dbobj, err := GetMonitorAlertEventByFingerPrintId(obj.FingerPrint)
+func (obj *MonitorAlertManagerEvent) UpdateOrCreateOne() error {
+	dbobj, err := GetMonitorAlertManagerEventByFingerPrintId(obj.FingerPrint)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// 第一次触发
@@ -80,12 +80,12 @@ func (obj *MonitorAlertEvent) UpdateOrCreateOne() error {
 	return obj.UpdateOne()
 }
 
-func (obj *MonitorAlertEvent) UpdateOne() error {
+func (obj *MonitorAlertManagerEvent) UpdateOne() error {
 	return Db.Where("id = ?", obj.ID).Updates(obj).Error
 }
 
-func GetMonitorAlertEventById(id int) (*MonitorAlertEvent, error) {
-	var dbMonitorAlertEvent MonitorAlertEvent
+func GetMonitorAlertManagerEventById(id int) (*MonitorAlertManagerEvent, error) {
+	var dbMonitorAlertEvent MonitorAlertManagerEvent
 	err := Db.Where("id = ? ", id).First(&dbMonitorAlertEvent).Error
 
 	if err != nil {
@@ -97,17 +97,17 @@ func GetMonitorAlertEventById(id int) (*MonitorAlertEvent, error) {
 	return &dbMonitorAlertEvent, nil
 }
 
-func GetMonitorAlertEventByFingerPrintId(fingerPrint string) (obj *MonitorAlertEvent, err error) {
+func GetMonitorAlertManagerEventByFingerPrintId(fingerPrint string) (obj *MonitorAlertManagerEvent, err error) {
 	err = Db.Where("finger_print = ?", fingerPrint).First(&obj).Error
 	return
 }
 
-func GetMonitorAlertEventAll() (obj []*MonitorAlertEvent, err error) {
+func GetMonitorAlertManagerEventAll() (obj []*MonitorAlertManagerEvent, err error) {
 	err = Db.Find(&obj).Error
 	return
 }
 
-func (obj *MonitorAlertEvent) GenMapFromKvs() map[string]string {
+func (obj *MonitorAlertManagerEvent) GenMapFromKvs() map[string]string {
 	labelsM := map[string]string{}
 	for _, i := range obj.Labels {
 		kvs := strings.Split(i, "=")
@@ -122,12 +122,12 @@ func (obj *MonitorAlertEvent) GenMapFromKvs() map[string]string {
 	return labelsM
 }
 
-func (obj *MonitorAlertEvent) FillFrontAllData() {
+func (obj *MonitorAlertManagerEvent) FillFrontAllData() {
 	obj.CreatedTime = common.TimeFormat(obj.CreatedAt)
 	obj.UpdatedTime = common.TimeFormat(obj.UpdatedAt)
 	obj.Key = fmt.Sprintf("%d", obj.ID)
 
-	alertRule, _ := GetMonitorAlertRuleById(int(obj.RuleId))
+	alertRule, _ := GetMonitorPromAlertById(int(obj.RuleId))
 	sendGroup, _ := GetMonitorAlertManagerSendGroupById(int(obj.SendGroupId))
 
 	// 🚀 核心修复 1：把之前注释掉的认领人查询打开，并赋值给虚拟字段 ReLingUser！
@@ -147,19 +147,19 @@ func (obj *MonitorAlertEvent) FillFrontAllData() {
 	}
 }
 
-func GetMonitorAlertEventByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorAlertEvent, err error) {
+func GetMonitorAlertManagerEventByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorAlertManagerEvent, err error) {
 	err = Db.Where("id in ?", ids).Limit(limit).Offset(offset).Find(&objs).Error
 	return
 
 }
 
 // UpdateEnable 更新采集任务的开关状态
-func (obj *MonitorAlertEvent) UpdateEnable() error {
+func (obj *MonitorAlertManagerEvent) UpdateEnable() error {
 	// 推荐使用 Select 显式指定更新 enable 字段，这样既安全又能避免潜在的零值过滤问题
 	return Db.Model(obj).Select("Enable").Updates(obj).Error
 }
 
-func (obj *MonitorAlertEvent) SendImMessageToQunLiaoByEvent(msg, url string, logger *zap.Logger, tw int) {
+func (obj *MonitorAlertManagerEvent) SendImMessageToQunLiaoByEvent(msg, url string, logger *zap.Logger, tw int) {
 	obj.FillFrontAllData()
 	if obj.SendGroup == nil {
 		return

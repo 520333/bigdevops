@@ -10,9 +10,9 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// MonitorScrapeJob 采集任务Job对象
+// MonitorPromScrapeJob 采集任务Job对象
 
-type MonitorScrapeJob struct {
+type MonitorPromScrapeJob struct {
 	Model
 	Name string `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:采集任务名称"`
 
@@ -50,35 +50,35 @@ type MonitorScrapeJob struct {
 	CreateUserName string `json:"createUserName" gorm:"-"`
 }
 
-func (obj *MonitorScrapeJob) Create() error {
+func (obj *MonitorPromScrapeJob) Create() error {
 	return Db.Create(obj).Error
 }
 
-func (obj *MonitorScrapeJob) DeleteOne() error {
+func (obj *MonitorPromScrapeJob) DeleteOne() error {
 	return Db.Select(clause.Associations).Unscoped().Delete(obj).Error
 }
 
-func (obj *MonitorScrapeJob) CreateOne() error {
+func (obj *MonitorPromScrapeJob) CreateOne() error {
 	return Db.Create(obj).Error
 }
 
-func (obj *MonitorScrapeJob) UpdateOne() error {
+func (obj *MonitorPromScrapeJob) UpdateOne() error {
 	return Db.Where("id = ?", obj.ID).Updates(obj).Error
 }
 
-func (obj *MonitorScrapeJob) IdsConvert() {
+func (obj *MonitorPromScrapeJob) IdsConvert() {
 	strIds := []string{}
 	for _, id := range obj.TreeNodeIds {
 		strIds = append(strIds, fmt.Sprintf("%s", id))
 	}
 }
-func (obj *MonitorScrapeJob) ValidateRelabelConfigsYamlString() error {
+func (obj *MonitorPromScrapeJob) ValidateRelabelConfigsYamlString() error {
 	var relabelConfigsObj []*relabel.Config
 	return yaml.Unmarshal([]byte(obj.RelabelConfigsYamlString), &relabelConfigsObj)
 }
 
-func GetMonitorScrapeJobById(id int) (*MonitorScrapeJob, error) {
-	var dbMonitorScrapeJob MonitorScrapeJob
+func GetMonitorPromScrapeJobById(id int) (*MonitorPromScrapeJob, error) {
+	var dbMonitorScrapeJob MonitorPromScrapeJob
 	err := Db.Where("id = ? ", id).First(&dbMonitorScrapeJob).Error
 
 	if err != nil {
@@ -90,36 +90,36 @@ func GetMonitorScrapeJobById(id int) (*MonitorScrapeJob, error) {
 	return &dbMonitorScrapeJob, nil
 }
 
-func GetMonitorScrapeJobByPoolId(poolId uint) (ps []*MonitorScrapeJob, err error) {
+func GetMonitorPromScrapeJobByPoolId(poolId uint) (ps []*MonitorPromScrapeJob, err error) {
 	err = Db.Where("enable = 1 AND pool_id = ? ", poolId).Find(&ps).Error
 	return
 }
 
-func GetMonitorScrapeJobAll() (ps []*MonitorScrapeJob, err error) {
+func GetMonitorPromScrapeJobAll() (ps []*MonitorPromScrapeJob, err error) {
 	err = Db.Find(&ps).Error
 	return
 }
 
-func (obj *MonitorScrapeJob) FillFrontAllData() {
+func (obj *MonitorPromScrapeJob) FillFrontAllData() {
 	dbUser, _ := GetUserById(int(obj.UserID))
 	if dbUser != nil {
 		obj.CreateUserName = fmt.Sprintf("%s(%s)", dbUser.Username, dbUser.RealName)
 	}
-	dbPool, _ := GetMonitorScrapePoolById(int(obj.PoolId))
+	dbPool, _ := GetMonitorPromScrapePoolById(int(obj.PoolId))
 	if dbPool != nil {
 		obj.PoolName = dbPool.Name
 	}
 	obj.Key = fmt.Sprintf("%d", obj.ID)
 }
 
-func GetMonitorScrapeJobByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorScrapeJob, err error) {
+func GetMonitorPromScrapeJobByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorPromScrapeJob, err error) {
 	err = Db.Where("id in ?", ids).Limit(limit).Offset(offset).Find(&objs).Error
 	return
 
 }
 
 // UpdateEnable 更新采集任务的开关状态
-func (obj *MonitorScrapeJob) UpdateEnable() error {
+func (obj *MonitorPromScrapeJob) UpdateEnable() error {
 	// 推荐使用 Select 显式指定更新 enable 字段，这样既安全又能避免潜在的零值过滤问题
 	return Db.Model(obj).Select("Enable").Updates(obj).Error
 }

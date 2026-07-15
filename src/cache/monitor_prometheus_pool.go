@@ -74,7 +74,7 @@ func (mc *MonitorCache) GetPrometheusMainConfigYamlByIp(ip string) string {
 
 // GeneratePrometheusMainConfigYaml 生成主配置文件
 func (mc *MonitorCache) GeneratePrometheusMainConfigYaml(ctx context.Context) {
-	pools, err := models.GetMonitorScrapePoolAll()
+	pools, err := models.GetMonitorPromScrapePoolAll()
 	if err != nil {
 		mc.Sc.Logger.Error("[监控模块]扫描数据库中的采集池失败", zap.Error(err))
 		return
@@ -195,7 +195,7 @@ func (mc *MonitorCache) GeneratePrometheusMainConfigYaml(ctx context.Context) {
 			}
 			outStr := string(out)
 			// 重新查一遍当前 pool 下的任务（因为 allConfig.ScrapeConfigs 里的顺序和查询出的顺序一致）
-			scrapeJobs, _ := models.GetMonitorScrapeJobByPoolId(pool.ID)
+			scrapeJobs, _ := models.GetMonitorPromScrapeJobByPoolId(pool.ID)
 			for _, job := range scrapeJobs {
 				if job.BearerToken != "" {
 					// Kubernetes SD 配置中通常有两处 token (外部 HTTPClientConfig 和 SD 内部的 HTTPClientConfig)
@@ -263,7 +263,7 @@ func (mc *MonitorCache) HashModScrapeConfig(scrapeConfigs []*ppc.ScrapeConfig, m
 	return res
 }
 
-func (mc *MonitorCache) GeneratePrometheusMainConfigYamlOnePool(pool *models.MonitorScrapePool) ppc.Config {
+func (mc *MonitorCache) GeneratePrometheusMainConfigYamlOnePool(pool *models.MonitorPromScrapePool) ppc.Config {
 	// 拼接主global
 	gc := ppc.GlobalConfig{
 		ScrapeInterval: GenPromModeDuration(pool.ScrapeInterval),
@@ -333,9 +333,9 @@ func (mc *MonitorCache) GeneratePrometheusMainConfigYamlOnePool(pool *models.Mon
 	return all
 }
 
-func (mc *MonitorCache) GeneratePrometheusScrapeConfigYamlOnePool(pool *models.MonitorScrapePool) []*ppc.ScrapeConfig {
+func (mc *MonitorCache) GeneratePrometheusScrapeConfigYamlOnePool(pool *models.MonitorPromScrapePool) []*ppc.ScrapeConfig {
 	var scrapeConfigs []*ppc.ScrapeConfig
-	scrapeJobs, err := models.GetMonitorScrapeJobByPoolId(pool.ID)
+	scrapeJobs, err := models.GetMonitorPromScrapeJobByPoolId(pool.ID)
 	if err != nil {
 		mc.Sc.Logger.Error("[监控模块]根据采集池poolId查找所有采集任务错误", zap.Error(err), zap.String("池子", pool.Name))
 		return nil

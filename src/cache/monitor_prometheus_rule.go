@@ -25,7 +25,7 @@ func (mc *MonitorCache) GetPrometheusAlertRuleConfigYamlByIp(ip string) string {
 }
 
 func (mc *MonitorCache) GeneratePrometheusAlertRuleConfigYaml(ctx context.Context) {
-	pools, err := models.GetMonitorScrapePoolSupportAlertAll()
+	pools, err := models.GetMonitorPromScrapePoolSupportAlertAll()
 	if err != nil {
 		mc.Sc.Logger.Error("[监控模块]扫描数据库中的采集池支持告警规则失败", zap.Error(err))
 		return
@@ -51,8 +51,8 @@ func (mc *MonitorCache) GeneratePrometheusAlertRuleConfigYaml(ctx context.Contex
 
 }
 
-func (mc *MonitorCache) GeneratePrometheusAlertRuleConfigYamlOnePool(pool *models.MonitorScrapePool) map[string]string {
-	rules, err := models.GetMonitorAlertRuleByPoolId(pool.ID)
+func (mc *MonitorCache) GeneratePrometheusAlertRuleConfigYamlOnePool(pool *models.MonitorPromScrapePool) map[string]string {
+	rules, err := models.GetMonitorPromAlertRuleByPoolId(pool.ID)
 	if err != nil {
 		mc.Sc.Logger.Error("[监控模块]根据采集池id查找所有的rule规则错误", zap.Error(err), zap.Any("池子", pool.Name))
 		return nil
@@ -115,7 +115,7 @@ func (mc *MonitorCache) GetPrometheusRecordRuleConfigYamlByIp(ip string) string 
 }
 
 func (mc *MonitorCache) GeneratePrometheusRecordRuleConfigYaml(ctx context.Context) {
-	pools, err := models.GetMonitorScrapePoolSupportRecordAll()
+	pools, err := models.GetMonitorPromScrapePoolSupportRecordAll()
 	if err != nil {
 		mc.Sc.Logger.Error("[监控模块]扫描数据库中的采集池支持预聚合规则失败", zap.Error(err))
 		return
@@ -141,8 +141,8 @@ func (mc *MonitorCache) GeneratePrometheusRecordRuleConfigYaml(ctx context.Conte
 
 }
 
-func (mc *MonitorCache) GeneratePrometheusRecordRuleConfigYamlOnePool(pool *models.MonitorScrapePool) map[string]string {
-	rules, err := models.GetMonitorRecordRuleByPoolId(pool.ID)
+func (mc *MonitorCache) GeneratePrometheusRecordRuleConfigYamlOnePool(pool *models.MonitorPromScrapePool) map[string]string {
+	rules, err := models.GetMonitorPromRecordRuleByPoolId(pool.ID)
 	if err != nil {
 		mc.Sc.Logger.Error("[监控模块]根据采集池id查找所有的rule规则错误", zap.Error(err), zap.Any("池子", pool.Name))
 		return nil

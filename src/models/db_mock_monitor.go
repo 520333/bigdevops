@@ -60,7 +60,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			onTag := fmt.Sprintf("%s=%s", tagKey, taValue)
 			tags = append(tags, onTag)
 		}
-		p := MonitorScrapePool{
+		p := MonitorPromScrapePool{
 			Name:                 fmt.Sprintf("pool-%v", i+1),
 			PrometheusInstances:  ips,
 			ScrapeInterval:       15,
@@ -97,7 +97,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 			j = len(treeNodeIds) - 1
 		}
 		k := i % len(exporterNames)
-		http := MonitorScrapeJob{
+		http := MonitorPromScrapeJob{
 			Name:                 fmt.Sprintf("%v_exporter_%v", exporterNames[k], i+1),
 			UserID:               1,
 			Enable:               1,
@@ -115,7 +115,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 	}
 	// k8s采集job
 	for i := 0; i < 1; i++ {
-		//k8s := MonitorScrapeJob{
+		//k8s := MonitorPromScrapeJob{
 		//	Name:                 fmt.Sprintf("k8s-%v", i+1),
 		//	UserID:               1,
 		//	ServiceDiscoveryType: common.MONITOR_SCRAPE_JOB_SD_TYPE_K8S,
@@ -140,7 +140,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 		//}
 
 		// 使用K8S集群SA  token证书方式
-		k8s := MonitorScrapeJob{
+		k8s := MonitorPromScrapeJob{
 			Name:                 "k8s-pod-monitor",
 			UserID:               1,
 			Enable:               1,
@@ -241,7 +241,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 		if mIndex >= len(metricsNames) {
 			mIndex = len(metricsNames) - 1
 		}
-		rule := MonitorAlertRule{
+		rule := MonitorPromAlertRule{
 			Name:        ruleNames[mIndex],
 			UserID:      1,
 			Enable:      1,
@@ -271,7 +271,7 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 		if mIndex >= len(metricsNames) {
 			mIndex = len(metricsNames) - 1
 		}
-		record := MonitorRecordRule{
+		record := MonitorPromRecordRule{
 			Name:       fmt.Sprintf("mock-record-%v", abc[mIndex]),
 			RecordName: fmt.Sprintf("node_avg_cpu_usage_%v", abc[mIndex]),
 			UserID:     1,
@@ -320,9 +320,9 @@ func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
 	}
 
 	//num = 20
-	//rules, _ := GetMonitorAlertRuleAll()
+	//rules, _ := GetMonitorPromAlertRuleAll()
 	//for i := 1; i <= num; i++ {
-	//	e := MonitorAlertEvent{
+	//	e := MonitorAlertManagerEvent{
 	//		AlertName:   fmt.Sprintf("mock-告警-%v", i+1),
 	//		FingerPrint: uuid.New().String(),
 	//		Status:      common.MONITOR_ALERT_STATUS_ARRAY[i%len(common.MONITOR_ALERT_STATUS_ARRAY)],

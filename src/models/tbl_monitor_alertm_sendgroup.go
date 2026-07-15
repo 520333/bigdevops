@@ -113,7 +113,7 @@ func GetMonitorAlertManagerSendGroupByPoolId(poolId uint) (ps []*MonitorAlertMan
 	return
 }
 
-func GetMonitorSendGroupByOndutyGroupId(ondutyGroupId uint) (ps []*MonitorAlertManagerSendGroup, err error) {
+func GetMonitorAlertManagerSendGroupByOndutyGroupId(ondutyGroupId uint) (ps []*MonitorAlertManagerSendGroup, err error) {
 	err = Db.Where("on_duty_group_id = ? ", ondutyGroupId).Find(&ps).Error
 	return
 }

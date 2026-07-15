@@ -10,9 +10,9 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// MonitorAlertRule 采集任务Job对象
+// MonitorPromAlertRule 采集任务Job对象
 
-type MonitorAlertRule struct {
+type MonitorPromAlertRule struct {
 	Model
 	Name string `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:告警规则名称"`
 
@@ -44,24 +44,24 @@ type MonitorAlertRule struct {
 	AnnotationsM     map[string]string `json:"annotationsM" gorm:"-"`
 }
 
-func (obj *MonitorAlertRule) Create() error {
+func (obj *MonitorPromAlertRule) Create() error {
 	return Db.Create(obj).Error
 }
 
-func (obj *MonitorAlertRule) DeleteOne() error {
+func (obj *MonitorPromAlertRule) DeleteOne() error {
 	return Db.Select(clause.Associations).Unscoped().Delete(obj).Error
 }
 
-func (obj *MonitorAlertRule) CreateOne() error {
+func (obj *MonitorPromAlertRule) CreateOne() error {
 	return Db.Create(obj).Error
 }
 
-func (obj *MonitorAlertRule) UpdateOne() error {
+func (obj *MonitorPromAlertRule) UpdateOne() error {
 	return Db.Where("id = ?", obj.ID).Updates(obj).Error
 }
 
-func GetMonitorAlertRuleById(id int) (*MonitorAlertRule, error) {
-	var dbMonitorAlertRule MonitorAlertRule
+func GetMonitorPromAlertById(id int) (*MonitorPromAlertRule, error) {
+	var dbMonitorAlertRule MonitorPromAlertRule
 	err := Db.Where("id = ? ", id).First(&dbMonitorAlertRule).Error
 
 	if err != nil {
@@ -73,22 +73,22 @@ func GetMonitorAlertRuleById(id int) (*MonitorAlertRule, error) {
 	return &dbMonitorAlertRule, nil
 }
 
-func GetMonitorAlertRuleByPoolId(poolId uint) (ps []*MonitorAlertRule, err error) {
+func GetMonitorPromAlertRuleByPoolId(poolId uint) (ps []*MonitorPromAlertRule, err error) {
 	err = Db.Where("enable = 1 AND pool_id = ? ", poolId).Find(&ps).Error
 	return
 }
 
-func GetMonitorAlertRuleBySendGroupId(sendGroupId uint) (ps []*MonitorAlertRule, err error) {
+func GetMonitorPromAlertRuleBySendGroupId(sendGroupId uint) (ps []*MonitorPromAlertRule, err error) {
 	err = Db.Where("send_group_id = ? ", sendGroupId).Find(&ps).Error
 	return
 }
 
-func GetMonitorAlertRuleAll() (ps []*MonitorAlertRule, err error) {
+func GetMonitorPromAlertRuleAll() (ps []*MonitorPromAlertRule, err error) {
 	err = Db.Find(&ps).Error
 	return
 }
 
-func (obj *MonitorAlertRule) GenMapFromKvs(kvs []string) map[string]string {
+func (obj *MonitorPromAlertRule) GenMapFromKvs(kvs []string) map[string]string {
 	labelsM := map[string]string{}
 	for _, i := range kvs {
 		kvs := strings.Split(i, "=")
@@ -102,7 +102,7 @@ func (obj *MonitorAlertRule) GenMapFromKvs(kvs []string) map[string]string {
 	return labelsM
 }
 
-func (obj *MonitorAlertRule) FillDefaultData() {
+func (obj *MonitorPromAlertRule) FillDefaultData() {
 	if obj.ForTime == "" {
 		obj.ForTime = "1m"
 	}
@@ -125,13 +125,13 @@ func (obj *MonitorAlertRule) FillDefaultData() {
 
 }
 
-func (obj *MonitorAlertRule) FillFrontAllData() {
+func (obj *MonitorPromAlertRule) FillFrontAllData() {
 	dbUser, _ := GetUserById(int(obj.UserID))
 	if dbUser != nil {
 		obj.CreateUserName = fmt.Sprintf("%s(%s)", dbUser.Username, dbUser.RealName)
 	}
 
-	promM, _ := GetMonitorScrapePoolById(int(obj.PoolId))
+	promM, _ := GetMonitorPromScrapePoolById(int(obj.PoolId))
 	if promM != nil {
 		obj.PoolName = promM.Name
 	}
@@ -161,28 +161,28 @@ func (obj *MonitorAlertRule) FillFrontAllData() {
 
 }
 
-func GetMonitorAlertRuleByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorAlertRule, err error) {
+func GetMonitorPromAlertRuleByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorPromAlertRule, err error) {
 	err = Db.Where("id in ?", ids).Limit(limit).Offset(offset).Find(&objs).Error
 	return
 
 }
 
 // UpdateEnable 更新采集任务的开关状态
-func (obj *MonitorAlertRule) UpdateEnable() error {
+func (obj *MonitorPromAlertRule) UpdateEnable() error {
 	// 推荐使用 Select 显式指定更新 enable 字段，这样既安全又能避免潜在的零值过滤问题
 	return Db.Model(obj).Select("Enable").Updates(obj).Error
 }
 
-// UpdateMonitorAlertRuleEnableBatch 批量更新告警规则的开关状态
-func UpdateMonitorAlertRuleEnableBatch(ids []int, enable int) error {
+// UpdateMonitorPromAlertRuleEnableBatch 批量更新告警规则的开关状态
+func UpdateMonitorPromAlertRuleEnableBatch(ids []int, enable int) error {
 	// 使用 GORM 的 IN 查询和批量 Update
 	// .Update("enable", enable) 会忽略结构体的零值限制，直接强制更新对应字段
-	err := Db.Model(&MonitorAlertRule{}).Where("id IN ?", ids).Update("enable", enable).Error
+	err := Db.Model(&MonitorPromAlertRule{}).Where("id IN ?", ids).Update("enable", enable).Error
 	return err
 }
 
-// DeleteMonitorAlertRuleBatch 批量删除告警规则
-func DeleteMonitorAlertRuleBatch(ids []uint) error {
+// DeleteMonitorPromAlertRuleBatch 批量删除告警规则
+func DeleteMonitorPromAlertRuleBatch(ids []uint) error {
 	// 使用 Unscoped() 进行硬删除（如果你的逻辑是软删除，去掉 Unscoped() 即可）
-	return Db.Unscoped().Where("id IN ?", ids).Delete(&MonitorAlertRule{}).Error
+	return Db.Unscoped().Where("id IN ?", ids).Delete(&MonitorPromAlertRule{}).Error
 }

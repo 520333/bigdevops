@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func getMonitorScrapePoolList(c *gin.Context) {
+func getMonitorPromScrapePoolList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
@@ -28,7 +28,7 @@ func getMonitorScrapePoolList(c *gin.Context) {
 		offset = (currentPage - 1) * limit
 	}
 
-	objs, err := models.GetMonitorScrapePoolAll()
+	objs, err := models.GetMonitorPromScrapePoolAll()
 	if err != nil {
 		sc.Logger.Error("去数据库中拿所有的采集池执行错误", zap.Error(err))
 		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的采集池执行错误：%v", err.Error()), c)
@@ -59,14 +59,14 @@ func getMonitorScrapePoolList(c *gin.Context) {
 	// 如果过滤后没有数据，直接返回空列表
 	if len(allIds) == 0 {
 		common.OkWithDetailed(gin.H{
-			"items": []models.MonitorScrapePool{},
+			"items": []models.MonitorPromScrapePool{},
 			"total": 0,
 		}, "ok", c)
 		return
 	}
 
 	// 根据过滤后的 ID 进行分页查询
-	pagedObjs, err := models.GetMonitorScrapePoolByIdsWithLimitOffset(allIds, limit, offset)
+	pagedObjs, err := models.GetMonitorPromScrapePoolByIdsWithLimitOffset(allIds, limit, offset)
 	if err != nil {
 		sc.Logger.Error("limit-offset 去数据库中拿所有的采集池执行错误", zap.Error(err))
 		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的采集池执行错误：%v", err.Error()), c)
@@ -84,10 +84,10 @@ func getMonitorScrapePoolList(c *gin.Context) {
 	}, "ok", c)
 }
 
-func createMonitorScrapePool(c *gin.Context) {
+func createMonitorPromScrapePool(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
-	var reqObj models.MonitorScrapePool
+	var reqObj models.MonitorPromScrapePool
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
 		sc.Logger.Error("解析新增采集池执行请求失败", zap.Error(err))
@@ -119,11 +119,11 @@ func createMonitorScrapePool(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
-func updateMonitorScrapePool(c *gin.Context) {
+func updateMonitorPromScrapePool(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
 	// 🚀 致命修复：同上
-	var reqObj models.MonitorScrapePool
+	var reqObj models.MonitorPromScrapePool
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
 		sc.Logger.Error("解析更新采集池请求失败", zap.Error(err))
@@ -137,7 +137,7 @@ func updateMonitorScrapePool(c *gin.Context) {
 		return
 	}
 	// 检查是否存在
-	_, err = models.GetMonitorScrapePoolById(int(reqObj.ID))
+	_, err = models.GetMonitorPromScrapePoolById(int(reqObj.ID))
 	if err != nil {
 		common.FailWithMessage("采集池不存在", c)
 		return
@@ -154,18 +154,18 @@ func updateMonitorScrapePool(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
-func deleteMonitorScrapePool(c *gin.Context) {
+func deleteMonitorPromScrapePool(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
 	intVar, _ := strconv.Atoi(id)
 
-	dbObj, err := models.GetMonitorScrapePoolById(intVar)
+	dbObj, err := models.GetMonitorPromScrapePoolById(intVar)
 	if err != nil {
 		common.FailWithMessage("采集池不存在", c)
 		return
 	}
 
-	jobs, err := models.GetMonitorScrapeJobByPoolId(uint(intVar))
+	jobs, err := models.GetMonitorPromScrapeJobByPoolId(uint(intVar))
 	if err != nil {
 		sc.Logger.Error("查询关联采集任务失败", zap.Error(err))
 		common.FailWithMessage("查询关联采集任务失败: "+err.Error(), c)

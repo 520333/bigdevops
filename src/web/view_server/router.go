@@ -155,40 +155,40 @@ func ConfigRouter(r *gin.Engine) {
 	monitorApiGroup := afterLoginApiGroup.Group("/monitor")
 	{
 		// prometheus 集群
-		monitorApiGroup.GET("/getMonitorScrapePoolList", getMonitorScrapePoolList)
-		monitorApiGroup.POST("/createMonitorScrapePool", createMonitorScrapePool)
-		monitorApiGroup.POST("/updateMonitorScrapePool", updateMonitorScrapePool)
-		monitorApiGroup.DELETE("/deleteMonitorScrapePool/:id", deleteMonitorScrapePool)
+		monitorApiGroup.GET("/getMonitorPromScrapePoolList", getMonitorPromScrapePoolList)
+		monitorApiGroup.POST("/createMonitorPromScrapePool", createMonitorPromScrapePool)
+		monitorApiGroup.POST("/updateMonitorPromScrapePool", updateMonitorPromScrapePool)
+		monitorApiGroup.DELETE("/deleteMonitorPromScrapePool/:id", deleteMonitorPromScrapePool)
 		monitorApiGroup.GET("/getMonitorPrometheusYamlOne", getMonitorPrometheusYamlOne)
 		monitorApiGroup.GET("/getMonitorPrometheusAlertRuleYamlOne", getMonitorPrometheusAlertRuleYamlOne)
 		monitorApiGroup.GET("/getMonitorPrometheusRecordRuleYamlOne", getMonitorPrometheusRecordRuleYamlOne)
 
 		// prometheus 采集任务
-		monitorApiGroup.GET("/getMonitorScrapeJobList", getMonitorScrapeJobList)
-		monitorApiGroup.POST("/createMonitorScrapeJob", createMonitorScrapeJob)
-		monitorApiGroup.POST("/updateMonitorScrapeJob", updateMonitorScrapeJob)
-		monitorApiGroup.DELETE("/deleteMonitorScrapeJob/:id", deleteMonitorScrapeJob)
-		monitorApiGroup.GET("/getMonitorScrapeJobOne", getMonitorScrapeJobOne)
-		monitorApiGroup.POST("/setScrapeJobStatus", setScrapeJobStatus)
+		monitorApiGroup.GET("/getMonitorPromScrapeJobList", getMonitorPromScrapeJobList)
+		monitorApiGroup.POST("/createMonitorPromScrapeJob", createMonitorPromScrapeJob)
+		monitorApiGroup.POST("/updateMonitorPromScrapeJob", updateMonitorPromScrapeJob)
+		monitorApiGroup.DELETE("/deleteMonitorPromScrapeJob/:id", deleteMonitorPromScrapeJob)
+		monitorApiGroup.GET("/getMonitorPromScrapeJobOne", getMonitorPromScrapeJobOne)
+		monitorApiGroup.POST("/setMonitorPromScrapeJobStatus", setMonitorPromScrapeJobStatus)
 
 		// prometheus 告警规则
-		monitorApiGroup.GET("/getMonitorAlertRuleList", getMonitorAlertRuleList)
-		monitorApiGroup.POST("/createMonitorAlertRule", createMonitorAlertRule)
-		monitorApiGroup.POST("/updateMonitorAlertRule", updateMonitorAlertRule)
-		monitorApiGroup.DELETE("/deleteMonitorAlertRule/:id", deleteMonitorAlertRule)
-		monitorApiGroup.DELETE("/deleteMonitorAlertRuleBatch", deleteMonitorAlertRuleBatch)
-		monitorApiGroup.POST("/setAlertRuleStatus", setAlertRuleStatus)
-		monitorApiGroup.POST("/setAlertRuleStatusBatch", setAlertRuleStatusBatch)
+		monitorApiGroup.GET("/getMonitorPromAlertRuleList", getMonitorPromAlertRuleList)
+		monitorApiGroup.POST("/createMonitorPromAlertRule", createMonitorPromAlertRule)
+		monitorApiGroup.POST("/updateMonitorPromAlertRule", updateMonitorPromAlertRule)
+		monitorApiGroup.DELETE("/deleteMonitorPromAlertRule/:id", deleteMonitorPromAlertRule)
+		monitorApiGroup.DELETE("/deleteMonitorPromAlertRuleBatch", deleteMonitorPromAlertRuleBatch)
+		monitorApiGroup.POST("/setMonitorPromAlertRuleStatus", setMonitorPromAlertRuleStatus)
+		monitorApiGroup.POST("/setMonitorPromAlertRuleStatusBatch", setMonitorPromAlertRuleStatusBatch)
 		monitorApiGroup.GET("/promqlExprCheck", promqlExprCheck)
 
 		// prometheus 预聚合规则
-		monitorApiGroup.GET("/getMonitorRecordRuleList", getMonitorRecordRuleList)
-		monitorApiGroup.POST("/createMonitorRecordRule", createMonitorRecordRule)
-		monitorApiGroup.POST("/updateMonitorRecordRule", updateMonitorRecordRule)
-		monitorApiGroup.DELETE("/deleteMonitorRecordRule/:id", deleteMonitorRecordRule)
-		monitorApiGroup.DELETE("/deleteMonitorRecordRuleBatch", deleteMonitorRecordRuleBatch)
-		monitorApiGroup.POST("/setRecordRuleStatus", setRecordRuleStatus)
-		monitorApiGroup.POST("/setRecordRuleStatusBatch", setRecordRuleStatusBatch)
+		monitorApiGroup.GET("/getMonitorPromRecordRuleList", getMonitorPromRecordRuleList)
+		monitorApiGroup.POST("/createMonitorPromRecordRule", createMonitorPromRecordRule)
+		monitorApiGroup.POST("/updateMonitorPromRecordRule", updateMonitorPromRecordRule)
+		monitorApiGroup.DELETE("/deleteMonitorPromRecordRule/:id", deleteMonitorPromRecordRule)
+		monitorApiGroup.DELETE("/deleteMonitorPromRecordRuleBatch", deleteMonitorPromRecordRuleBatch)
+		monitorApiGroup.POST("/setMonitorPromRecordRuleStatus", setMonitorPromRecordRuleStatus)
+		monitorApiGroup.POST("/setMonitorPromRecordRuleStatusBatch", setMonitorPromRecordRuleStatusBatch)
 		monitorApiGroup.GET("/recordRulePromqlExprCheck", recordRulePromqlExprCheck)
 
 		// alertManager 集群
@@ -206,12 +206,12 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.POST("/setAlertManagerSendGroupStatus", setAlertManagerSendGroupStatus)
 
 		// alertManager 告警事件
-		monitorApiGroup.GET("/getMonitorAlertEventList", getMonitorAlertEventList)
-		monitorApiGroup.POST("/alertEventSilence/:id", alertEventSilence)
-		monitorApiGroup.POST("/alertEventUnSilence/:id", alertEventUnSilence)
-		monitorApiGroup.POST("/alertEventBatchSilence", alertEventBatchSilence)
-		monitorApiGroup.POST("/alertEventBatchUnSilence", alertEventBatchUnSilence)
-		monitorApiGroup.POST("/alertEventReLing/:id", alertEventReLing)
+		monitorApiGroup.GET("/getMonitorAlertManagerEventList", getMonitorAlertManagerEventList)
+		monitorApiGroup.POST("/alertManagerEventSilence/:id", alertManagerEventSilence)
+		monitorApiGroup.POST("/alertManagerEventUnSilence/:id", alertManagerEventUnSilence)
+		monitorApiGroup.POST("/alertManagerEventBatchSilence", alertManagerEventBatchSilence)
+		monitorApiGroup.POST("/alertManagerEventBatchUnSilence", alertManagerEventBatchUnSilence)
+		monitorApiGroup.POST("/alertManagerEventReLing/:id", alertManagerEventReLing)
 
 		// 值班组
 		monitorApiGroup.GET("/getMonitorOndutyGroupList", getMonitorOndutyGroupList)
@@ -221,7 +221,7 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.GET("/getMonitorOndutyGroupFuturePlan/:id", getMonitorOndutyGroupFuturePlan)
 		monitorApiGroup.GET("/getMonitorOndutyGroupOne/:id", getMonitorOndutyGroupOne)
 		monitorApiGroup.POST("/createMonitorOndutyChange", createMonitorOndutyChange)
-		monitorApiGroup.POST("/setOnDutyStatus", setOnDutyStatus)
+		monitorApiGroup.POST("/setMonitorOndutyStatus", setMonitorOndutyStatus)
 	}
 }
 

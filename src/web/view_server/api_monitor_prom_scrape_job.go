@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func getMonitorScrapeJobList(c *gin.Context) {
+func getMonitorPromScrapeJobList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
@@ -32,7 +32,7 @@ func getMonitorScrapeJobList(c *gin.Context) {
 		offset = (currentPage - 1) * limit
 	}
 
-	objs, err := models.GetMonitorScrapeJobAll()
+	objs, err := models.GetMonitorPromScrapeJobAll()
 	if err != nil {
 		sc.Logger.Error("去数据库中拿所有的采集任务执行错误", zap.Error(err))
 		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的采集任务执行错误：%v", err.Error()), c)
@@ -66,14 +66,14 @@ func getMonitorScrapeJobList(c *gin.Context) {
 	// 如果过滤后没有数据，直接返回空列表
 	if len(allIds) == 0 {
 		common.OkWithDetailed(gin.H{
-			"items": []models.MonitorScrapeJob{},
+			"items": []models.MonitorPromScrapeJob{},
 			"total": 0,
 		}, "ok", c)
 		return
 	}
 
 	// 根据过滤后的 ID 进行分页查询
-	pagedObjs, err := models.GetMonitorScrapeJobByIdsWithLimitOffset(allIds, limit, offset)
+	pagedObjs, err := models.GetMonitorPromScrapeJobByIdsWithLimitOffset(allIds, limit, offset)
 	if err != nil {
 		sc.Logger.Error("limit-offset 去数据库中拿所有的采集任务执行错误", zap.Error(err))
 		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的采集任务执行错误：%v", err.Error()), c)
@@ -91,7 +91,7 @@ func getMonitorScrapeJobList(c *gin.Context) {
 	}, "ok", c)
 }
 
-func getMonitorScrapeJobOne(c *gin.Context) {
+func getMonitorPromScrapeJobOne(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
 	sc.Logger.Info("采集任务实例", zap.Any("id", id))
@@ -108,10 +108,10 @@ func getMonitorScrapeJobOne(c *gin.Context) {
 	common.OkWithDetailed(dbObj, "ok", c)
 }
 
-func createMonitorScrapeJob(c *gin.Context) {
+func createMonitorPromScrapeJob(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
-	var reqObj models.MonitorScrapeJob
+	var reqObj models.MonitorPromScrapeJob
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
 		sc.Logger.Error("解析新增采集任务执行请求失败", zap.Error(err))
@@ -145,11 +145,11 @@ func createMonitorScrapeJob(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
-func updateMonitorScrapeJob(c *gin.Context) {
+func updateMonitorPromScrapeJob(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
 	// 🚀 致命修复：同上
-	var reqObj models.MonitorScrapeJob
+	var reqObj models.MonitorPromScrapeJob
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
 		sc.Logger.Error("解析更新采集任务请求失败", zap.Error(err))
@@ -157,7 +157,7 @@ func updateMonitorScrapeJob(c *gin.Context) {
 		return
 	}
 	// 检查是否存在
-	_, err = models.GetMonitorScrapeJobById(int(reqObj.ID))
+	_, err = models.GetMonitorPromScrapeJobById(int(reqObj.ID))
 	if err != nil {
 		common.FailWithMessage("采集任务不存在", c)
 		return
@@ -186,8 +186,8 @@ type setScrapeJobEnableReq struct {
 	Enable int  `json:"enable" validate:"required,oneof=1 2"` // 假设 1=启用 2=禁用
 }
 
-// setScrapeJobStatus 设置采集任务的启用/禁用状态
-func setScrapeJobStatus(c *gin.Context) {
+// setMonitorPromScrapeJobStatus 设置采集任务的启用/禁用状态
+func setMonitorPromScrapeJobStatus(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
 	var reqObj setScrapeJobEnableReq
@@ -208,7 +208,7 @@ func setScrapeJobStatus(c *gin.Context) {
 	}
 
 	// 1. 查询数据库中原有的记录
-	dbJob, err := models.GetMonitorScrapeJobById(int(reqObj.Id))
+	dbJob, err := models.GetMonitorPromScrapeJobById(int(reqObj.Id))
 	if err != nil {
 		sc.Logger.Error("根据id查找采集任务错误", zap.Any("req", reqObj), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
@@ -229,12 +229,12 @@ func setScrapeJobStatus(c *gin.Context) {
 	common.OkWithMessage("状态修改成功", c)
 }
 
-func deleteMonitorScrapeJob(c *gin.Context) {
+func deleteMonitorPromScrapeJob(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
 	intVar, _ := strconv.Atoi(id)
 
-	dbObj, err := models.GetMonitorScrapeJobById(intVar)
+	dbObj, err := models.GetMonitorPromScrapeJobById(intVar)
 	if err != nil {
 		common.FailWithMessage("采集任务不存在", c)
 		return

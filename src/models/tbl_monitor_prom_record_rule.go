@@ -10,9 +10,9 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// MonitorRecordRule 采集任务Job对象
+// MonitorPromRecordRule 采集任务Job对象
 
-type MonitorRecordRule struct {
+type MonitorPromRecordRule struct {
 	Model
 	Name       string `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:告警规则名称"`
 	RecordName string `json:"recordName,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:预聚合名称"`
@@ -42,24 +42,24 @@ type MonitorRecordRule struct {
 	AnnotationsM     map[string]string `json:"annotationsM" gorm:"-"`
 }
 
-func (obj *MonitorRecordRule) Create() error {
+func (obj *MonitorPromRecordRule) Create() error {
 	return Db.Create(obj).Error
 }
 
-func (obj *MonitorRecordRule) DeleteOne() error {
+func (obj *MonitorPromRecordRule) DeleteOne() error {
 	return Db.Select(clause.Associations).Unscoped().Delete(obj).Error
 }
 
-func (obj *MonitorRecordRule) CreateOne() error {
+func (obj *MonitorPromRecordRule) CreateOne() error {
 	return Db.Create(obj).Error
 }
 
-func (obj *MonitorRecordRule) UpdateOne() error {
+func (obj *MonitorPromRecordRule) UpdateOne() error {
 	return Db.Where("id = ?", obj.ID).Updates(obj).Error
 }
 
-func GetMonitorRecordRuleById(id int) (*MonitorRecordRule, error) {
-	var dbMonitorRecordRule MonitorRecordRule
+func GetMonitorPromRecordRuleById(id int) (*MonitorPromRecordRule, error) {
+	var dbMonitorRecordRule MonitorPromRecordRule
 	err := Db.Where("id = ? ", id).First(&dbMonitorRecordRule).Error
 
 	if err != nil {
@@ -71,17 +71,17 @@ func GetMonitorRecordRuleById(id int) (*MonitorRecordRule, error) {
 	return &dbMonitorRecordRule, nil
 }
 
-func GetMonitorRecordRuleByPoolId(poolId uint) (ps []*MonitorRecordRule, err error) {
+func GetMonitorPromRecordRuleByPoolId(poolId uint) (ps []*MonitorPromRecordRule, err error) {
 	err = Db.Where("enable = 1 AND pool_id = ? ", poolId).Find(&ps).Error
 	return
 }
 
-func GetMonitorRecordRuleAll() (ps []*MonitorRecordRule, err error) {
+func GetMonitorPromRecordRuleAll() (ps []*MonitorPromRecordRule, err error) {
 	err = Db.Find(&ps).Error
 	return
 }
 
-func (obj *MonitorRecordRule) GenMapFromKvs(kvs []string) map[string]string {
+func (obj *MonitorPromRecordRule) GenMapFromKvs(kvs []string) map[string]string {
 	labelsM := map[string]string{}
 	for _, i := range kvs {
 		kvs := strings.Split(i, "=")
@@ -95,7 +95,7 @@ func (obj *MonitorRecordRule) GenMapFromKvs(kvs []string) map[string]string {
 	return labelsM
 }
 
-func (obj *MonitorRecordRule) FillDefaultData() {
+func (obj *MonitorPromRecordRule) FillDefaultData() {
 	//if obj.ForTime == "" {
 	//	obj.ForTime = "1m"
 	//}
@@ -105,13 +105,13 @@ func (obj *MonitorRecordRule) FillDefaultData() {
 
 }
 
-func (obj *MonitorRecordRule) FillFrontAllData() {
+func (obj *MonitorPromRecordRule) FillFrontAllData() {
 	dbUser, _ := GetUserById(int(obj.UserID))
 	if dbUser != nil {
 		obj.CreateUserName = fmt.Sprintf("%s(%s)", dbUser.Username, dbUser.RealName)
 	}
 
-	promM, _ := GetMonitorScrapePoolById(int(obj.PoolId))
+	promM, _ := GetMonitorPromScrapePoolById(int(obj.PoolId))
 	if promM != nil {
 		obj.PoolName = promM.Name
 	}
@@ -143,25 +143,25 @@ func (obj *MonitorRecordRule) FillFrontAllData() {
 
 }
 
-func GetMonitorRecordRuleByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorRecordRule, err error) {
+func GetMonitorPromRecordRuleByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*MonitorPromRecordRule, err error) {
 	err = Db.Where("id in ?", ids).Limit(limit).Offset(offset).Find(&objs).Error
 	return
 
 }
 
 // UpdateEnable 更新采集任务的开关状态
-func (obj *MonitorRecordRule) UpdateEnable() error {
+func (obj *MonitorPromRecordRule) UpdateEnable() error {
 	// 推荐使用 Select 显式指定更新 enable 字段，这样既安全又能避免潜在的零值过滤问题
 	return Db.Model(obj).Select("Enable").Updates(obj).Error
 }
 
-// UpdateMonitorRecordRuleEnableBatch 批量更新告警规则的开关状态
-func UpdateMonitorRecordRuleEnableBatch(ids []int, enable int) error {
-	err := Db.Model(&MonitorRecordRule{}).Where("id IN ?", ids).Update("enable", enable).Error
+// UpdateMonitorPromRecordRuleEnableBatch 批量更新告警规则的开关状态
+func UpdateMonitorPromRecordRuleEnableBatch(ids []int, enable int) error {
+	err := Db.Model(&MonitorPromRecordRule{}).Where("id IN ?", ids).Update("enable", enable).Error
 	return err
 }
 
-// DeleteMonitorRecordRuleBatch 批量删除告警规则
-func DeleteMonitorRecordRuleBatch(ids []uint) error {
-	return Db.Unscoped().Where("id IN ?", ids).Delete(&MonitorRecordRule{}).Error
+// DeleteMonitorPromRecordRuleBatch 批量删除告警规则
+func DeleteMonitorPromRecordRuleBatch(ids []uint) error {
+	return Db.Unscoped().Where("id IN ?", ids).Delete(&MonitorPromRecordRule{}).Error
 }

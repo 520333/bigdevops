@@ -106,10 +106,10 @@ func MigrateTable() error {
 		&JobTask{},
 		&JobResult{},
 
-		&MonitorScrapePool{},
-		&MonitorScrapeJob{},
-		&MonitorAlertRule{},
-		&MonitorRecordRule{},
+		&MonitorPromScrapePool{},
+		&MonitorPromScrapeJob{},
+		&MonitorPromAlertRule{},
+		&MonitorPromRecordRule{},
 
 		&MonitorAlertManagerPool{},
 		&MonitorAlertManagerSendGroup{},
@@ -119,7 +119,7 @@ func MigrateTable() error {
 		&MonitorOndutyHistory{},
 		&MonitorOndutyChange{},
 
-		&MonitorAlertEvent{},
+		&MonitorAlertManagerEvent{},
 	)
 }
 

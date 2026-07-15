@@ -407,7 +407,7 @@ func deleteMonitorOndutyGroup(c *gin.Context) {
 		common.FailWithMessage("值班组不存在", c)
 		return
 	}
-	dbSendGroups, _ := models.GetMonitorSendGroupByOndutyGroupId(uint(intVar))
+	dbSendGroups, _ := models.GetMonitorAlertManagerSendGroupByOndutyGroupId(uint(intVar))
 	if dbSendGroups != nil && len(dbSendGroups) > 0 {
 		sc.Logger.Warn("该值班组已经绑定了发送组，禁止直接删除！", zap.Any("", id))
 		common.FailWithMessage("该值班组已经绑定了发送组，禁止直接删除！", c)
@@ -510,8 +510,8 @@ func createMonitorOndutyChange(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
-// setOnDutyStatus 设置采集任务的启用/禁用状态
-func setOnDutyStatus(c *gin.Context) {
+// setMonitorOndutyStatus 设置采集任务的启用/禁用状态
+func setMonitorOndutyStatus(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
 	var reqObj setMonitorOndutyGroupEnableReq

@@ -625,7 +625,7 @@ var (
 }`
 )
 
-func (ac *AlertCache) GenerateFeiShuCardMsgOneAlert(alert template.Alert, event *models.MonitorAlertEvent, rule *models.MonitorAlertRule, sendGroup *models.MonitorAlertManagerSendGroup) {
+func (ac *AlertCache) GenerateFeiShuCardMsgOneAlert(alert template.Alert, event *models.MonitorAlertManagerEvent, rule *models.MonitorPromAlertRule, sendGroup *models.MonitorAlertManagerSendGroup) {
 	// 时间格式化 utc+8
 	locName := ac.Sc.AlertTimezone
 	if locName == "" {

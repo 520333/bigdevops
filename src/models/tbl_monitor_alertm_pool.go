@@ -17,6 +17,7 @@ type MonitorAlertManagerPool struct {
 
 	UserID uint
 	//ExternalLabels StringArray `json:"externalLabels" gorm:"comment:remote_write的时候添加的标签组 key=v"`
+	Enable         int    `json:"enable" gorm:"comment:是否被开启 1正常 2禁用"`
 	ResolveTimeout string `json:"resolveTimeout" gorm:"comment:默认恢复时间"`
 	GroupWait      string `json:"groupWait" gorm:"comment:默认分组第一次等待时间"`
 	GroupInterval  string `json:"groupInterval" gorm:"comment:默认分组间隔"`
