@@ -22,7 +22,8 @@ func CasBinRbacMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		path := c.Request.URL.Path
+		//path := c.Request.URL.Path
+		path := c.FullPath()
 		method := c.Request.Method
 
 		pass := false

@@ -39,6 +39,16 @@ func ConfigRouter(r *gin.Engine) {
 	}
 	systemApiGroup := afterLoginApiGroup.Group("/system")
 	{
+		// 账号路由
+		systemApiGroup.POST("/createAccount", createAccount)
+		systemApiGroup.POST("/updateAccount", updateAccount)
+		systemApiGroup.POST("/accountExist", accountExist)
+		systemApiGroup.DELETE("/deleteAccount/:id", deleteAccount)
+		systemApiGroup.POST("/setAccountStatus", setAccountStatus)
+		systemApiGroup.GET("/getAccountList", getAccountList)
+		systemApiGroup.POST("/changePassword", changePassword)
+		systemApiGroup.GET("/getAllUserAndRoles", getAllUserAndRoles)
+
 		// 菜单路由
 		systemApiGroup.GET("/getMenuList", getMenuList)
 		systemApiGroup.GET("/getMenuListAll", getMenuListAll)
@@ -50,21 +60,10 @@ func ConfigRouter(r *gin.Engine) {
 		systemApiGroup.GET("/getRoleListAll", getRoleListAll)
 		systemApiGroup.POST("/createRole", createRole)
 		systemApiGroup.POST("/updateRole", updateRole)
-		systemApiGroup.POST("/setRoleStatus", setRoleStatus)
 		systemApiGroup.DELETE("/deleteRole/:id", deleteRole)
+		systemApiGroup.POST("/setRoleStatus", setRoleStatus)
 
-		// 账号路由
-		systemApiGroup.POST("/createAccount", createAccount)
-		systemApiGroup.POST("/updateAccount", updateAccount)
-		systemApiGroup.POST("/accountExist", accountExist)
-		systemApiGroup.DELETE("/deleteAccount/:id", deleteAccount)
-		systemApiGroup.POST("/setAccountStatus", setAccountStatus)
-
-		systemApiGroup.GET("/getAccountList", getAccountList)
-		systemApiGroup.POST("/changePassword", changePassword)
-		systemApiGroup.GET("/getAllUserAndRoles", getAllUserAndRoles)
-
-		// 菜单路由
+		// 接口路由
 		systemApiGroup.GET("/getApiList", getApiList)
 		systemApiGroup.GET("/getApiListAll", getApiListAll)
 		systemApiGroup.POST("/createApi", createApi)
@@ -78,18 +77,17 @@ func ConfigRouter(r *gin.Engine) {
 		sTreeApiGroup.GET("/getStreeNodeList", getStreeNodeList)
 		sTreeApiGroup.GET("/getStreeNodeSelect", getStreeNodeSelect)
 		sTreeApiGroup.GET("/getTopStreeNodes", getTopStreeNodes)
+		sTreeApiGroup.GET("/getChildrenStreeNodes/:pid", getChildrenStreeNodes)
 		sTreeApiGroup.POST("/createStreeNode", createStreeNode)
 		sTreeApiGroup.POST("/updateStreeNode", updateStreeNode)
 		sTreeApiGroup.DELETE("/deleteStreeNode/:id", deleteStreeNode)
-		sTreeApiGroup.GET("/getChildrenStreeNodes/:pid", getChildrenStreeNodes)
 		sTreeApiGroup.GET("/getLeafStreeNodes", getLeafStreeNodes)
-
+		sTreeApiGroup.GET("/fetchResourceByNode", fetchResourceByNode)
 		// ECS
-		sTreeApiGroup.GET("/getResourceEcsUnbindList", getResourceEcsUnbindList)
-
 		sTreeApiGroup.POST("/bindEcsToStreeNode", bindEcsToStreeNode)
 		sTreeApiGroup.POST("/unBindEcsToStreeNode", unBindEcsToStreeNode)
 		sTreeApiGroup.GET("getStreeNodeEcsList/:id", getStreeNodeEcsList)
+		sTreeApiGroup.GET("/getResourceEcsUnbindList", getResourceEcsUnbindList)
 		sTreeApiGroup.GET("/getResourceEcsList", getResourceEcsList)
 		// ELB
 		sTreeApiGroup.GET("/getResourceElbUnbindList", getResourceElbUnbindList)
@@ -101,7 +99,6 @@ func ConfigRouter(r *gin.Engine) {
 		sTreeApiGroup.POST("/bindRdsToStreeNode", bindRdsToStreeNode)
 		sTreeApiGroup.POST("/unBindRdsToStreeNode", unBindRdsToStreeNode)
 
-		sTreeApiGroup.GET("/fetchResourceByNode", fetchResourceByNode)
 	}
 
 	workOrDerApiGroup := afterLoginApiGroup.Group("/workorder")
@@ -136,18 +133,18 @@ func ConfigRouter(r *gin.Engine) {
 	jobExecApiGroup := afterLoginApiGroup.Group("/jobexec")
 	{
 		jobExecApiGroup.GET("/getJobExecScriptList", getJobExecScriptList)
-		jobExecApiGroup.GET("/getJobExecScriptSelect", getJobExecScriptSelect)
-		jobExecApiGroup.GET("/getJobExecScriptOne/:id", getJobExecScriptOne)
 		jobExecApiGroup.POST("/createJobExecScript", createJobExecScript)
 		jobExecApiGroup.POST("/updateJobExecScript", updateJobExecScript)
 		jobExecApiGroup.DELETE("/deleteJobExecScript/:id", deleteJobExecScript)
+		jobExecApiGroup.GET("/getJobExecScriptSelect", getJobExecScriptSelect)
+		jobExecApiGroup.GET("/getJobExecScriptOne/:id", getJobExecScriptOne)
 		jobExecApiGroup.GET("/getJobExecScriptDetail/:id", getJobExecScriptDetail)
 
 		jobExecApiGroup.GET("/getJobExecTaskList", getJobExecTaskList)
+		jobExecApiGroup.GET("/getJobExecTaskOne/:id", getJobExecTaskOne)
 		jobExecApiGroup.POST("/createJobExecTask", createJobExecTask)
 		jobExecApiGroup.POST("/updateJobExecTask", updateJobExecTask)
 		jobExecApiGroup.DELETE("/deleteJobExecTask/:id", deleteJobExecTask)
-		jobExecApiGroup.GET("/getJobExecTaskOne/:id", getJobExecTaskOne)
 		jobExecApiGroup.POST("/actionJobExecTaskOne/:id", actionJobExecTaskOne)
 		jobExecApiGroup.GET("/getJobExecResultByJobId", getJobExecResultByJobId)
 	}
@@ -165,10 +162,10 @@ func ConfigRouter(r *gin.Engine) {
 
 		// prometheus 采集任务
 		monitorApiGroup.GET("/getMonitorPromScrapeJobList", getMonitorPromScrapeJobList)
+		monitorApiGroup.GET("/getMonitorPromScrapeJobOne", getMonitorPromScrapeJobOne)
 		monitorApiGroup.POST("/createMonitorPromScrapeJob", createMonitorPromScrapeJob)
 		monitorApiGroup.POST("/updateMonitorPromScrapeJob", updateMonitorPromScrapeJob)
 		monitorApiGroup.DELETE("/deleteMonitorPromScrapeJob/:id", deleteMonitorPromScrapeJob)
-		monitorApiGroup.GET("/getMonitorPromScrapeJobOne", getMonitorPromScrapeJobOne)
 		monitorApiGroup.POST("/setMonitorPromScrapeJobStatus", setMonitorPromScrapeJobStatus)
 
 		// prometheus 告警规则
@@ -215,13 +212,13 @@ func ConfigRouter(r *gin.Engine) {
 
 		// 值班组
 		monitorApiGroup.GET("/getMonitorOndutyGroupList", getMonitorOndutyGroupList)
+		monitorApiGroup.GET("/getMonitorOndutyGroupOne/:id", getMonitorOndutyGroupOne)
 		monitorApiGroup.POST("/createMonitorOndutyGroup", createMonitorOndutyGroup)
 		monitorApiGroup.POST("/updateMonitorOndutyGroup", updateMonitorOndutyGroup)
 		monitorApiGroup.DELETE("/deleteMonitorOndutyGroup/:id", deleteMonitorOndutyGroup)
-		monitorApiGroup.GET("/getMonitorOndutyGroupFuturePlan/:id", getMonitorOndutyGroupFuturePlan)
-		monitorApiGroup.GET("/getMonitorOndutyGroupOne/:id", getMonitorOndutyGroupOne)
-		monitorApiGroup.POST("/createMonitorOndutyChange", createMonitorOndutyChange)
 		monitorApiGroup.POST("/setMonitorOndutyStatus", setMonitorOndutyStatus)
+		monitorApiGroup.GET("/getMonitorOndutyGroupFuturePlan/:id", getMonitorOndutyGroupFuturePlan)
+		monitorApiGroup.POST("/createMonitorOndutyChange", createMonitorOndutyChange)
 	}
 }
 

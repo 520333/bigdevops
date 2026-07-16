@@ -31,9 +31,11 @@ func mockResourceData(sc *config.ServerConfig, adminUser *User) {
 
 	for _, node := range streeNodes {
 		_ = node.CreateOne()
-		err := Db.Model(node).Association("BindEcss").Append(ecss[0])
-		if err != nil {
-			sc.Logger.Error("绑定ECS到服务树失败", zap.Error(err))
+		if node.IsLeaf && node.ID == 3 {
+			err := Db.Model(node).Association("BindEcss").Append(ecss[0])
+			if err != nil {
+				sc.Logger.Error("绑定ECS到叶子节点失败", zap.Error(err))
+			}
 		}
 	}
 
