@@ -272,7 +272,7 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		//{Path: "/api/system/getAccountList", Method: "GET", Pid: 1, Title: "获取用户列表", Type: "1"},
 
 		{Path: "/api/code", Method: "GET", Title: "代码管理", Type: "0"},
-		{Path: "/api/system/setting/get", Method: "GET", Pid: 1, Title: "系统管理-全局设置", Type: "1"},
+		{Path: "/api/system/setting/get", Method: "GET", Pid: 149, Title: "系统管理-全局设置", Type: "1"},
 	}
 
 	for _, menu := range menus {
