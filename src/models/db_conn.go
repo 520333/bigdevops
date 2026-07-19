@@ -89,6 +89,7 @@ func MigrateTable() error {
 		&Role{},
 		&Menu{},
 		&Api{},
+		&SystemSetting{},
 
 		&StreeNode{},
 		&ResourceEcs{},
@@ -120,6 +121,9 @@ func MigrateTable() error {
 		&MonitorOndutyChange{},
 
 		&MonitorAlertManagerEvent{},
+
+		// git
+		&CodeGitServer{},
 	)
 }
 
@@ -148,6 +152,9 @@ func MockUserRegister(sc *config.ServerConfig) {
 
 	// 5.监控模块数据
 	mockMonitorData(sc, adminUser)
+
+	//
+	mockCodeGitData(sc, adminUser)
 
 	sc.Logger.Info("全模块 Mock 基础数据初始化成功 🚀")
 }

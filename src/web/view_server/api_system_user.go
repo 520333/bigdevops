@@ -176,7 +176,7 @@ func createAccount(c *gin.Context) {
 	//hashPwd := common.BcryptHash(reqUser.Password)
 	//reqUser.Password = common.BcryptHash(reqUser.Password)
 	reqUser.Password = common.BcryptHash(reqUser.ReqPassword)
-	reqUser.HomePath = "/system/role"
+	reqUser.HomePath = "/dashboard/analysis"
 	err = reqUser.CreateOne()
 	if err != nil {
 		sc.Logger.Error("创建用户错误", zap.Any("菜单", reqUser), zap.Error(err))

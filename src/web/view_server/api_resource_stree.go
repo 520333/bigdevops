@@ -218,6 +218,19 @@ func createStreeNode(c *gin.Context) {
 		return
 	}
 
+	users := make([]*models.User, 0)
+	for _, userName := range reqNode.OpsAdminUsers {
+		dbUser, err := models.GetUserByUsername(userName)
+		if err != nil {
+			sc.Logger.Error("树节点根据userName找用户错误", zap.Any("树节点", reqNode), zap.Error(err))
+			common.FailWithMessage(err.Error(), c)
+			return
+		}
+
+		users = append(users, dbUser)
+	}
+	reqNode.OpsAdmins = users
+
 	err = reqNode.CreateOne()
 	if err != nil {
 		sc.Logger.Error("创建StreeNode错误", zap.Any("StreeNode", reqNode), zap.Error(err))

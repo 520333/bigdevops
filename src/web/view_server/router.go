@@ -63,13 +63,16 @@ func ConfigRouter(r *gin.Engine) {
 		systemApiGroup.DELETE("/deleteRole/:id", deleteRole)
 		systemApiGroup.POST("/setRoleStatus", setRoleStatus)
 
-		// 接口路由
+		// api 路由
 		systemApiGroup.GET("/getApiList", getApiList)
 		systemApiGroup.GET("/getApiListAll", getApiListAll)
 		systemApiGroup.POST("/createApi", createApi)
 		systemApiGroup.POST("/updateApi", updateApi)
 		systemApiGroup.DELETE("/deleteApi/:id", deleteApi)
 
+		// system settings 路由
+		systemApiGroup.GET("/setting/get", GetSystemSetting)
+		systemApiGroup.PUT("/setting/update", UpdateSystemSetting)
 	}
 
 	sTreeApiGroup := afterLoginApiGroup.Group("/stree")
@@ -219,6 +222,38 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.POST("/setMonitorOndutyStatus", setMonitorOndutyStatus)
 		monitorApiGroup.GET("/getMonitorOndutyGroupFuturePlan/:id", getMonitorOndutyGroupFuturePlan)
 		monitorApiGroup.POST("/createMonitorOndutyChange", createMonitorOndutyChange)
+	}
+
+	CodeGroup := afterLoginApiGroup.Group("/code")
+	{
+		CodeGroup.GET("/getCodeGitServerList", getCodeGitServerList)
+		CodeGroup.POST("/createCodeGitServer", createCodeGitServer)
+		CodeGroup.POST("/updateCodeGitServer", updateCodeGitServer)
+		CodeGroup.DELETE("/deleteCodeGitServer/:id", deleteCodeGitServer)
+		CodeGroup.POST("/pingCodeGitServer", pingCodeGitServer)
+
+		CodeGroup.GET("/getCodeGitRepoList", getCodeGitRepoList)
+		CodeGroup.POST("/createCodeGitRepo", createCodeGitRepo)
+		CodeGroup.POST("/updateCodeGitRepo", updateCodeGitRepo)
+
+		CodeGroup.GET("/getGitNamespaces", getGitNamespaces)      // 命名空间管理 (Group / Organization)
+		CodeGroup.POST("/createGitNamespace", createGitNamespace) // 创建命名空间
+		CodeGroup.POST("/updateGitNamespace", updateGitNamespace) // 更新命名空间
+
+		CodeGroup.GET("/getGitUsers", getGitUsers)      // 远端系统用户列表
+		CodeGroup.POST("/createGitUser", createGitUser) // 创建系统用户
+		CodeGroup.POST("/updateGitUser", updateGitUser) // 更新系统用户
+
+		CodeGroup.GET("/getRepoMembers", getRepoMembers) // 获取成员
+		CodeGroup.POST("/addRepoMember", addRepoMember)  // 添加/更新成员
+		CodeGroup.DELETE("/removeRepoMember", removeRepoMember)
+		CodeGroup.GET("/getRepoBranches", getRepoBranches)
+
+		CodeGroup.GET("/getMergeRequests", getMergeRequests)
+		CodeGroup.POST("/createMergeRequest", createMergeRequest)
+		CodeGroup.POST("/mergeMergeRequest", mergeMergeRequest)
+		CodeGroup.POST("/closeMergeRequest", closeMergeRequest)
+
 	}
 }
 

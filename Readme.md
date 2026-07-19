@@ -34,6 +34,10 @@ go get k8s.io/apimachinery/pkg/util/wait
 
 # aws
 
+
+# 代码仓库
+go get github.com/xanzy/go-gitlab
+go get code.gitea.io/sdk/gitea
 ```
 ## agent grpc相关
 cd src/proto

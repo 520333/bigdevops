@@ -10,43 +10,66 @@ import (
 
 func mockSystemData(sc *config.ServerConfig) *User {
 	menus := []*Menu{
-		{Name: "System", Title: "系统管理", Icon: "ant-design:setting-outlined", Type: "0", Show: "1", OrderNo: 90, Component: "LAYOUT", Redirect: "system/account", Path: "/system"},
-		{Name: "MenuManagement", Title: "菜单管理", Icon: "ant-design:menu-outlined", Type: "1", Show: "1", OrderNo: 91, Component: "system/menu/index", Pid: 1, Path: "menu"},
-		{Name: "AccountManagement", Title: "用户管理", Icon: "ant-design:user-outlined", Type: "1", Show: "1", OrderNo: 92, Component: "system/account/index", Pid: 1, Path: "account"},
-		{Name: "RoleManagement", Title: "角色管理", Icon: "ant-design:solution-outlined", Type: "1", Show: "1", OrderNo: 93, Component: "system/role/index", Pid: 1, Path: "role"},
-		{Name: "ChangePassword", Title: "修改密码", Icon: "ant-design:key-outlined", Type: "1", Show: "1", OrderNo: 94, Component: "system/password/index", Pid: 1, Path: "changePassword"},
-		{Name: "ApiManagement", Title: "接口授权", Icon: "ant-design:api-outlined", Type: "1", Show: "1", OrderNo: 95, Component: "system/api/index", Pid: 1, Path: "api"},
+		{Name: "Dashboard", Title: "工作台", Icon: "ant-design:dashboard-outlined", Type: "0", Show: "1", OrderNo: 1, Component: "LAYOUT", Path: "/dashboard", Redirect: "/dashboard/analysis"},
+		{Name: "Analysis", Title: "概览分析", Icon: "ant-design:area-chart-outlined", Type: "1", Show: "1", OrderNo: 2, Component: "dashboard/analysis/index", Pid: 1, Path: "analysis"},
 
-		{Name: "PermissionManagement", Title: "权限管理", Icon: "ion:layers-outline", Type: "0", Show: "1", OrderNo: 100, Component: "LAYOUT", Redirect: "/permission/front", Path: "/permission"},
-		{Name: "PermissionFront", Title: "前端权限管理", Icon: "ion:layers-outline", Type: "1", Show: "1", OrderNo: 101, Component: "/permission/front/index", Pid: 7, Path: "front"},
-
-		{Name: "ServiceTree", Title: "CMDB资产管理", Icon: "ant-design:database-outlined", Type: "0", Show: "1", OrderNo: 10, Component: "LAYOUT", Path: "/serviceTree", Redirect: "/serviceTree/service"},
-		{Name: "ServiceTreeIndexAsync", Title: "服务树", Icon: "ant-design:node-index-outlined", Type: "1", Show: "1", OrderNo: 11, Component: "stree/stree/indexAsync", Pid: 9, Path: "streeAsync"},
+		{Name: "ServiceTree", Title: "资产管理", Icon: "ant-design:database-outlined", Type: "0", Show: "1", OrderNo: 10, Component: "LAYOUT", Path: "/serviceTree", Redirect: "/ServiceTree/streeAsync"},
+		{Name: "ServiceTreeIndexAsync", Title: "CMDB服务树", Icon: "ant-design:node-index-outlined", Type: "1", Show: "1", OrderNo: 11, Component: "stree/stree/indexAsync", Pid: 3, Path: "streeAsync"},
 
 		{Name: "WorkOrder", Title: "工单服务", Icon: "ant-design:reconciliation-outlined", Type: "0", Show: "1", OrderNo: 20, Component: "LAYOUT", Path: "/workOrder", Redirect: "/workOrder/process"},
-		{Name: "ProcessManagement", Title: "审批流程管理", Icon: "ant-design:apartment-outlined", Type: "1", Show: "1", OrderNo: 21, Component: "workorder/process/index", Pid: 11, Path: "process"},
-		{Name: "FormManagement", Title: "表单设计管理", Icon: "ant-design:form-outlined", Type: "1", Show: "1", OrderNo: 22, Component: "workorder/formDesign/index", Pid: 11, Path: "formDesign"},
-		{Name: "WorkOrderTemplateManagement", Title: "工单模板管理", Icon: "ant-design:layout-outlined", Type: "1", Show: "1", OrderNo: 23, Component: "workorder/template/index", Pid: 11, Path: "template"},
-		{Name: "WorkOrderTicket", Title: "工单申请", Icon: "ant-design:profile-outlined", Type: "1", Show: "1", OrderNo: 24, Component: "workorder/ticket/index", Pid: 11, Path: "ticket"},
-		{Name: "WorkOrderCreate", Title: "工单填写", Icon: "ant-design:form-outlined", Type: "1", Show: "0", OrderNo: 25, Component: "workorder/ticket/create", Pid: 11, Path: "create"},
-		{Name: "WorkOrderSearch", Title: "我的工单", Icon: "ant-design:profile-outlined", Type: "1", Show: "1", OrderNo: 26, Component: "workorder/ticket/search", Pid: 11, Path: "search"},
+		{Name: "ProcessManagement", Title: "审批流程管理", Icon: "ant-design:apartment-outlined", Type: "1", Show: "1", OrderNo: 21, Component: "workorder/process/index", Pid: 5, Path: "process"},
+		{Name: "FormManagement", Title: "表单设计管理", Icon: "ant-design:form-outlined", Type: "1", Show: "1", OrderNo: 22, Component: "workorder/formDesign/index", Pid: 5, Path: "formDesign"},
+		{Name: "WorkOrderTemplateManagement", Title: "工单模板管理", Icon: "ant-design:layout-outlined", Type: "1", Show: "1", OrderNo: 23, Component: "workorder/template/index", Pid: 5, Path: "template"},
+		{Name: "WorkOrderTicket", Title: "工单申请", Icon: "ant-design:profile-outlined", Type: "1", Show: "1", OrderNo: 24, Component: "workorder/ticket/index", Pid: 5, Path: "ticket"},
+		{Name: "WorkOrderCreate", Title: "工单填写", Icon: "ant-design:form-outlined", Type: "1", Show: "0", OrderNo: 25, Component: "workorder/ticket/create", Pid: 5, Path: "create"},
+		{Name: "WorkOrderSearch", Title: "我的工单", Icon: "ant-design:profile-outlined", Type: "1", Show: "1", OrderNo: 26, Component: "workorder/ticket/search", Pid: 5, Path: "search"},
 
-		{Name: "JobExec", Title: "任务执行中心", Icon: "ant-design:thunderbolt-outlined", Type: "0", Show: "1", OrderNo: 30, Component: "LAYOUT", Path: "/jobExec", Redirect: "/jobExec/task"},
-		{Name: "JobExecScript", Title: "脚本管理", Icon: "ant-design:code-outlined", Type: "1", Show: "1", OrderNo: 31, Component: "jobExec/script/index", Pid: 18, Path: "script"},
-		{Name: "JobExecTask", Title: "任务管理", Icon: "ant-design:schedule-outlined", Type: "1", Show: "1", OrderNo: 32, Component: "jobExec/task/index", Pid: 18, Path: "task"},
+		{Name: "JobExec", Title: "任务执行", Icon: "ant-design:thunderbolt-outlined", Type: "0", Show: "1", OrderNo: 30, Component: "LAYOUT", Path: "/jobExec", Redirect: "/jobExec/script"},
+		{Name: "JobExecTask", Title: "任务管理", Icon: "ant-design:schedule-outlined", Type: "1", Show: "1", OrderNo: 32, Component: "jobExec/task/index", Pid: 12, Path: "task"},
+		{Name: "JobExecScript", Title: "脚本管理", Icon: "ant-design:code-outlined", Type: "1", Show: "1", OrderNo: 31, Component: "jobExec/script/index", Pid: 12, Path: "script"},
 
-		{Name: "Monitor", Title: "监控中心", Icon: "ant-design:dashboard-outlined", Type: "0", Show: "1", OrderNo: 40, Component: "LAYOUT", Path: "/monitor", Redirect: "/monitor/scrape"},
-		{Name: "MonitorPromPool", Title: "prom集群实例管理", Icon: "ant-design:database-outlined", Type: "1", Show: "1", OrderNo: 41, Component: "monitor/pool/index", Pid: 21, Path: "pool"},
-		{Name: "MonitorPromScrapeJob", Title: "prom采集任务管理", Icon: "ant-design:api-outlined", Type: "1", Show: "1", OrderNo: 42, Component: "monitor/scrape/index", Pid: 21, Path: "scrape"},
-		{Name: "MonitorPromAlertRule", Title: "prom告警规则管理", Icon: "ant-design:fund-view-outlined", Type: "1", Show: "1", OrderNo: 43, Component: "monitor/alertrule/index", Pid: 21, Path: "alertrule"},
-		{Name: "MonitorPromRecordRule", Title: "prom聚合规则管理", Icon: "ant-design:fund-view-outlined", Type: "1", Show: "1", OrderNo: 44, Component: "monitor/recordrule/index", Pid: 21, Path: "recordrule"},
+		{Name: "Monitor", Title: "监控中心", Icon: "ant-design:dashboard-outlined", Type: "0", Show: "1", OrderNo: 40, Component: "LAYOUT", Path: "/monitor", Redirect: "/monitor/prom_instance"},
+		{Name: "MonitorPromPool", Title: "prom集群实例管理", Icon: "ant-design:database-outlined", Type: "1", Show: "1", OrderNo: 41, Component: "monitor/prom_instance/index", Pid: 15, Path: "prom_instance"},
+		{Name: "MonitorPromScrapeJob", Title: "prom采集任务管理", Icon: "ant-design:api-outlined", Type: "1", Show: "1", OrderNo: 42, Component: "monitor/prom_scrape/index", Pid: 15, Path: "prom_scrape"},
+		{Name: "MonitorPromAlertRule", Title: "prom告警规则管理", Icon: "ant-design:fund-view-outlined", Type: "1", Show: "1", OrderNo: 43, Component: "monitor/prom_alertrule/index", Pid: 15, Path: "prom_alertrule"},
+		{Name: "MonitorPromRecordRule", Title: "prom聚合规则管理", Icon: "ant-design:fund-view-outlined", Type: "1", Show: "1", OrderNo: 44, Component: "monitor/prom_recordrule/index", Pid: 15, Path: "prom_recordrule"},
+		{Name: "MonitorAlertPool", Title: "alert集群实例管理", Icon: "ant-design:alert-outlined", Type: "1", Show: "1", OrderNo: 45, Component: "monitor/alert_manager/index", Pid: 15, Path: "alert_manager"},
+		{Name: "MonitorAlertSendGroup", Title: "alert发送组管理", Icon: "ant-design:dingding-outlined", Type: "1", Show: "1", OrderNo: 46, Component: "monitor/alert_sendgroup/index", Pid: 15, Path: "alert_sendgroup"},
+		{Name: "MonitorAlertManagerEvent", Title: "alert告警事件管理", Icon: "ant-design:project-outlined", Type: "1", Show: "1", OrderNo: 47, Component: "monitor/alert_event/index", Pid: 15, Path: "alert_event"},
+		{Name: "MonitorOnDutyGroup", Title: "值班组设置", Icon: "ant-design:ungroup-outlined", Type: "1", Show: "1", OrderNo: 48, Component: "monitor/onduty_group/index", Pid: 15, Path: "onduty_group"},
+		{Name: "MonitorOnDutyGroupPlan", Title: "轮值排班表", Icon: "ant-design:calendar-outlined", Type: "1", Show: "1", OrderNo: 49, Component: "monitor/onduty_plan/index", Pid: 15, Path: "onduty_plan"},
 
-		{Name: "MonitorAlertPool", Title: "alert集群实例管理", Icon: "ant-design:alert-outlined", Type: "1", Show: "1", OrderNo: 45, Component: "monitor/alertmanager/index", Pid: 21, Path: "alertmanager"},
-		{Name: "MonitorSendGroup", Title: "alert发送组管理", Icon: "ant-design:dingding-outlined", Type: "1", Show: "1", OrderNo: 46, Component: "monitor/sendgroup/index", Pid: 21, Path: "sendgroup"},
-		{Name: "MonitorAlertManagerEvent", Title: "alert告警事件管理", Icon: "ant-design:project-outlined", Type: "1", Show: "1", OrderNo: 47, Component: "monitor/event/index", Pid: 21, Path: "event"},
+		{Name: "K8sManagement", Title: "容器集群", Icon: "ant-design:kubernetes-outlined", Type: "0", Show: "1", OrderNo: 50, Component: "LAYOUT", Path: "/k8s", Redirect: "/k8s/node"},
+		{Name: "K8sNode", Title: "节点管理", Icon: "ant-design:kubernetes-outlined", Type: "1", Show: "1", OrderNo: 51, Component: "k8s/node/index", Pid: 25, Path: "node"},
 
-		{Name: "MonitorOnDutyGroup", Title: "值班组设置", Icon: "ant-design:ungroup-outlined", Type: "1", Show: "1", OrderNo: 48, Component: "monitor/ondutygroup/index", Pid: 21, Path: "ondutygroup"},
-		{Name: "MonitorOnDutyGroupPlan", Title: "轮值排班表", Icon: "ant-design:calendar-outlined", Type: "1", Show: "1", OrderNo: 49, Component: "monitor/plan/index", Pid: 21, Path: "plan"},
+		{Name: "CiCdManagement", Title: "持续交付", Icon: "ant-design:calendar-outlined", Type: "0", Show: "1", OrderNo: 60, Component: "LAYOUT", Path: "/cicd", Redirect: "/cicd/workorder"},
+		{Name: "CiCdWorkList", Title: "工单列表", Icon: "ant-design:database-outlined", Type: "1", Show: "1", OrderNo: 61, Component: "cicd/workorder/index", Pid: 27, Path: "workorder"},
+		{Name: "CiCdDeployList", Title: "发布工单", Icon: "ant-design:rocket-outlined", Type: "1", Show: "1", OrderNo: 62, Component: "cicd/deploy/index", Pid: 27, Path: "deploy"},
+		{Name: "CiCdServiceBaseline", Title: "服务基线", Icon: "ant-design:sliders-outlined", Type: "1", Show: "1", OrderNo: 63, Component: "cicd/baseline/index", Pid: 27, Path: "baseline"},
+		{Name: "CiCdPipeline", Title: "流水线管理", Icon: "ant-design:branches-outlined", Type: "1", Show: "1", OrderNo: 64, Component: "cicd/pipeline/index", Pid: 27, Path: "pipeline"},
+		{Name: "CiCdEnvManagement", Title: "环境配置", Icon: "ant-design:cloud-server-outlined", Type: "1", Show: "1", OrderNo: 65, Component: "cicd/environment/index", Pid: 27, Path: "environment"},
+
+		{Name: "CodeManagement", Title: "代码管理", Icon: "ant-design:gitlab-filled", Type: "0", Show: "1", OrderNo: 70, Component: "LAYOUT", Path: "/code", Redirect: "/code/repo"},
+		{Name: "CodeRepoManagement", Title: "仓库管理", Icon: "ant-design:database-outlined", Type: "1", Show: "1", OrderNo: 71, Component: "code/repo/index", Pid: 33, Path: "repo"},
+		{Name: "CodeMergeManagement", Title: "合并请求", Icon: "ant-design:merge-cells-outlined", Type: "1", Show: "1", OrderNo: 72, Component: "code/merge/index", Pid: 33, Path: "merge"},
+		{Name: "CodeServerManagement", Title: "实例管理", Icon: "ant-design:api-outlined", Type: "1", Show: "1", OrderNo: 73, Component: "code/server/index", Pid: 33, Path: "server"},
+
+		{Name: "DORAManagement", Title: "效能度量", Icon: "ant-design:line-chart-outlined", Type: "0", Show: "1", OrderNo: 80, Component: "LAYOUT", Path: "/dora", Redirect: "/dora/dashboard"},
+		{Name: "EffDashboard", Title: "效能看板", Icon: "ant-design:code-outlined", Type: "1", Show: "1", OrderNo: 81, Component: "dora/dashboard/index", Pid: 37, Path: "dashboard"},
+		{Name: "DeployStat", Title: "部署统计", Icon: "ant-design:database-outlined", Type: "1", Show: "1", OrderNo: 82, Component: "dora/deployStat/index", Pid: 37, Path: "deployStat"},
+
+		{Name: "System", Title: "系统管理", Icon: "ant-design:setting-outlined", Type: "0", Show: "1", OrderNo: 90, Component: "LAYOUT", Path: "/system", Redirect: "/system/changePassword"},
+		{Name: "MenuManagement", Title: "菜单管理", Icon: "ant-design:menu-outlined", Type: "1", Show: "1", OrderNo: 91, Component: "system/menu/index", Pid: 40, Path: "menu"},
+		{Name: "AccountManagement", Title: "用户管理", Icon: "ant-design:user-outlined", Type: "1", Show: "1", OrderNo: 92, Component: "system/account/index", Pid: 40, Path: "account"},
+		{Name: "RoleManagement", Title: "角色管理", Icon: "ant-design:solution-outlined", Type: "1", Show: "1", OrderNo: 93, Component: "system/role/index", Pid: 40, Path: "role"},
+		{Name: "ChangePassword", Title: "修改密码", Icon: "ant-design:key-outlined", Type: "1", Show: "1", OrderNo: 94, Component: "system/password/index", Pid: 40, Path: "changePassword"},
+		{Name: "ApiManagement", Title: "接口授权", Icon: "ant-design:api-outlined", Type: "1", Show: "1", OrderNo: 95, Component: "system/api/index", Pid: 40, Path: "api"},
+		{Name: "SystemSetting", Title: "系统设置", Icon: "ant-design:setting-twotone", Type: "1", Show: "1", OrderNo: 96, Component: "system/settings/index", Pid: 40, Path: "settings"},
+
+		{Name: "PermissionManagement", Title: "权限管理", Icon: "ion:layers-outline", Type: "0", Show: "1", OrderNo: 100, Component: "LAYOUT", Path: "/permission", Redirect: "/permission/front"},
+		{Name: "PermissionFront", Title: "前端权限管理", Icon: "ion:layers-outline", Type: "1", Show: "1", OrderNo: 101, Component: "/permission/front/index", Pid: 47, Path: "front"},
+		{Name: "CodeUserManagement", Title: "Git用户管理", Icon: "ant-design:usergroup-add-outlined", Type: "1", Show: "1", OrderNo: 74, Component: "code/user/index", Pid: 33, Path: "user"},
+		{Name: "CodeNamespaceManagement", Title: "命名空间管理", Icon: "ant-design:appstore-outlined", Type: "1", Show: "1", OrderNo: 75, Component: "code/namespace/index", Pid: 33, Path: "namespace"},
 	}
 
 	apis := []*Api{
@@ -247,6 +270,9 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		//{Path: "/api/getUserInfo", Method: "GET", Pid: 1, Title: "获取用户信息", Type: "1"},
 		//{Path: "/api/getPermCode", Method: "GET", Pid: 1, Title: "获得用户code", Type: "1"},
 		//{Path: "/api/system/getAccountList", Method: "GET", Pid: 1, Title: "获取用户列表", Type: "1"},
+
+		{Path: "/api/code", Method: "GET", Title: "代码管理", Type: "0"},
+		{Path: "/api/system/setting/get", Method: "GET", Pid: 1, Title: "系统管理-全局设置", Type: "1"},
 	}
 
 	for _, menu := range menus {
@@ -260,7 +286,7 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		Password:     common.BcryptHash("tingbao89.."),
 		RealName:     "海绵宝宝",
 		FeiShuUserId: "b75ag4g4",
-		HomePath:     "/system/role",
+		HomePath:     "/dashboard/analysis",
 		Enable:       1,
 		Roles: []*Role{
 			{RoleName: "超级管理员", RoleValue: "super", Menus: menus},
@@ -272,7 +298,7 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		Password:     common.BcryptHash("123456"),
 		RealName:     "派大星",
 		FeiShuUserId: "b75ag4g4",
-		HomePath:     "/system/role",
+		HomePath:     "/dashboard/analysis",
 		Enable:       1,
 		Roles: []*Role{
 			{RoleName: "前端管理员", RoleValue: "frontAdmin"},
@@ -284,7 +310,7 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		Password:     common.BcryptHash("123456"),
 		RealName:     "自动工单执行机器人",
 		FeiShuUserId: "b75ag4g4",
-		HomePath:     "/system/role",
+		HomePath:     "/dashboard/analysis",
 		Enable:       1,
 		Roles: []*Role{
 			{RoleName: "集群超级管理员", RoleValue: "bot_super", Menus: menus},

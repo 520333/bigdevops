@@ -229,20 +229,9 @@ func deleteJobExecTask(c *gin.Context) {
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
-	dbTemplate, err := models.GetJobTaskById(intVar)
-
-	// 1. 如果有 err 并且不是“未找到记录”的错误，说明数据库查询出错了
-	if err != nil && err.Error() != "WorkOrderTemplate不存在" { // 这里的字符串取决于你 Get 方法里的定义
-		sc.Logger.Error("检查表单关联模板时发生数据库错误", zap.Error(err))
-		common.FailWithMessage("检查模板关联失败", c)
-		return
-	}
-
-	// 2. 如果成功查到了模板，说明被占用了，明确拒绝并返回自定义提示
-	if dbTemplate != nil && dbTemplate.ID > 0 {
-		errMsg := fmt.Sprintf("该任务执行已被工单模板【%s】绑定，禁止直接删除！", dbTemplate.Title)
-		sc.Logger.Warn(errMsg, zap.Any("表单ID", id))
-		common.FailWithMessage(errMsg, c)
+	// 检查任务是否正在运行，防止误删正在执行的后台任务
+	if dbRole.Status == "running" {
+		common.FailWithMessage("任务正在运行中，请先终止任务后再删除！", c)
 		return
 	}
 	err = dbRole.DeleteOne()
