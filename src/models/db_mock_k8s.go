@@ -12,6 +12,7 @@ import (
 
 func mockK8sData(sc *config.ServerConfig, adminUser *User) {
 	var kubeConfigContents []string
+	var kubeConfigNames []string
 
 	configs, err := os.ReadDir("./kubeconfig")
 	if err != nil {
@@ -19,16 +20,17 @@ func mockK8sData(sc *config.ServerConfig, adminUser *User) {
 		return
 	}
 
-	for _, dirEntry := range configs {
-		if dirEntry.IsDir() {
+	for _, info := range configs {
+		if info.IsDir() {
 			continue
 		}
-		content, err := os.ReadFile(filepath.Join("./kubeconfig", dirEntry.Name()))
+		content, err := os.ReadFile(filepath.Join("./kubeconfig", info.Name()))
 		if err != nil {
-			sc.Logger.Error("[k8s模块] 读取 kubeconfig 配置文件失败", zap.String("file", dirEntry.Name()), zap.Error(err))
+			sc.Logger.Error("[k8s模块] 读取 kubeconfig 配置文件失败", zap.String("file", info.Name()), zap.Error(err))
 			continue
 		}
 		kubeConfigContents = append(kubeConfigContents, string(content))
+		kubeConfigNames = append(kubeConfigNames, info.Name())
 	}
 
 	if len(kubeConfigContents) == 0 {
@@ -36,7 +38,7 @@ func mockK8sData(sc *config.ServerConfig, adminUser *User) {
 		return
 	}
 
-	num := 5
+	num := 1
 	for i := 0; i < num; i++ {
 		mIndex := i
 		if mIndex >= len(common.RUN_ENV_TYPE_ARRAY) {
@@ -47,7 +49,8 @@ func mockK8sData(sc *config.ServerConfig, adminUser *User) {
 		configContent := kubeConfigContents[i%len(kubeConfigContents)]
 
 		tmp := K8sCluster{
-			Name:                 fmt.Sprintf("k8s-cluster-%s-%d", env, i+1),
+			Name:                 kubeConfigNames[mIndex],
+			NameZh:               fmt.Sprintf("集群-%s", env),
 			UserID:               1,
 			Env:                  env,
 			KubeConfigContent:    configContent,

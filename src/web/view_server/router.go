@@ -224,6 +224,15 @@ func ConfigRouter(r *gin.Engine) {
 		monitorApiGroup.POST("/createMonitorOndutyChange", createMonitorOndutyChange)
 	}
 
+	K8sGroup := afterLoginApiGroup.Group("/k8s")
+	{
+		K8sGroup.GET("/getK8sClusterList", getK8sClusterList)
+		K8sGroup.POST("/createK8sCluster", createK8sCluster)
+		K8sGroup.POST("/updateK8sCluster", updateK8sCluster)
+		K8sGroup.DELETE("/deleteK8sCluster/:id", deleteK8sCluster)
+		K8sGroup.DELETE("/deleteK8sClusterBatch", deleteK8sClusterBatch)
+	}
+
 	CodeGroup := afterLoginApiGroup.Group("/code")
 	{
 		CodeGroup.GET("/getCodeGitServerList", getCodeGitServerList)
@@ -255,6 +264,7 @@ func ConfigRouter(r *gin.Engine) {
 		CodeGroup.POST("/closeMergeRequest", closeMergeRequest)
 
 	}
+
 }
 
 func getNowTs(c *gin.Context) {

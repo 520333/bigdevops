@@ -15,18 +15,23 @@ func mockSystemData(sc *config.ServerConfig) *User {
 	}
 
 	modules := []MenuModule{
+		// 工作台
 		{
 			Parent: &Menu{Name: "Dashboard", Title: "工作台", Icon: "ant-design:dashboard-outlined", Type: "0", Show: "1", OrderNo: 1, Component: "LAYOUT", Path: "/dashboard", Redirect: "/dashboard/analysis"},
 			Children: []*Menu{
 				{Name: "Analysis", Title: "概览分析", Icon: "ant-design:area-chart-outlined", Type: "1", Show: "1", OrderNo: 2, Component: "dashboard/analysis/index", Path: "analysis"},
 			},
 		},
+
+		// 服务树
 		{
 			Parent: &Menu{Name: "ServiceTree", Title: "资产管理", Icon: "ant-design:database-outlined", Type: "0", Show: "1", OrderNo: 10, Component: "LAYOUT", Path: "/serviceTree", Redirect: "/ServiceTree/streeAsync"},
 			Children: []*Menu{
 				{Name: "ServiceTreeIndexAsync", Title: "CMDB服务树", Icon: "ant-design:node-index-outlined", Type: "1", Show: "1", OrderNo: 11, Component: "stree/stree/indexAsync", Path: "streeAsync"},
 			},
 		},
+
+		// IT工单
 		{
 			Parent: &Menu{Name: "WorkOrder", Title: "工单服务", Icon: "ant-design:reconciliation-outlined", Type: "0", Show: "1", OrderNo: 20, Component: "LAYOUT", Path: "/workOrder", Redirect: "/workOrder/process"},
 			Children: []*Menu{
@@ -38,6 +43,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 				{Name: "WorkOrderSearch", Title: "我的工单", Icon: "ant-design:profile-outlined", Type: "1", Show: "1", OrderNo: 26, Component: "workorder/ticket/search", Path: "search"},
 			},
 		},
+
+		// 任务执行
 		{
 			Parent: &Menu{Name: "JobExec", Title: "任务执行", Icon: "ant-design:thunderbolt-outlined", Type: "0", Show: "1", OrderNo: 30, Component: "LAYOUT", Path: "/jobExec", Redirect: "/jobExec/script"},
 			Children: []*Menu{
@@ -45,6 +52,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 				{Name: "JobExecScript", Title: "脚本管理", Icon: "ant-design:code-outlined", Type: "1", Show: "1", OrderNo: 31, Component: "jobExec/script/index", Path: "script"},
 			},
 		},
+
+		// 监控中心
 		{
 			Parent: &Menu{Name: "Monitor", Title: "监控中心", Icon: "ant-design:dashboard-outlined", Type: "0", Show: "1", OrderNo: 40, Component: "LAYOUT", Path: "/monitor", Redirect: "/monitor/prom_instance"},
 			Children: []*Menu{
@@ -59,12 +68,16 @@ func mockSystemData(sc *config.ServerConfig) *User {
 				{Name: "MonitorOnDutyGroupPlan", Title: "轮值排班表", Icon: "ant-design:calendar-outlined", Type: "1", Show: "1", OrderNo: 49, Component: "monitor/onduty_plan/index", Path: "onduty_plan"},
 			},
 		},
+
+		// 容器集群
 		{
-			Parent: &Menu{Name: "K8sClusterManagement", Title: "容器集群", Icon: "ant-design:kubernetes-outlined", Type: "0", Show: "1", OrderNo: 50, Component: "LAYOUT", Path: "/k8s", Redirect: "/k8s/node"},
+			Parent: &Menu{Name: "K8sClusterManagement", Title: "容器集群", Icon: "ant-design:kubernetes-outlined", Type: "0", Show: "1", OrderNo: 50, Component: "LAYOUT", Path: "/k8s", Redirect: "/k8s/cluster"},
 			Children: []*Menu{
-				{Name: "K8sNode", Title: "节点管理", Icon: "ant-design:kubernetes-outlined", Type: "1", Show: "1", OrderNo: 51, Component: "k8s/node/index", Path: "node"},
+				{Name: "K8sNode", Title: "集群管理", Icon: "ant-design:kubernetes-outlined", Type: "1", Show: "1", OrderNo: 51, Component: "k8s/cluster/index", Path: "cluster"},
 			},
 		},
+
+		// cicd
 		{
 			Parent: &Menu{Name: "CiCdManagement", Title: "持续交付", Icon: "ant-design:calendar-outlined", Type: "0", Show: "1", OrderNo: 60, Component: "LAYOUT", Path: "/cicd", Redirect: "/cicd/workorder"},
 			Children: []*Menu{
@@ -75,6 +88,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 				{Name: "CiCdEnvManagement", Title: "环境配置", Icon: "ant-design:cloud-server-outlined", Type: "1", Show: "1", OrderNo: 65, Component: "cicd/environment/index", Path: "environment"},
 			},
 		},
+
+		// 代码管理
 		{
 			Parent: &Menu{Name: "CodeManagement", Title: "代码管理", Icon: "ant-design:gitlab-filled", Type: "0", Show: "1", OrderNo: 70, Component: "LAYOUT", Path: "/code", Redirect: "/code/repo"},
 			Children: []*Menu{
@@ -85,6 +100,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 				{Name: "CodeNamespaceManagement", Title: "命名空间管理", Icon: "ant-design:appstore-outlined", Type: "1", Show: "1", OrderNo: 75, Component: "code/namespace/index", Path: "namespace"},
 			},
 		},
+
+		// 效能度量
 		{
 			Parent: &Menu{Name: "DORAManagement", Title: "效能度量", Icon: "ant-design:line-chart-outlined", Type: "0", Show: "1", OrderNo: 80, Component: "LAYOUT", Path: "/dora", Redirect: "/dora/dashboard"},
 			Children: []*Menu{
@@ -92,6 +109,7 @@ func mockSystemData(sc *config.ServerConfig) *User {
 				{Name: "DeployStat", Title: "部署统计", Icon: "ant-design:database-outlined", Type: "1", Show: "1", OrderNo: 82, Component: "dora/deployStat/index", Path: "deployStat"},
 			},
 		},
+		// 系统管理
 		{
 			Parent: &Menu{Name: "System", Title: "系统管理", Icon: "ant-design:setting-outlined", Type: "0", Show: "1", OrderNo: 90, Component: "LAYOUT", Path: "/system", Redirect: "/system/changePassword"},
 			Children: []*Menu{
@@ -128,6 +146,7 @@ func mockSystemData(sc *config.ServerConfig) *User {
 	}
 
 	apiModules := []ApiModule{
+		// 系统管理
 		{
 			Parent: &Api{Path: "/api/system", Method: "GET", Title: "系统管理", Type: "0", Pid: 0},
 			Children: []*Api{
@@ -160,6 +179,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 				{Path: "/api/system/setting/update", Method: "PUT", Title: "系统管理-更新设置", Type: "1"},
 			},
 		},
+
+		// 服务树
 		{
 			Parent: &Api{Path: "/api/stree", Method: "GET", Title: "CMDB资产管理模块", Type: "0"},
 			Children: []*Api{
@@ -185,6 +206,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 				{Path: "/api/stree/unBindRdsToStreeNode", Method: "POST", Title: "[cmdb数据库]节点解绑RDS", Type: "1"},
 			},
 		},
+
+		// it工单
 		{
 			Parent: &Api{Path: "/api/workorder", Method: "GET", Title: "工单服务模块", Type: "0"},
 			Children: []*Api{
@@ -211,6 +234,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 				{Path: "/api/workorder/commentWorkOrderInstance/:id", Method: "POST", Title: "[工单模块]评论工单", Type: "1"},
 			},
 		},
+
+		// 任务执行
 		{
 			Parent: &Api{Path: "/api/jobexec", Method: "GET", Title: "任务执行中心模块", Type: "0"},
 			Children: []*Api{
@@ -230,6 +255,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 				{Path: "/api/jobexec/getJobExecResultByJobId", Method: "GET", Title: "[任务执行中心]获取任务结果", Type: "1"},
 			},
 		},
+
+		// 监控中心
 		{
 			Parent: &Api{Path: "/api/monitor", Method: "GET", Title: "监控中心模块", Type: "0"},
 			Children: []*Api{
@@ -288,6 +315,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 				{Path: "/api/monitor/createMonitorOndutyChange", Method: "POST", Title: "[排班表]创建替班记录", Type: "1"},
 			},
 		},
+
+		// 代码管理
 		{
 			Parent: &Api{Path: "/api/code", Method: "GET", Title: "代码管理", Type: "0"},
 			Children: []*Api{
@@ -315,6 +344,17 @@ func mockSystemData(sc *config.ServerConfig) *User {
 				{Path: "/api/code/closeMergeRequest", Method: "POST", Title: "[代码管理]关闭合并请求", Type: "1"},
 			},
 		},
+		{
+			Parent: &Api{Path: "/api/k8s", Method: "GET", Title: "容器集群模块", Type: "0"},
+			Children: []*Api{
+				{Path: "/api/k8s/getK8sClusterList", Method: "GET", Title: "[k8s集群]获取集群列表", Type: "1"},
+				{Path: "/api/k8s/createK8sCluster", Method: "POST", Title: "[k8s集群]创建集群", Type: "1"},
+				{Path: "/api/k8s/updateK8sCluster", Method: "POST", Title: "[k8s集群]更新集群", Type: "1"},
+				{Path: "/api/k8s/deleteK8sCluster/:id", Method: "DELETE", Title: "[k8s集群]删除集群", Type: "1"},
+				{Path: "/api/k8s/deleteK8sClusterBatch", Method: "DELETE", Title: "[k8s集群]批量删除集群", Type: "1"},
+			},
+		},
+
 		{
 			Parent: &Api{Path: "/api", Method: "GET", Title: "所有api权限", Type: "0"},
 			Children: []*Api{
@@ -377,7 +417,7 @@ func mockSystemData(sc *config.ServerConfig) *User {
 	var opsApis []*Api
 	var k8sApis []*Api
 
-	var systemApiParentID, streeApiParentID, monitorApiParentID uint
+	var systemApiParentID, streeApiParentID, monitorApiParentID, k8sApiParentID uint
 	for _, mod := range apiModules {
 		if mod.Parent.Path == "/api/system" {
 			systemApiParentID = mod.Parent.ID
@@ -385,6 +425,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 			streeApiParentID = mod.Parent.ID
 		} else if mod.Parent.Path == "/api/monitor" {
 			monitorApiParentID = mod.Parent.ID
+		} else if mod.Parent.Path == "/api/k8s" {
+			k8sApiParentID = mod.Parent.ID
 		}
 	}
 
@@ -393,9 +435,10 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		if api.ID != systemApiParentID && api.Pid != int(systemApiParentID) {
 			opsApis = append(opsApis, api)
 		}
-		// K8s Admin gets CMDB stree and Monitor APIs
+		// K8s Admin gets CMDB stree, Monitor and K8s APIs
 		if api.ID == streeApiParentID || api.Pid == int(streeApiParentID) ||
-			api.ID == monitorApiParentID || api.Pid == int(monitorApiParentID) {
+			api.ID == monitorApiParentID || api.Pid == int(monitorApiParentID) ||
+			api.ID == k8sApiParentID || api.Pid == int(k8sApiParentID) {
 			k8sApis = append(k8sApis, api)
 		}
 	}

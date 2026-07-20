@@ -13,7 +13,8 @@ import (
 
 type K8sCluster struct {
 	Model
-	Name string `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:k8s集群名称"`
+	Name   string `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:k8s集群英文名称"`
+	NameZh string `json:"nameZh,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:k8s集群中文名称"`
 
 	UserID               uint
 	Env                  string `json:"env,omitempty" gorm:"comment:集群环境信息 prod|stage|test"`
