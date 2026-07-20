@@ -21,6 +21,7 @@ type ServerConfig struct {
 	WorkOrderAutoActionC            *WorkOrderAutoAction `yaml:"work_order_auto_action"`
 	GrpcServerConfig                *GrpcServerConfig    `yaml:"grpc_server_config"`
 	JobExec                         *ServerJobExec       `yaml:"job_exec"`
+	K8sClusterC                     *K8sCluster          `yaml:"k8s_cluster"`
 	MonitorComputeC                 *MonitorCompute      `yaml:"monitor_compute"`
 	Logger                          *zap.Logger          `yaml:"-"`
 	Domain                          string               `yaml:"front_domain"`
@@ -28,10 +29,14 @@ type ServerConfig struct {
 	AlertManagerApi                 string               `yaml:"alert_manager_api"`
 }
 
-type ServerJobExec struct {
+type K8sCluster struct {
 	Enable             bool `yaml:"enable"`
 	RunIntervalSeconds int  `yaml:"run_interval_seconds"`
 	ExecTimeoutSeconds int  `yaml:"execTimeoutSeconds"`
+}
+type ServerJobExec struct {
+	Enable             bool `yaml:"enable"`
+	RunIntervalSeconds int  `yaml:"run_interval_seconds"`
 }
 type MonitorCompute struct {
 	Enable             bool   `yaml:"enable"`

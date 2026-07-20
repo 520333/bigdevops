@@ -84,6 +84,9 @@ func main() {
 	// 初始化 监控模块的cache
 	mc := cache.NewMonitorCache(sc)
 
+	// 初始化 k8s模块的cache
+	kc := cache.NewK8sClusterCache(sc)
+
 	// 初始化group
 	group, stopChan := esl.SetupStopSignalContext()
 	ctxAll, cancelAll := context.WithCancel(context.Background())
@@ -131,6 +134,7 @@ func main() {
 		}
 	}
 
+	// 任务执行模块
 	{
 		if sc.JobExec.Enable {
 			group.Go(func() error {
@@ -146,6 +150,7 @@ func main() {
 		}
 	}
 
+	// 告警监控模块
 	{
 		if sc.MonitorComputeC.Enable {
 			group.Go(func() error {
@@ -172,6 +177,22 @@ func main() {
 		})
 
 	}
+	// k8s集群模块
+	{
+		if sc.K8sClusterC.Enable {
+			group.Go(func() error {
+				logger.Info("计划任务-k8s模块-启动")
+				err := kc.K8sClusterCacheManager(ctxAll)
+				if err != nil {
+					logger.Error("计划任务-k8s模块-报错", zap.Error(err))
+				}
+				return err
+			})
+		} else {
+			logger.Info("计划任务-k8s模块-关闭")
+		}
+	}
+
 	// GIN-WEB
 	group.Go(func() error {
 		errChan := make(chan error, 1)

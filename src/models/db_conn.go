@@ -122,6 +122,8 @@ func MigrateTable() error {
 
 		&MonitorAlertManagerEvent{},
 
+		// k8s
+		&K8sCluster{},
 		// git
 		&CodeGitServer{},
 	)
@@ -153,7 +155,12 @@ func MockUserRegister(sc *config.ServerConfig) {
 	// 5.监控模块数据
 	mockMonitorData(sc, adminUser)
 
-	//
+	// 6.k8s集群数据
+	mockK8sData(sc, adminUser)
+
+	// 7.CICD
+
+	// 8.代码仓库
 	mockCodeGitData(sc, adminUser)
 
 	sc.Logger.Info("全模块 Mock 基础数据初始化成功 🚀")

@@ -39,7 +39,7 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		{Name: "MonitorOnDutyGroup", Title: "值班组设置", Icon: "ant-design:ungroup-outlined", Type: "1", Show: "1", OrderNo: 48, Component: "monitor/onduty_group/index", Pid: 15, Path: "onduty_group"},
 		{Name: "MonitorOnDutyGroupPlan", Title: "轮值排班表", Icon: "ant-design:calendar-outlined", Type: "1", Show: "1", OrderNo: 49, Component: "monitor/onduty_plan/index", Pid: 15, Path: "onduty_plan"},
 
-		{Name: "K8sManagement", Title: "容器集群", Icon: "ant-design:kubernetes-outlined", Type: "0", Show: "1", OrderNo: 50, Component: "LAYOUT", Path: "/k8s", Redirect: "/k8s/node"},
+		{Name: "K8sClusterManagement", Title: "容器集群", Icon: "ant-design:kubernetes-outlined", Type: "0", Show: "1", OrderNo: 50, Component: "LAYOUT", Path: "/k8s", Redirect: "/k8s/node"},
 		{Name: "K8sNode", Title: "节点管理", Icon: "ant-design:kubernetes-outlined", Type: "1", Show: "1", OrderNo: 51, Component: "k8s/node/index", Pid: 25, Path: "node"},
 
 		{Name: "CiCdManagement", Title: "持续交付", Icon: "ant-design:calendar-outlined", Type: "0", Show: "1", OrderNo: 60, Component: "LAYOUT", Path: "/cicd", Redirect: "/cicd/workorder"},

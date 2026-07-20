@@ -3,6 +3,7 @@ module bigdevops
 go 1.26.1
 
 require (
+	code.gitea.io/sdk/gitea v0.25.1
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.107
 	github.com/aws/aws-sdk-go-v2 v1.41.11
 	github.com/aws/aws-sdk-go-v2/config v1.32.18
@@ -31,6 +32,7 @@ require (
 	github.com/prometheus/prometheus v0.312.0
 	github.com/shimingyah/pool v1.0.0
 	github.com/shirou/gopsutil/v3 v3.24.5
+	github.com/xanzy/go-gitlab v0.115.0
 	github.com/zsais/go-gin-prometheus v1.0.3
 	go.uber.org/zap v1.28.0
 	golang.org/x/crypto v0.51.0
@@ -47,7 +49,6 @@ require (
 	cloud.google.com/go/auth v0.20.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
-	code.gitea.io/sdk/gitea v0.25.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/42wim/httpsig v1.2.4 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.21.1 // indirect
@@ -186,7 +187,6 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	github.com/xanzy/go-gitlab v0.115.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
