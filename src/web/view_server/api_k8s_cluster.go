@@ -46,7 +46,6 @@ func getK8sClusterList(c *gin.Context) {
 			continue
 		}
 		obj.LastProbSuccess = kc.GetClusterProbeResultById(obj.ID)
-		//sc.Logger.Info("[k8s模块] 获取集群探活状态", zap.Any("obj.ID", obj.ID), zap.Any("LastProbSuccess", obj.LastProbSuccess), zap.Any("cachedAliveMap", kc.KubeClientsAlive))
 		// 填充前端需要的数据（拿到组合好的 CreateUserName）
 		obj.FillFrontAllData()
 
@@ -78,6 +77,7 @@ func getK8sClusterList(c *gin.Context) {
 	// 🚀 修复 2：分页查出来的新对象，必须再次遍历填充一次虚拟字段，否则响应里还是空的！
 	for _, obj := range pagedObjs {
 		obj.LastProbSuccess = kc.GetClusterProbeResultById(obj.ID)
+		obj.LastProbErrMsg = kc.GetClusterProbeErrMsgById(obj.ID)
 		obj.FillFrontAllData()
 	}
 

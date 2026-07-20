@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -30,6 +31,7 @@ type K8sCluster struct {
 	CreateUserName string `json:"createUserName" gorm:"-"`
 
 	LastProbSuccess  bool              `json:"lastProbSuccess" gorm:"-"`
+	LastProbErrMsg   string            `json:"LastProbErrMsg" gorm:"-"`
 	LabelsFront      string            `json:"labelsFront" gorm:"-"`
 	AnnotationsFront string            `json:"annotationsFront" gorm:"-"`
 	LabelsM          map[string]string `json:"labelsM" gorm:"-"`
@@ -104,6 +106,7 @@ func (obj *K8sCluster) FillDefaultData() error {
 		return fmt.Errorf("解析kubeconfig内容失败: %v", err)
 	}
 	obj.ApiServerAddr = kConfig.Host
+	kConfig.Timeout = time.Duration(obj.ActionTimeoutSeconds) * time.Second
 
 	clientSet, err := kubernetes.NewForConfig(kConfig)
 	if err != nil {
