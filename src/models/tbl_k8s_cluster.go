@@ -7,6 +7,8 @@ import (
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // K8sCluster 采集任务Job对象
@@ -18,6 +20,8 @@ type K8sCluster struct {
 
 	UserID               uint
 	Env                  string `json:"env,omitempty" gorm:"comment:集群环境信息 prod|stage|test"`
+	Version              string `json:"version,omitempty" gorm:"comment:集群版本"`              // 不需要用户填入 解析kubeconfig发起serverVersion请求
+	ApiServerAddr        string `json:"apiServerAddr,omitempty" gorm:"comment:apiServer地址"` // 不需要用户填入 解析kubeconfig
 	KubeConfigContent    string `json:"kubeConfigContent" gorm:"comment:kubeconfig配置文件"`
 	ActionTimeoutSeconds int    `json:"actionTimeoutSeconds" gorm:"comment:超时时间秒数"`
 
@@ -25,6 +29,7 @@ type K8sCluster struct {
 
 	CreateUserName string `json:"createUserName" gorm:"-"`
 
+	LastProbSuccess  bool              `json:"lastProbSuccess" gorm:"-"`
 	LabelsFront      string            `json:"labelsFront" gorm:"-"`
 	AnnotationsFront string            `json:"annotationsFront" gorm:"-"`
 	LabelsM          map[string]string `json:"labelsM" gorm:"-"`
@@ -84,11 +89,32 @@ func (obj *K8sCluster) GenMapFromKvs(kvs []string) map[string]string {
 	return labelsM
 }
 
-func (obj *K8sCluster) FillDefaultData() {
+func (obj *K8sCluster) FillDefaultData() error {
 	if obj.ActionTimeoutSeconds == 0 {
 		obj.ActionTimeoutSeconds = 3
 	}
 
+	if obj.KubeConfigContent == "" {
+		return errors.New("KubeConfig内容不能为空")
+	}
+
+	// 解析kubeconfig 拿到apiServer地址
+	kConfig, err := clientcmd.RESTConfigFromKubeConfig([]byte(obj.KubeConfigContent))
+	if err != nil {
+		return fmt.Errorf("解析kubeconfig内容失败: %v", err)
+	}
+	obj.ApiServerAddr = kConfig.Host
+
+	clientSet, err := kubernetes.NewForConfig(kConfig)
+	if err != nil {
+		return fmt.Errorf("创建Kubernetes客户端失败: %v", err)
+	}
+
+	v, err := clientSet.ServerVersion()
+	if err == nil && v != nil && v.GitVersion != "" {
+		obj.Version = v.GitVersion
+	}
+	return nil
 }
 
 func (obj *K8sCluster) FillFrontAllData() {

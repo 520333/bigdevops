@@ -197,7 +197,7 @@ func main() {
 	group.Go(func() error {
 		errChan := make(chan error, 1)
 		go func() {
-			errChan <- web.ServerStartGin(sc, mc)
+			errChan <- web.ServerStartGin(sc, mc, kc)
 		}()
 		logger.Info("[web启动成功]")
 		select {

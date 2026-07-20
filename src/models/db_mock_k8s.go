@@ -38,7 +38,7 @@ func mockK8sData(sc *config.ServerConfig, adminUser *User) {
 		return
 	}
 
-	num := 1
+	num := 4
 	for i := 0; i < num; i++ {
 		mIndex := i
 		if mIndex >= len(common.RUN_ENV_TYPE_ARRAY) {
@@ -48,14 +48,16 @@ func mockK8sData(sc *config.ServerConfig, adminUser *User) {
 
 		configContent := kubeConfigContents[i%len(kubeConfigContents)]
 
+		baseName := kubeConfigNames[i%len(kubeConfigNames)]
 		tmp := K8sCluster{
-			Name:                 kubeConfigNames[mIndex],
+			Name:                 fmt.Sprintf("%s-%s", baseName, env),
 			NameZh:               fmt.Sprintf("集群-%s", env),
 			UserID:               1,
 			Env:                  env,
 			KubeConfigContent:    configContent,
 			ActionTimeoutSeconds: i + 1,
 		}
+		_ = tmp.FillDefaultData()
 		_ = tmp.CreateOne()
 	}
 

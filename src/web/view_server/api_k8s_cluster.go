@@ -1,6 +1,7 @@
 package view_server
 
 import (
+	"bigdevops/src/cache"
 	"bigdevops/src/common"
 	"bigdevops/src/config"
 	"bigdevops/src/models"
@@ -35,7 +36,7 @@ func getK8sClusterList(c *gin.Context) {
 		return
 	}
 	allIds := []int{}
-
+	kc := c.MustGet(common.GIN_CTX_K8S_CACHE).(*cache.K8sClusterCache)
 	for _, obj := range objs {
 		if searchUserID != "" && int(obj.UserID) != searchUserIDInt {
 			continue
@@ -44,7 +45,8 @@ func getK8sClusterList(c *gin.Context) {
 		if searchTitle != "" && !strings.Contains(obj.Name, searchTitle) {
 			continue
 		}
-
+		obj.LastProbSuccess = kc.GetClusterProbeResultById(obj.ID)
+		//sc.Logger.Info("[k8s模块] 获取集群探活状态", zap.Any("obj.ID", obj.ID), zap.Any("LastProbSuccess", obj.LastProbSuccess), zap.Any("cachedAliveMap", kc.KubeClientsAlive))
 		// 填充前端需要的数据（拿到组合好的 CreateUserName）
 		obj.FillFrontAllData()
 
@@ -75,6 +77,7 @@ func getK8sClusterList(c *gin.Context) {
 
 	// 🚀 修复 2：分页查出来的新对象，必须再次遍历填充一次虚拟字段，否则响应里还是空的！
 	for _, obj := range pagedObjs {
+		obj.LastProbSuccess = kc.GetClusterProbeResultById(obj.ID)
 		obj.FillFrontAllData()
 	}
 
@@ -104,7 +107,15 @@ func createK8sCluster(c *gin.Context) {
 		reqObj.UserID = dbUser.ID
 	}
 
-	reqObj.FillDefaultData()
+	err = reqObj.FillDefaultData()
+	if err != nil {
+		sc.Logger.Error("获取集群版本错误", zap.Error(err))
+		common.ReqBadFailWithMessage(err.Error(), c)
+		return
+	}
+
+	// 解析kubeconfig
+
 	// 存入数据库
 	err = reqObj.CreateOne()
 	if err != nil {
@@ -134,8 +145,12 @@ func updateK8sCluster(c *gin.Context) {
 		return
 	}
 	reqObj.UserID = dbOld.UserID
-
-	reqObj.FillDefaultData()
+	err = reqObj.FillDefaultData()
+	if err != nil {
+		sc.Logger.Error("更新集群配置解析错误", zap.Error(err))
+		common.ReqBadFailWithMessage(err.Error(), c)
+		return
+	}
 
 	err = reqObj.UpdateOne()
 	if err != nil {
