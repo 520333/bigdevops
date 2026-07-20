@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"bigdevops/src/common"
 	"bigdevops/src/config"
 	"bigdevops/src/models"
 	"context"
@@ -48,7 +49,6 @@ func (obj *K8sClusterCache) ReNewClientsMap(ctx context.Context) {
 	m := make(map[uint]*kubernetes.Clientset)
 	for _, kc := range kcs {
 		kc := kc
-		// 【彻底修复】：直接在内存中解析 KubeConfig 内容，不生成任何临时文件
 		kConfig, err := clientcmd.RESTConfigFromKubeConfig([]byte(kc.KubeConfigContent))
 		if err != nil {
 			obj.Sc.Logger.Error("[k8s模块]解析KubeConfig内存内容失败", zap.Error(err), zap.Any("集群名称", kc.Name))
@@ -61,8 +61,9 @@ func (obj *K8sClusterCache) ReNewClientsMap(ctx context.Context) {
 			continue
 		}
 		m[kc.ID] = clientSet
-		//obj.Sc.Logger.Info("[k8s模块]读取kubeconfig生成NewForConfig成功", zap.Any("集群名称", kc.Name))
-		nodes, err := clientSet.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+		ctx1, cancel1 := common.GenTimeoutContext(kc.ActionTimeoutSeconds)
+		nodes, err := clientSet.CoreV1().Nodes().List(ctx1, metav1.ListOptions{})
+		cancel1()
 
 		if err != nil {
 			continue

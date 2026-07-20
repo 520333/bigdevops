@@ -15,9 +15,10 @@ type K8sCluster struct {
 	Model
 	Name string `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:k8s集群名称"`
 
-	UserID            uint
-	Env               string `json:"env,omitempty" gorm:"comment:集群环境信息 prod|stage|test"`
-	KubeConfigContent string `json:"kubeConfigContent" gorm:"comment:kubeconfig配置文件"`
+	UserID               uint
+	Env                  string `json:"env,omitempty" gorm:"comment:集群环境信息 prod|stage|test"`
+	KubeConfigContent    string `json:"kubeConfigContent" gorm:"comment:kubeconfig配置文件"`
+	ActionTimeoutSeconds int    `json:"actionTimeoutSeconds" gorm:"comment:超时时间秒数"`
 
 	Key string `json:"key" gorm:"-"` // 前端表格使用
 
@@ -83,6 +84,9 @@ func (obj *K8sCluster) GenMapFromKvs(kvs []string) map[string]string {
 }
 
 func (obj *K8sCluster) FillDefaultData() {
+	if obj.ActionTimeoutSeconds == 0 {
+		obj.ActionTimeoutSeconds = 3
+	}
 
 }
 

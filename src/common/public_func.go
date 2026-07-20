@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -44,11 +45,6 @@ func GetHostName() string {
 
 }
 
-//	func GetNodeInfo() sysinfo.SysInfo {
-//		var si sysinfo.SysInfo
-//		si.GetSysInfo()
-//		return si
-//	}
 func GetNodeInfo() *NodeInfo {
 	info := &NodeInfo{}
 
@@ -129,6 +125,12 @@ func GentStringArrayByChangeLine(text string) []string {
 func TimeFormat(t time.Time) string {
 	return t.Format("2006-01-02 15:04:05")
 }
+
 func TimeNowString() string {
 	return TimeFormat(time.Now())
+}
+
+// GenTimeoutContext 超时控制
+func GenTimeoutContext(tw int) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), time.Duration(tw)*time.Second)
 }
