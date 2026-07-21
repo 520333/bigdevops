@@ -59,6 +59,7 @@ func getK8sClusterList(c *gin.Context) {
 			continue
 		}
 		obj.LastProbSuccess = kc.GetClusterProbeResultById(obj.ID)
+		obj.LastProbErrMsg = kc.GetClusterProbeErrMsgById(obj.ID)
 		// 填充前端需要的数据（拿到组合好的 CreateUserName）
 		obj.FillFrontAllData()
 

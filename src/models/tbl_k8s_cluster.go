@@ -1,6 +1,7 @@
 package models
 
 import (
+	"bigdevops/src/common"
 	"errors"
 	"fmt"
 	"strings"
@@ -8,8 +9,6 @@ import (
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 // K8sCluster 采集任务Job对象
@@ -55,8 +54,8 @@ func (obj *K8sCluster) UpdateOne() error {
 }
 
 func GetK8sClusterById(id int) (*K8sCluster, error) {
-	var dbMonitorRecordRule K8sCluster
-	err := Db.Where("id = ? ", id).First(&dbMonitorRecordRule).Error
+	var dbObj K8sCluster
+	err := Db.Where("id = ?", id).First(&dbObj).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -64,7 +63,20 @@ func GetK8sClusterById(id int) (*K8sCluster, error) {
 		}
 		return nil, fmt.Errorf("数据库错误%v", err)
 	}
-	return &dbMonitorRecordRule, nil
+	return &dbObj, nil
+}
+
+func GetK8sClusterByName(name string) (*K8sCluster, error) {
+	var dbObj K8sCluster
+	err := Db.Where("name = ?", name).First(&dbObj).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("K8sCluster不存在")
+		}
+		return nil, fmt.Errorf("数据库错误%v", err)
+	}
+	return &dbObj, nil
 }
 
 func GetK8sClusterByPoolId(poolId uint) (ps []*K8sCluster, err error) {
@@ -92,7 +104,7 @@ func (obj *K8sCluster) GenMapFromKvs(kvs []string) map[string]string {
 }
 
 func (obj *K8sCluster) FillDefaultData() error {
-	if obj.ActionTimeoutSeconds == 0 {
+	if obj.ActionTimeoutSeconds <= 0 {
 		obj.ActionTimeoutSeconds = 3
 	}
 
@@ -100,20 +112,26 @@ func (obj *K8sCluster) FillDefaultData() error {
 		return errors.New("KubeConfig内容不能为空")
 	}
 
-	// 解析kubeconfig 拿到apiServer地址
-	kConfig, err := clientcmd.RESTConfigFromKubeConfig([]byte(obj.KubeConfigContent))
+	// 1. 解析 kubeconfig 得到 rest.Config
+	//kConfig, err := clientcmd.RESTConfigFromKubeConfig([]byte(obj.KubeConfigContent))
+	kConfig, kClientSet, err := common.GenK8sClientSetByKubeconfigContent(obj.KubeConfigContent, obj.ActionTimeoutSeconds)
 	if err != nil {
 		return fmt.Errorf("解析kubeconfig内容失败: %v", err)
 	}
 	obj.ApiServerAddr = kConfig.Host
+
+	// 2. 🚀 关键修复：必须在 NewForConfig 之前设置 Timeout！
+	// 否则 ClientSet 的底层 HTTP Client 拿不到超时配置，导致连不上的 IP 挂起 30 秒引起前端 HTTP 请求超时！
 	kConfig.Timeout = time.Duration(obj.ActionTimeoutSeconds) * time.Second
 
-	clientSet, err := kubernetes.NewForConfig(kConfig)
-	if err != nil {
-		return fmt.Errorf("创建Kubernetes客户端失败: %v", err)
-	}
+	// 3. 创建 ClientSet
+	//kClientSet, err := kubernetes.NewForConfig(kConfig)
+	//if err != nil {
+	//	return fmt.Errorf("创建Kubernetes客户端失败: %v", err)
+	//}
 
-	v, err := clientSet.ServerVersion()
+	// 4. 请求 ServerVersion (已包含 ActionTimeoutSeconds 超时控制)
+	v, err := kClientSet.ServerVersion()
 	if err == nil && v != nil && v.GitVersion != "" {
 		obj.Version = v.GitVersion
 	}

@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"bigdevops/src/common"
 	"bigdevops/src/config"
 	"bigdevops/src/models"
 	"context"
@@ -10,21 +11,20 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 type K8sClusterCache struct {
 	sync.RWMutex
-	KubeClientsMap        map[uint]*kubernetes.Clientset
-	KubeClientsAlive      map[uint]bool
+	KubeClientsMap map[uint]*kubernetes.Clientset
+	//KubeClientsAlive      map[uint]bool
 	KubeClientsProbErrMsg map[uint]string
 	Sc                    *config.ServerConfig
 }
 
 func NewK8sClusterCache(sc *config.ServerConfig) *K8sClusterCache {
 	kc := &K8sClusterCache{
-		KubeClientsMap:        make(map[uint]*kubernetes.Clientset),
-		KubeClientsAlive:      make(map[uint]bool),
+		KubeClientsMap: make(map[uint]*kubernetes.Clientset),
+		//KubeClientsAlive:      make(map[uint]bool),
 		KubeClientsProbErrMsg: make(map[uint]string),
 		Sc:                    sc,
 	}
@@ -39,7 +39,6 @@ func (obj *K8sClusterCache) K8sClusterCacheManager(ctx context.Context) error {
 }
 
 func (obj *K8sClusterCache) ReNewClientsMap(ctx context.Context) {
-	//obj.Sc.Logger.Info("[k8s模块] 开始执行 ReNewClientsMap...")
 	kcs, err := models.GetK8sClusterAll()
 	if err != nil {
 		obj.Sc.Logger.Error("[k8s模块]扫描数据中的k8s集群失败", zap.Error(err))
@@ -50,83 +49,51 @@ func (obj *K8sClusterCache) ReNewClientsMap(ctx context.Context) {
 	}
 
 	m := make(map[uint]*kubernetes.Clientset)
-	aliveM := make(map[uint]bool)
-	errMsgM := make(map[uint]string)
+	lastErrM := make(map[uint]string)
 	for _, kc := range kcs {
 		kc := kc
-		kConfig, err := clientcmd.RESTConfigFromKubeConfig([]byte(kc.KubeConfigContent))
+		// 1. 生成 Clientset (并在函数内部自动应用 ActionTimeoutSeconds 超时设置)
+		_, kClientSet, err := common.GenK8sClientSetByKubeconfigContent(kc.KubeConfigContent, kc.ActionTimeoutSeconds)
 		if err != nil {
 			obj.Sc.Logger.Error("[k8s模块]解析KubeConfig内存内容失败", zap.Error(err), zap.Any("集群名称", kc.Name))
-			errMsgM[kc.ID] = "解析KubeConfig失败: " + err.Error()
-			aliveM[kc.ID] = false
+			lastErrM[kc.ID] = "解析KubeConfig失败: " + err.Error()
 			continue
 		}
-		timeoutSec := kc.ActionTimeoutSeconds
-		if timeoutSec == 0 {
-			timeoutSec = 3
-		}
-		kConfig.Timeout = time.Duration(timeoutSec) * time.Second
+		m[kc.ID] = kClientSet
 
-		clientSet, err := kubernetes.NewForConfig(kConfig)
-		if err != nil {
-			obj.Sc.Logger.Error("[k8s模块]生成NewForConfig错误", zap.Error(err), zap.Any("集群名称", kc.Name))
-			errMsgM[kc.ID] = "生成KubeConfig客户端失败: " + err.Error()
-			aliveM[kc.ID] = false
-			continue
-		}
-		m[kc.ID] = clientSet
-
-		version, err := clientSet.ServerVersion()
+		// 2. 发起探活
+		version, err := kClientSet.ServerVersion()
 		if err != nil {
 			obj.Sc.Logger.Error("[k8s模块]获取集群版本(探活)失败", zap.Error(err), zap.Any("集群名称", kc.Name))
-			errMsgM[kc.ID] = "连接Kubernetes失败: " + err.Error()
-			aliveM[kc.ID] = false
+			lastErrM[kc.ID] = "连接Kubernetes失败: " + err.Error()
 		} else if version != nil && version.GitVersion != "" {
-			aliveM[kc.ID] = true
-			errMsgM[kc.ID] = ""
+			lastErrM[kc.ID] = ""
 		} else {
-			errMsgM[kc.ID] = "未知错误: 服务端GitVersion为空"
-			aliveM[kc.ID] = false
+			lastErrM[kc.ID] = "未知错误: 服务端GitVersion为空"
 		}
-
-		//ctx1, cancel1 := common.GenTimeoutContext(kc.ActionTimeoutSeconds)
-		//nodes, err := clientSet.CoreV1().Nodes().List(ctx1, metav1.ListOptions{})
-		//cancel1()
-
-		//if err != nil {
-		//	continue
-		//}
-
-		//for index, node := range nodes.Items {
-		//	node := node
-		//	obj.Sc.Logger.Info("[k8s模块]测试获取节点",
-		//		zap.Any("集群", kc.Name),
-		//		zap.Any("序号", index),
-		//		zap.Any("节点名称", node.Name),
-		//		zap.Any("内核版本", node.Status.NodeInfo.KernelVersion),
-		//		zap.Any("内核版本", node.Status.NodeInfo.OSImage),
-		//		zap.Any("内核版本", node.Status.NodeInfo.ContainerRuntimeVersion),
-		//	)
-		//}
-
 	}
 
-	//obj.Sc.Logger.Info("[k8s模块] 探活结果汇总", zap.Any("aliveM", aliveM))
 	obj.Lock()
 	obj.KubeClientsMap = m
-	obj.KubeClientsAlive = aliveM
-	obj.KubeClientsProbErrMsg = errMsgM
+	obj.KubeClientsProbErrMsg = lastErrM
 	obj.Unlock()
-}
-
-func (obj *K8sClusterCache) GetClusterProbeResultById(id uint) bool {
-	obj.RLock()
-	defer obj.RUnlock()
-	return obj.KubeClientsAlive[id]
 }
 
 func (obj *K8sClusterCache) GetClusterProbeErrMsgById(id uint) string {
 	obj.RLock()
 	defer obj.RUnlock()
 	return obj.KubeClientsProbErrMsg[id]
+}
+
+func (obj *K8sClusterCache) GetClusterProbeResultById(id uint) bool {
+	obj.RLock()
+	defer obj.RUnlock()
+	errMsg, ok := obj.KubeClientsProbErrMsg[id]
+	return ok && errMsg == ""
+}
+
+func (obj *K8sClusterCache) GetClusterClientSetById(id uint) *kubernetes.Clientset {
+	obj.RLock()
+	defer obj.RUnlock()
+	return obj.KubeClientsMap[id]
 }

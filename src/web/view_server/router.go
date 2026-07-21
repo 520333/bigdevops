@@ -231,6 +231,9 @@ func ConfigRouter(r *gin.Engine) {
 		K8sGroup.POST("/updateK8sCluster", updateK8sCluster)
 		K8sGroup.DELETE("/deleteK8sCluster/:id", deleteK8sCluster)
 		K8sGroup.DELETE("/deleteK8sClusterBatch", deleteK8sClusterBatch)
+
+		K8sGroup.GET("/getK8sNodeList", getK8sNodeList)
+
 	}
 
 	CodeGroup := afterLoginApiGroup.Group("/code")

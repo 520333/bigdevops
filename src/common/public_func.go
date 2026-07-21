@@ -13,6 +13,9 @@ import (
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/mem"
+	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // NodeInfo 自定义一个结构体，只保留你业务真正需要的字段
@@ -133,4 +136,20 @@ func TimeNowString() string {
 // GenTimeoutContext 超时控制
 func GenTimeoutContext(tw int) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), time.Duration(tw)*time.Second)
+}
+
+func GenK8sClientSetByKubeconfigContent(c string, timeoutSeconds int) (*restclient.Config, *kubernetes.Clientset, error) {
+	kConfig, err := clientcmd.RESTConfigFromKubeConfig([]byte(c))
+	if err != nil {
+		return nil, nil, err
+	}
+	if timeoutSeconds > 0 {
+		kConfig.Timeout = time.Duration(timeoutSeconds) * time.Second
+	}
+	clientSet, err := kubernetes.NewForConfig(kConfig)
+	if err != nil {
+		return nil, nil, err
+	}
+	return kConfig, clientSet, nil
+
 }

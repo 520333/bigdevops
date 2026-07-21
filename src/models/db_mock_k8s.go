@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func mockK8sData(sc *config.ServerConfig, adminUser *User) {
@@ -59,6 +62,24 @@ func mockK8sData(sc *config.ServerConfig, adminUser *User) {
 		}
 		_ = tmp.FillDefaultData()
 		_ = tmp.CreateOne()
+	}
+
+	num = 5
+	clusters, _ := GetK8sClusterAll()
+	for _, cluster := range clusters {
+		cluster := cluster
+		nodes := []corev1.Node{}
+		for i := 0; i < num; i++ {
+			node := corev1.Node{
+				TypeMeta:   metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec:       corev1.NodeSpec{},
+				Status:     corev1.NodeStatus{},
+			}
+			node.Name = fmt.Sprintf("%s-%d", strings.ReplaceAll(cluster.Name, "_", "-"), i)
+			nodes = append(nodes, node)
+
+		}
 	}
 
 	sc.Logger.Info("k8s集群模块 Mock 数据注入成功")

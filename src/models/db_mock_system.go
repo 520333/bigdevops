@@ -71,9 +71,10 @@ func mockSystemData(sc *config.ServerConfig) *User {
 
 		// 容器集群
 		{
-			Parent: &Menu{Name: "K8sClusterManagement", Title: "容器集群", Icon: "ant-design:kubernetes-outlined", Type: "0", Show: "1", OrderNo: 50, Component: "LAYOUT", Path: "/k8s", Redirect: "/k8s/cluster"},
+			Parent: &Menu{Name: "K8sManagement", Title: "容器集群", Icon: "ant-design:kubernetes-outlined", Type: "0", Show: "1", OrderNo: 50, Component: "LAYOUT", Path: "/k8s", Redirect: "/k8s/cluster"},
 			Children: []*Menu{
-				{Name: "K8sNode", Title: "集群管理", Icon: "ant-design:kubernetes-outlined", Type: "1", Show: "1", OrderNo: 51, Component: "k8s/cluster/index", Path: "cluster"},
+				{Name: "K8sClusterManagement", Title: "集群管理", Icon: "ant-design:kubernetes-outlined", Type: "1", Show: "1", OrderNo: 51, Component: "k8s/cluster/index", Path: "cluster"},
+				{Name: "K8sNodeManagement", Title: "集群节点", Icon: "ant-design:kubernetes-outlined", Type: "1", Show: "1", OrderNo: 52, Component: "k8s/node/index", Path: "node"},
 			},
 		},
 
