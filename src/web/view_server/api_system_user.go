@@ -12,6 +12,16 @@ import (
 	"go.uber.org/zap"
 )
 
+// UserLogin 用户登录接口
+// @Summary      用户登录
+// @Description  校验用户名密码，登录成功后在响应及Header中返回 JWT Token
+// @Tags         系统管理模块
+// @Accept       json
+// @Produce      json
+// @Param        data  body      models.UserLoginRequest  true  "登录请求参数"
+// @Success      200   {object}  map[string]interface{}  "登录成功返回"
+// @Failure      400   {object}  map[string]interface{}  "参数错误或密码错误"
+// @Router       /../login [post]
 func UserLogin(c *gin.Context) {
 	// 校验用户账号密码
 	var user models.UserLoginRequest

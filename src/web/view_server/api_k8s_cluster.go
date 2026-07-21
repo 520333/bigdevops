@@ -13,6 +13,19 @@ import (
 	"go.uber.org/zap"
 )
 
+// GetK8sClusterList 获取K8s集群列表
+// @Summary      获取K8s集群列表
+// @Description  分页获取K8s集群详细信息列表
+// @Tags         k8s集群管理模块
+// @Accept       json
+// @Produce      json
+// @Param        page      query     int     false  "页码" default(1)
+// @Param        pageSize  query     int     false  "每页数量" default(10)
+// @Success      200       {object}  models.K8sCluster "成功响应"
+// @Failure      400       {object}  map[string]interface{} "请求错误"
+// @Failure      500       {object}  map[string]interface{} "服务器错误"
+// @Security     Bearer
+// @Router       /k8s/getK8sClusterList [get]
 func getK8sClusterList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))

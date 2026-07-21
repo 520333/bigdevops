@@ -60,7 +60,7 @@ func GetK8sClusterById(id int) (*K8sCluster, error) {
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("MonitorScrapePool不存在")
+			return nil, fmt.Errorf("K8sCluster不存在")
 		}
 		return nil, fmt.Errorf("数据库错误%v", err)
 	}

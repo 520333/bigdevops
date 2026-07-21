@@ -16,6 +16,18 @@ import (
 	"go.uber.org/zap"
 )
 
+// @title           BigDevOps API 文档
+// @version         1.0
+// @description     Big DevOps 接口文档
+// @termsOfService  http://swagger.io/terms/
+// @contact.name    DevOps Team
+// @contact.url     http://www.example.com/support
+// @host            localhost:8080
+// @BasePath        /api
+// @securityDefinitions.apikey Bearer
+// @in header
+// @name Authorization
+// @description 直接输入/粘贴 JWT Token（系统已自动兼容 Bearer 前缀）
 func main() {
 	// 配置文件参数 命令行启动参数
 	var (

@@ -1,6 +1,7 @@
 package web
 
 import (
+	_ "bigdevops/docs"
 	"bigdevops/src/cache"
 	"bigdevops/src/common"
 	"bigdevops/src/config"
@@ -10,9 +11,10 @@ import (
 	"time"
 
 	"github.com/gin-contrib/requestid"
-	"github.com/zsais/go-gin-prometheus"
-
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/zsais/go-gin-prometheus"
 )
 
 // ServerStartGin 启动gin
@@ -25,6 +27,12 @@ func ServerStartGin(sc *config.ServerConfig, mc *cache.MonitorCache, kc *cache.K
 	r := gin.New()
 	r.Use(gin.Recovery())
 
+	// 注册 Swagger UI 路由（增加 HTTP Basic Auth 账号密码认证）
+	swaggerGroup := r.Group("/swagger", gin.BasicAuth(gin.Accounts{
+		"admin":  "devops666", // 账号 : 密码 (可添加多组)
+		"devops": "devops666",
+	}))
+	swaggerGroup.GET("/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	varMap := map[string]interface{}{}
 	//varMap[common.GIN_CTX_CONFIG_LOGGER] = sc.Logger
 	varMap[common.GIN_CTX_CONFIG_CONFIG] = sc
