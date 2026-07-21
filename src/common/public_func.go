@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	metricsClientSet "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
 // NodeInfo 自定义一个结构体，只保留你业务真正需要的字段
@@ -106,6 +107,18 @@ func GenKvStringByMap(m map[string]string) string {
 	return res
 }
 
+func GenMapByKvString(kvs []string) map[string]string {
+	m := map[string]string{}
+	for _, kv := range kvs {
+		res := strings.Split(kv, "=")
+		if len(res) != 2 {
+			continue
+		}
+		m[res[0]] = res[1]
+	}
+	return m
+}
+
 func GentStringArrayByMap(m map[string]string) []string {
 	res := []string{}
 	for k, v := range m {
@@ -138,18 +151,18 @@ func GenTimeoutContext(tw int) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), time.Duration(tw)*time.Second)
 }
 
-func GenK8sClientSetByKubeconfigContent(c string, timeoutSeconds int) (*restclient.Config, *kubernetes.Clientset, error) {
+func GenK8sClientSetByKubeconfigContent(c string, timeoutSeconds int) (*restclient.Config, *kubernetes.Clientset, *metricsClientSet.Clientset, error) {
 	kConfig, err := clientcmd.RESTConfigFromKubeConfig([]byte(c))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if timeoutSeconds > 0 {
 		kConfig.Timeout = time.Duration(timeoutSeconds) * time.Second
 	}
 	clientSet, err := kubernetes.NewForConfig(kConfig)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return kConfig, clientSet, nil
-
+	mClientSet, _ := metricsClientSet.NewForConfig(kConfig)
+	return kConfig, clientSet, mClientSet, nil
 }

@@ -227,13 +227,18 @@ func ConfigRouter(r *gin.Engine) {
 	K8sGroup := afterLoginApiGroup.Group("/k8s")
 	{
 		K8sGroup.GET("/getK8sClusterList", getK8sClusterList)
+		K8sGroup.GET("/getClusterForSelect", getClusterForSelect)
 		K8sGroup.POST("/createK8sCluster", createK8sCluster)
 		K8sGroup.POST("/updateK8sCluster", updateK8sCluster)
 		K8sGroup.DELETE("/deleteK8sCluster/:id", deleteK8sCluster)
 		K8sGroup.DELETE("/deleteK8sClusterBatch", deleteK8sClusterBatch)
 
 		K8sGroup.GET("/getK8sNodeList", getK8sNodeList)
-
+		K8sGroup.POST("/scheduleEnableSwitchK8sNodesOne", scheduleEnableSwitchK8sNodesOne)
+		K8sGroup.POST("/labelK8sNodes", labelK8sNodes)
+		K8sGroup.POST("/taintK8sNodes", taintK8sNodes)
+		K8sGroup.POST("/drainK8sNodes", drainK8sNodes)
+		K8sGroup.GET("/getPodListByNodeName", getPodListByNodeName)
 	}
 
 	CodeGroup := afterLoginApiGroup.Group("/code")

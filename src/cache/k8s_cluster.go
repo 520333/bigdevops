@@ -11,20 +11,21 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	metricsClientSet "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
 type K8sClusterCache struct {
 	sync.RWMutex
-	KubeClientsMap map[uint]*kubernetes.Clientset
-	//KubeClientsAlive      map[uint]bool
+	KubeClientsMap        map[uint]*kubernetes.Clientset
+	MetricsClientSetMap   map[uint]*metricsClientSet.Clientset
 	KubeClientsProbErrMsg map[uint]string
 	Sc                    *config.ServerConfig
 }
 
 func NewK8sClusterCache(sc *config.ServerConfig) *K8sClusterCache {
 	kc := &K8sClusterCache{
-		KubeClientsMap: make(map[uint]*kubernetes.Clientset),
-		//KubeClientsAlive:      make(map[uint]bool),
+		KubeClientsMap:        make(map[uint]*kubernetes.Clientset),
+		MetricsClientSetMap:   make(map[uint]*metricsClientSet.Clientset),
 		KubeClientsProbErrMsg: make(map[uint]string),
 		Sc:                    sc,
 	}
@@ -49,17 +50,21 @@ func (obj *K8sClusterCache) ReNewClientsMap(ctx context.Context) {
 	}
 
 	m := make(map[uint]*kubernetes.Clientset)
+	sm := make(map[uint]*metricsClientSet.Clientset)
 	lastErrM := make(map[uint]string)
 	for _, kc := range kcs {
 		kc := kc
-		// 1. 生成 Clientset (并在函数内部自动应用 ActionTimeoutSeconds 超时设置)
-		_, kClientSet, err := common.GenK8sClientSetByKubeconfigContent(kc.KubeConfigContent, kc.ActionTimeoutSeconds)
+		// 1. 生成 Clientset 及 MetricsClientSet (并在函数内部自动应用 ActionTimeoutSeconds 超时设置)
+		_, kClientSet, mClientSet, err := common.GenK8sClientSetByKubeconfigContent(kc.KubeConfigContent, kc.ActionTimeoutSeconds)
 		if err != nil {
 			obj.Sc.Logger.Error("[k8s模块]解析KubeConfig内存内容失败", zap.Error(err), zap.Any("集群名称", kc.Name))
 			lastErrM[kc.ID] = "解析KubeConfig失败: " + err.Error()
 			continue
 		}
 		m[kc.ID] = kClientSet
+		if mClientSet != nil {
+			sm[kc.ID] = mClientSet
+		}
 
 		// 2. 发起探活
 		version, err := kClientSet.ServerVersion()
@@ -75,6 +80,7 @@ func (obj *K8sClusterCache) ReNewClientsMap(ctx context.Context) {
 
 	obj.Lock()
 	obj.KubeClientsMap = m
+	obj.MetricsClientSetMap = sm
 	obj.KubeClientsProbErrMsg = lastErrM
 	obj.Unlock()
 }
@@ -96,4 +102,10 @@ func (obj *K8sClusterCache) GetClusterClientSetById(id uint) *kubernetes.Clients
 	obj.RLock()
 	defer obj.RUnlock()
 	return obj.KubeClientsMap[id]
+}
+
+func (obj *K8sClusterCache) GetClusterMetricsSetById(id uint) *metricsClientSet.Clientset {
+	obj.RLock()
+	defer obj.RUnlock()
+	return obj.MetricsClientSetMap[id]
 }

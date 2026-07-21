@@ -80,6 +80,9 @@ const (
 	RUN_ENV_TYPE_TEST  = "test"
 	RUN_ENV_TYPE_DEV   = "dev"
 	RUN_ENV_TYPE_PRESS = "press"
+
+	LabelNodeRolePrefix = "node-role.kubernetes.io/"
+	NodeLabelRole       = "kubernetes.io/role"
 )
 
 var (

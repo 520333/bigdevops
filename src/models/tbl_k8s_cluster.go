@@ -113,8 +113,7 @@ func (obj *K8sCluster) FillDefaultData() error {
 	}
 
 	// 1. 解析 kubeconfig 得到 rest.Config
-	//kConfig, err := clientcmd.RESTConfigFromKubeConfig([]byte(obj.KubeConfigContent))
-	kConfig, kClientSet, err := common.GenK8sClientSetByKubeconfigContent(obj.KubeConfigContent, obj.ActionTimeoutSeconds)
+	kConfig, kClientSet, _, err := common.GenK8sClientSetByKubeconfigContent(obj.KubeConfigContent, obj.ActionTimeoutSeconds)
 	if err != nil {
 		return fmt.Errorf("解析kubeconfig内容失败: %v", err)
 	}

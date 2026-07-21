@@ -144,7 +144,6 @@ func createK8sCluster(c *gin.Context) {
 func updateK8sCluster(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
-	// 🚀 致命修复：同上
 	var reqObj models.K8sCluster
 	err := c.ShouldBindJSON(&reqObj)
 	if err != nil {
@@ -224,4 +223,33 @@ func deleteK8sClusterBatch(c *gin.Context) {
 	}
 
 	common.OkWithMessage(fmt.Sprintf("成功删除了 %d 条k8s集群", len(reqObj.Ids)), c)
+}
+
+// @Summary      获取K8s集群下拉选择列表
+// @Description  获取用于前端 Select 组件的 K8s 集群 Label/Value 列表
+// @Tags         k8s集群管理模块
+// @Accept       json
+// @Produce      json
+// @Success      200       {object}  map[string]interface{} "成功响应"
+// @Security     Bearer
+// @Router       /k8s/getClusterForSelect [get]
+func getClusterForSelect(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+	objs, err := models.GetK8sClusterAll()
+	if err != nil {
+		sc.Logger.Error("去数据库中拿所有的k8s集群配置执行错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的k8s集群配置执行错误：%v", err.Error()), c)
+		return
+	}
+
+	var res []common.CommonSelectOneItem
+	for _, obj := range objs {
+		obj := obj
+		res = append(res, common.CommonSelectOneItem{
+			Label: obj.NameZh,
+			Value: obj.Name,
+		})
+	}
+	common.OkWithDetailed(res, "ok", c)
+
 }
