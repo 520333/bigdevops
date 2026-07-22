@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -61,8 +62,19 @@ type K8sOneNode struct {
 	Annotation    map[string]string      `json:"annotation"`
 	Conditions    []corev1.NodeCondition `json:"conditions"`
 	Taints        []corev1.Taint         `json:"taints"`
-	Events        []corev1.Event         `json:"events"`
+	Events        []OneEvent             `json:"events"`
 	Pods          []OnePod               `json:"pods"`
+}
+
+type OneEvent struct {
+	Type           string `json:"type"`
+	Component      string `json:"component"`
+	Count          int    `json:"count"`
+	Reason         string `json:"reason"`
+	Message        string `json:"message"`
+	Object         string `json:"object"`
+	FirstTimestamp string `json:"firstTimestamp"`
+	LastTimestamp  string `json:"lastTimestamp"`
 }
 
 // 封装 k8s node --> my node
@@ -102,101 +114,128 @@ func nodeConvert(knode corev1.Node, kCluster *models.K8sCluster, kSet *kubernete
 	res.Age = translateTimestampSince(knode.CreationTimestamp)
 	//提取 Node IP 地址
 	res.Ip = getNodeInternalIp(&knode)
-	osImage, kernelVersion, crVersion := knode.Status.NodeInfo.OSImage, knode.Status.NodeInfo.KernelVersion, knode.Status.NodeInfo.ContainerRuntimeVersion
-	if osImage == "" {
-		osImage = "<unknown>"
-	}
-	if kernelVersion == "" {
-		kernelVersion = "<unknown>"
-	}
-	if crVersion == "" {
-		crVersion = "<unknown>"
-	}
-	res.OsVersion = osImage
-	res.KernelVersion = kernelVersion
-	res.CriVersion = crVersion
+
 	res.KubeletVersion = knode.Status.NodeInfo.KubeletVersion
-
-	// ip
-	pods, _ := getPodsOnNode(knode.Name, kCluster.ActionTimeoutSeconds, kSet)
-	res.PodNum = len(pods)
-
-	// 申请和 limit 准确计算 (使用 MilliValue 毫核 及 Bytes 转 GB 计算百分比)
-	var cpuRequestMilli, cpuLimitMilli, memoryRequestTotal, memoryLimitTotal int64
-	for _, pod := range pods {
-		for _, container := range pod.Spec.Containers {
-			cpuRequestMilli += container.Resources.Requests.Cpu().MilliValue()
-			cpuLimitMilli += container.Resources.Limits.Cpu().MilliValue()
-			memoryRequestTotal += container.Resources.Requests.Memory().Value()
-			memoryLimitTotal += container.Resources.Limits.Memory().Value()
-		}
-	}
+	res.CriVersion = knode.Status.NodeInfo.ContainerRuntimeVersion
+	res.OsVersion = knode.Status.NodeInfo.OSImage
+	res.KernelVersion = knode.Status.NodeInfo.KernelVersion
 
 	allocCpuMilli := knode.Status.Allocatable.Cpu().MilliValue()
 	allocMemBytes := knode.Status.Allocatable.Memory().Value()
 
-	// 计算 CPU 百分比
-	var cpuReqRate, cpuLimitRate float64
-	if allocCpuMilli > 0 {
-		cpuReqRate = float64(cpuRequestMilli) / float64(allocCpuMilli) * 100
-		cpuLimitRate = float64(cpuLimitMilli) / float64(allocCpuMilli) * 100
-	}
-	res.CpuRequestInfo = fmt.Sprintf("%.2f/%.2f核 (%.1f%%)", float64(cpuRequestMilli)/1000, float64(allocCpuMilli)/1000, cpuReqRate)
-	res.CpuLimitInfo = fmt.Sprintf("%.2f/%.2f核 (%.1f%%)", float64(cpuLimitMilli)/1000, float64(allocCpuMilli)/1000, cpuLimitRate)
+	// 获取节点上 Pod 列表
+	nodePods, err := getPodsOnNode(knode.Name, kCluster.ActionTimeoutSeconds, kSet)
+	if err == nil && nodePods != nil {
+		res.PodNum = len(nodePods)
 
-	// 计算 内存 百分比与单位转换 (GB)
-	var memReqRate, memLimitRate float64
-	if allocMemBytes > 0 {
-		memReqRate = float64(memoryRequestTotal) / float64(allocMemBytes) * 100
-		memLimitRate = float64(memoryLimitTotal) / float64(allocMemBytes) * 100
-	}
-	const gb = 1024 * 1024 * 1024
-	res.MemoryRequestInfo = fmt.Sprintf("%.2f/%.2f GB (%.1f%%)", float64(memoryRequestTotal)/gb, float64(allocMemBytes)/gb, memReqRate)
-	res.MemoryLimitInfo = fmt.Sprintf("%.2f/%.2f GB (%.1f%%)", float64(memoryLimitTotal)/gb, float64(allocMemBytes)/gb, memLimitRate)
+		// 统计节点关联 Pod 的 Request 与 Limit 申请量汇总
+		var cpuRequestTotal, cpuLimitTotal int64
+		var memoryRequestTotal, memoryLimitTotal int64
 
-	res.LabelPairs = knode.Labels            // 标签
-	res.Annotation = knode.Annotations       // 注解
-	res.Taints = knode.Spec.Taints           // 污点
-	res.Conditions = knode.Status.Conditions // 状况
-
-	res.CpuCores = fmt.Sprintf("%.2f/%.2f核", float64(knode.Status.Allocatable.Cpu().MilliValue())/1000, float64(knode.Status.Capacity.Cpu().MilliValue())/1000)
-	res.MemGibs = fmt.Sprintf("%.2f/%.2f GB",
-		float64(knode.Status.Allocatable.Memory().Value())/gb,
-		float64(knode.Status.Capacity.Memory().Value())/gb,
-	)
-	res.EphemeralStorage = fmt.Sprintf("%.2f/%.2f GB",
-		float64(knode.Status.Allocatable.StorageEphemeral().Value())/gb,
-		float64(knode.Status.Capacity.StorageEphemeral().Value())/gb,
-	)
-
-	// 节点真实使用率计算 (来自 Metrics Server)
-	if mSet != nil {
-		nodeMetrics, err := getNodeUsageByMetricsServer(knode.Name, kCluster.ActionTimeoutSeconds, mSet)
-		if err == nil && nodeMetrics != nil {
-			cpuUsageMilli := nodeMetrics.Usage.Cpu().MilliValue()
-			memUsageBytes := nodeMetrics.Usage.Memory().Value()
-
-			var cpuUsageRate, memUsageRate float64
-			if allocCpuMilli > 0 {
-				cpuUsageRate = float64(cpuUsageMilli) / float64(allocCpuMilli) * 100
+		for _, pod := range nodePods {
+			if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+				continue
 			}
-			if allocMemBytes > 0 {
-				memUsageRate = float64(memUsageBytes) / float64(allocMemBytes) * 100
+			for _, container := range pod.Spec.Containers {
+				cpuRequestTotal += container.Resources.Requests.Cpu().MilliValue()
+				cpuLimitTotal += container.Resources.Limits.Cpu().MilliValue()
+				memoryRequestTotal += container.Resources.Requests.Memory().Value()
+				memoryLimitTotal += container.Resources.Limits.Memory().Value()
 			}
-
-			res.CpuUsageInfo = fmt.Sprintf("%.2f/%.2f核 (%.1f%%)", float64(cpuUsageMilli)/1000, float64(allocCpuMilli)/1000, cpuUsageRate)
-			res.MemoryUsageInfo = fmt.Sprintf("%.2f/%.2f GB (%.1f%%)", float64(memUsageBytes)/gb, float64(allocMemBytes)/gb, memUsageRate)
-		} else {
-			res.CpuUsageInfo = "未安装MetricsServer"
-			res.MemoryUsageInfo = "未安装MetricsServer"
 		}
-	} else {
-		res.CpuUsageInfo = "未初始化Metrics"
-		res.MemoryUsageInfo = "未初始化Metrics"
+
+		// 计算 CPU 百分比
+		var cpuReqRate, cpuLimitRate float64
+		if allocCpuMilli > 0 {
+			cpuReqRate = float64(cpuRequestTotal) / float64(allocCpuMilli) * 100
+			cpuLimitRate = float64(cpuLimitTotal) / float64(allocCpuMilli) * 100
+		}
+		res.CpuRequestInfo = fmt.Sprintf("%.2f/%.2f核 (%.1f%%)", float64(cpuRequestTotal)/1000, float64(allocCpuMilli)/1000, cpuReqRate)
+		res.CpuLimitInfo = fmt.Sprintf("%.2f/%.2f核 (%.1f%%)", float64(cpuLimitTotal)/1000, float64(allocCpuMilli)/1000, cpuLimitRate)
+
+		// 计算 内存 百分比与单位转换 (GB)
+		var memReqRate, memLimitRate float64
+		if allocMemBytes > 0 {
+			memReqRate = float64(memoryRequestTotal) / float64(allocMemBytes) * 100
+			memLimitRate = float64(memoryLimitTotal) / float64(allocMemBytes) * 100
+		}
+		const gb = 1024 * 1024 * 1024
+		res.MemoryRequestInfo = fmt.Sprintf("%.2f/%.2f GB (%.1f%%)", float64(memoryRequestTotal)/gb, float64(allocMemBytes)/gb, memReqRate)
+		res.MemoryLimitInfo = fmt.Sprintf("%.2f/%.2f GB (%.1f%%)", float64(memoryLimitTotal)/gb, float64(allocMemBytes)/gb, memLimitRate)
+
+		res.LabelPairs = knode.Labels            // 标签
+		res.Annotation = knode.Annotations       // 注解
+		res.Taints = knode.Spec.Taints           // 污点
+		res.Conditions = knode.Status.Conditions // 状况
+
+		res.CpuCores = fmt.Sprintf("%.2f/%.2f核", float64(knode.Status.Allocatable.Cpu().MilliValue())/1000, float64(knode.Status.Capacity.Cpu().MilliValue())/1000)
+		res.MemGibs = fmt.Sprintf("%.2f/%.2f GB",
+			float64(knode.Status.Allocatable.Memory().Value())/gb,
+			float64(knode.Status.Capacity.Memory().Value())/gb,
+		)
+		res.EphemeralStorage = fmt.Sprintf("%.2f/%.2f GB",
+			float64(knode.Status.Allocatable.StorageEphemeral().Value())/gb,
+			float64(knode.Status.Capacity.StorageEphemeral().Value())/gb,
+		)
+
+		// 节点真实使用率计算 (来自 Metrics Server)
+		if mSet != nil {
+			nodeMetrics, err := getNodeUsageByMetricsServer(knode.Name, kCluster.ActionTimeoutSeconds, mSet)
+			if err == nil && nodeMetrics != nil {
+				cpuUsageMilli := nodeMetrics.Usage.Cpu().MilliValue()
+				memUsageBytes := nodeMetrics.Usage.Memory().Value()
+
+				var cpuUsageRate, memUsageRate float64
+				if allocCpuMilli > 0 {
+					cpuUsageRate = float64(cpuUsageMilli) / float64(allocCpuMilli) * 100
+				}
+				if allocMemBytes > 0 {
+					memUsageRate = float64(memUsageBytes) / float64(allocMemBytes) * 100
+				}
+
+				res.CpuUsageInfo = fmt.Sprintf("%.2f/%.2f核 (%.1f%%)", float64(cpuUsageMilli)/1000, float64(allocCpuMilli)/1000, cpuUsageRate)
+				res.MemoryUsageInfo = fmt.Sprintf("%.2f/%.2f GB (%.1f%%)", float64(memUsageBytes)/gb, float64(allocMemBytes)/gb, memUsageRate)
+			} else {
+				res.CpuUsageInfo = "未安装MetricsServer"
+				res.MemoryUsageInfo = "未安装MetricsServer"
+			}
+		} else {
+			res.CpuUsageInfo = "未初始化Metrics"
+			res.MemoryUsageInfo = "未初始化Metrics"
+		}
+
+		res.Labels = common.GentStringArrayByMap(knode.Labels)
+
+		// 节点 event 转化为精致的 DTO 结构
+		events, _ := getEventOnNode(knode.Name, kCluster.ActionTimeoutSeconds, kSet)
+		myEvents := make([]OneEvent, 0, len(events))
+		for _, event := range events {
+			var firstTimeStr, lastTimeStr string
+			if !event.FirstTimestamp.IsZero() {
+				firstTimeStr = event.FirstTimestamp.Time.Format("2006-01-02 15:04:05")
+			}
+			if !event.LastTimestamp.IsZero() {
+				lastTimeStr = event.LastTimestamp.Time.Format("2006-01-02 15:04:05")
+			}
+
+			objStr := event.InvolvedObject.Name
+			if event.InvolvedObject.Kind != "" {
+				objStr = fmt.Sprintf("%s/%s", event.InvolvedObject.Kind, event.InvolvedObject.Name)
+			}
+
+			myEvents = append(myEvents, OneEvent{
+				Type:           event.Type,
+				Component:      event.Source.Component,
+				Count:          int(event.Count),
+				Reason:         event.Reason,
+				Message:        event.Message,
+				Object:         objStr,
+				FirstTimestamp: firstTimeStr,
+				LastTimestamp:  lastTimeStr,
+			})
+		}
+		res.Events = myEvents
 	}
-
-	res.Labels = common.GentStringArrayByMap(knode.Labels)
-
 	return res
 }
 
@@ -252,6 +291,21 @@ func getPodsOnNode(nodeName string, tw int, kSet *kubernetes.Clientset) ([]corev
 	return pods.Items, nil
 }
 
+func getEventOnNode(nodeName string, tw int, kSet *kubernetes.Clientset) ([]corev1.Event, error) {
+	ctx1, cancel1 := common.GenTimeoutContext(tw)
+	defer cancel1()
+
+	selector := fields.Set{
+		"involvedObject.kind": "Node",
+		"involvedObject.name": nodeName,
+	}.AsSelector().String()
+
+	events, err := kSet.CoreV1().Events("").List(ctx1, metav1.ListOptions{FieldSelector: selector})
+	if err != nil || events == nil {
+		return nil, err
+	}
+	return events.Items, nil
+}
 func getNodeUsageByMetricsServer(nodeName string, tw int, mSet *metricsClientSet.Clientset) (*metricsv1beta1.NodeMetrics, error) {
 	if mSet == nil {
 		return nil, fmt.Errorf("metricsClientSet is nil")
@@ -345,12 +399,20 @@ func getK8sNodeList(c *gin.Context) {
 		pagedNodes = filteredNodes[offset:limit]
 	}
 
-	// 7. 🚀 仅将分页后的数据进行 nodeConvert 转换，避免性能浪费及返回错误的数据集
-	var mNodes []K8sOneNode
-	for _, node := range pagedNodes {
-		mNode := nodeConvert(node, dbObj, kSet, mSet)
-		mNodes = append(mNodes, *mNode)
+	// 7. 🚀 使用 Goroutine 并发多线程转换分页后的节点，避免串行网络等待拖慢接口响应
+	mNodes := make([]K8sOneNode, len(pagedNodes))
+	var wg sync.WaitGroup
+	for i, node := range pagedNodes {
+		wg.Add(1)
+		go func(idx int, n corev1.Node) {
+			defer wg.Done()
+			mNode := nodeConvert(n, dbObj, kSet, mSet)
+			if mNode != nil {
+				mNodes[idx] = *mNode
+			}
+		}(i, node)
 	}
+	wg.Wait()
 
 	// 8. 返回结果
 	common.OkWithDetailed(gin.H{
