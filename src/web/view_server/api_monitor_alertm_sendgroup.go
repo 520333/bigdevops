@@ -13,6 +13,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      获取AlertManager发送组列表
+// @Description  获取AlertManager发送组列表 接口
+// @Tags         monitor-alert
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取AlertManager发送组列表 响应结果"
+// @Router       /monitor/getMonitorAlertManagerSendGroupList [get]
+// @Security     Bearer
 func getMonitorAlertManagerSendGroupList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -90,6 +98,14 @@ func getMonitorAlertManagerSendGroupList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      创建AlertManager发送组
+// @Description  创建AlertManager发送组 接口
+// @Tags         monitor-alert
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建AlertManager发送组 响应结果"
+// @Router       /monitor/createMonitorAlertManagerSendGroup [post]
+// @Security     Bearer
 func createMonitorAlertManagerSendGroup(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -120,6 +136,14 @@ func createMonitorAlertManagerSendGroup(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      更新AlertManager发送组
+// @Description  更新AlertManager发送组 接口
+// @Tags         monitor-alert
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新AlertManager发送组 响应结果"
+// @Router       /monitor/updateMonitorAlertManagerSendGroup [post]
+// @Security     Bearer
 func updateMonitorAlertManagerSendGroup(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -158,7 +182,14 @@ type setAlertManagerSendGroupEnableReq struct {
 	Enable int  `json:"enable" validate:"required,oneof=1 2"` // 假设 1=启用 2=禁用
 }
 
-// setMonitorPromScrapeJobStatus 设置发送组配置的启用/禁用状态
+// @Summary      设置AlertManager发送组状态
+// @Description  设置AlertManager发送组状态 接口
+// @Tags         monitor-alert
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "设置AlertManager发送组状态 响应结果"
+// @Router       /monitor/setAlertManagerSendGroupStatus [post]
+// @Security     Bearer
 func setAlertManagerSendGroupStatus(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -201,6 +232,14 @@ func setAlertManagerSendGroupStatus(c *gin.Context) {
 	common.OkWithMessage("状态修改成功", c)
 }
 
+// @Summary      删除AlertManager发送组
+// @Description  删除AlertManager发送组 接口
+// @Tags         monitor-alert
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除AlertManager发送组 响应结果"
+// @Router       /monitor/deleteMonitorAlertManagerSendGroup/{id} [delete]
+// @Security     Bearer
 func deleteMonitorAlertManagerSendGroup(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")

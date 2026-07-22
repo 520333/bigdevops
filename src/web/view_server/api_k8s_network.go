@@ -104,6 +104,14 @@ func serviceConvert(svc *v1.Service) *OneService {
 	}
 }
 
+// @Summary      获取Service服务列表
+// @Description  获取Service服务列表 接口
+// @Tags         k8s-network
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Service服务列表 响应结果"
+// @Router       /k8s/getK8sServiceList [get]
+// @Security     Bearer
 func getK8sServiceList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -149,6 +157,14 @@ func getK8sServiceList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      获取Service声明YAML
+// @Description  获取Service声明YAML 接口
+// @Tags         k8s-network
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Service声明YAML 响应结果"
+// @Router       /k8s/getK8sServiceYaml [get]
+// @Security     Bearer
 func getK8sServiceYaml(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -274,9 +290,34 @@ func createServiceHelper(c *gin.Context, isUpdate bool) {
 	common.OkWithMessage("Service 保存应用成功", c)
 }
 
+// @Summary      创建Service服务
+// @Description  创建Service服务 接口
+// @Tags         k8s-network
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建Service服务 响应结果"
+// @Router       /k8s/createK8sService [post]
+// @Security     Bearer
 func createK8sService(c *gin.Context) { createServiceHelper(c, false) }
+
+// @Summary      更新Service服务
+// @Description  更新Service服务 接口
+// @Tags         k8s-network
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新Service服务 响应结果"
+// @Router       /k8s/updateK8sService [post]
+// @Security     Bearer
 func updateK8sService(c *gin.Context) { createServiceHelper(c, true) }
 
+// @Summary      删除Service服务
+// @Description  删除Service服务 接口
+// @Tags         k8s-network
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除Service服务 响应结果"
+// @Router       /k8s/deleteK8sService [post]
+// @Security     Bearer
 func deleteK8sService(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sDeleteServiceReq
@@ -304,6 +345,14 @@ func deleteK8sService(c *gin.Context) {
 	common.OkWithMessage(fmt.Sprintf("Service [%s] 已删除", reqObj.Name), c)
 }
 
+// @Summary      批量删除Service服务
+// @Description  批量删除Service服务 接口
+// @Tags         k8s-network
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "批量删除Service服务 响应结果"
+// @Router       /k8s/deleteK8sServiceBatch [post]
+// @Security     Bearer
 func deleteK8sServiceBatch(c *gin.Context) {
 	var reqObj K8sDeleteServiceBatchReq
 	if err := c.ShouldBindJSON(&reqObj); err != nil {
@@ -442,6 +491,14 @@ func ingressConvert(ing *networkingv1.Ingress) *OneIngress {
 	}
 }
 
+// @Summary      获取Ingress路由规则列表
+// @Description  获取Ingress路由规则列表 接口
+// @Tags         k8s-network
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Ingress路由规则列表 响应结果"
+// @Router       /k8s/getK8sIngressList [get]
+// @Security     Bearer
 func getK8sIngressList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -487,6 +544,14 @@ func getK8sIngressList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      获取Ingress声明YAML
+// @Description  获取Ingress声明YAML 接口
+// @Tags         k8s-network
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Ingress声明YAML 响应结果"
+// @Router       /k8s/getK8sIngressYaml [get]
+// @Security     Bearer
 func getK8sIngressYaml(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -612,9 +677,34 @@ func createIngressHelper(c *gin.Context, isUpdate bool) {
 	common.OkWithMessage("Ingress 保存应用成功", c)
 }
 
+// @Summary      创建Ingress路由规则
+// @Description  创建Ingress路由规则 接口
+// @Tags         k8s-network
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建Ingress路由规则 响应结果"
+// @Router       /k8s/createK8sIngress [post]
+// @Security     Bearer
 func createK8sIngress(c *gin.Context) { createIngressHelper(c, false) }
+
+// @Summary      更新Ingress路由规则
+// @Description  更新Ingress路由规则 接口
+// @Tags         k8s-network
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新Ingress路由规则 响应结果"
+// @Router       /k8s/updateK8sIngress [post]
+// @Security     Bearer
 func updateK8sIngress(c *gin.Context) { createIngressHelper(c, true) }
 
+// @Summary      删除Ingress路由规则
+// @Description  删除Ingress路由规则 接口
+// @Tags         k8s-network
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除Ingress路由规则 响应结果"
+// @Router       /k8s/deleteK8sIngress [post]
+// @Security     Bearer
 func deleteK8sIngress(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sDeleteIngressReq
@@ -642,6 +732,14 @@ func deleteK8sIngress(c *gin.Context) {
 	common.OkWithMessage(fmt.Sprintf("Ingress [%s] 已删除", reqObj.Name), c)
 }
 
+// @Summary      批量删除Ingress路由规则
+// @Description  批量删除Ingress路由规则 接口
+// @Tags         k8s-network
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "批量删除Ingress路由规则 响应结果"
+// @Router       /k8s/deleteK8sIngressBatch [post]
+// @Security     Bearer
 func deleteK8sIngressBatch(c *gin.Context) {
 	var reqObj K8sDeleteIngressBatchReq
 	if err := c.ShouldBindJSON(&reqObj); err != nil {

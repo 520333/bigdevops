@@ -28,6 +28,14 @@ type OnDutyOne struct {
 	Remark     string       `json:"remark,omitempty"`
 }
 
+// @Summary      获取值班组列表
+// @Description  获取值班组列表 接口
+// @Tags         monitor-onduty
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取值班组列表 响应结果"
+// @Router       /monitor/getMonitorOndutyGroupList [get]
+// @Security     Bearer
 func getMonitorOndutyGroupList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -115,6 +123,14 @@ func getMonitorOndutyGroupList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      获取值班组未来排班表
+// @Description  获取值班组未来排班表 接口
+// @Tags         monitor-onduty
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取值班组未来排班表 响应结果"
+// @Router       /monitor/getMonitorOndutyGroupFuturePlan/{id} [get]
+// @Security     Bearer
 func getMonitorOndutyGroupFuturePlan(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
@@ -317,6 +333,14 @@ func getMonitorOndutyGroupFuturePlan(c *gin.Context) {
 	common.OkWithData(ondutyPlanResponse, c)
 }
 
+// @Summary      创建值班组
+// @Description  创建值班组 接口
+// @Tags         monitor-onduty
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建值班组 响应结果"
+// @Router       /monitor/createMonitorOndutyGroup [post]
+// @Security     Bearer
 func createMonitorOndutyGroup(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -360,6 +384,14 @@ func createMonitorOndutyGroup(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      更新值班组
+// @Description  更新值班组 接口
+// @Tags         monitor-onduty
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新值班组 响应结果"
+// @Router       /monitor/updateMonitorOndutyGroup [post]
+// @Security     Bearer
 func updateMonitorOndutyGroup(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -397,6 +429,14 @@ type setMonitorOndutyGroupEnableReq struct {
 	Enable int  `json:"enable" validate:"required,oneof=1 2"` // 假设 1=启用 2=禁用
 }
 
+// @Summary      删除值班组
+// @Description  删除值班组 接口
+// @Tags         monitor-onduty
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除值班组 响应结果"
+// @Router       /monitor/deleteMonitorOndutyGroup/{id} [delete]
+// @Security     Bearer
 func deleteMonitorOndutyGroup(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
@@ -423,6 +463,14 @@ func deleteMonitorOndutyGroup(c *gin.Context) {
 	common.OkWithMessage("删除成功", c)
 }
 
+// @Summary      获取指定值班组详情
+// @Description  获取指定值班组详情 接口
+// @Tags         monitor-onduty
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取指定值班组详情 响应结果"
+// @Router       /monitor/getMonitorOndutyGroupOne/{id} [get]
+// @Security     Bearer
 func getMonitorOndutyGroupOne(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
@@ -440,6 +488,14 @@ func getMonitorOndutyGroupOne(c *gin.Context) {
 	common.OkWithData(dbObj, c)
 }
 
+// @Summary      提交调班/换班申请
+// @Description  提交调班/换班申请 接口
+// @Tags         monitor-onduty
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "提交调班/换班申请 响应结果"
+// @Router       /monitor/createMonitorOndutyChange [post]
+// @Security     Bearer
 func createMonitorOndutyChange(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -510,7 +566,14 @@ func createMonitorOndutyChange(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
-// setMonitorOndutyStatus 设置采集任务的启用/禁用状态
+// @Summary      设置值班组状态
+// @Description  设置值班组状态 接口
+// @Tags         monitor-onduty
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "设置值班组状态 响应结果"
+// @Router       /monitor/setMonitorOndutyStatus [post]
+// @Security     Bearer
 func setMonitorOndutyStatus(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 

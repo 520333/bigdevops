@@ -192,7 +192,14 @@ func getClusterClientsetHelper(c *gin.Context, clusterName string) (*kubernetes.
 	return kSet, dSet, dbCluster, nil
 }
 
-// getK8sNamespaceList 获取指定 K8s 集群的命名空间列表
+// @Summary      获取集群Namespace命名空间列表
+// @Description  获取集群Namespace命名空间列表 接口
+// @Tags         k8s-pod
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取集群Namespace命名空间列表 响应结果"
+// @Router       /k8s/getK8sNamespaceList [get]
+// @Security     Bearer
 func getK8sNamespaceList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -226,7 +233,14 @@ func getK8sNamespaceList(c *gin.Context) {
 	common.OkWithDetailed(res, "ok", c)
 }
 
-// getK8sPodList 获取指定 K8s 集群与命名空间的 Pod 列表
+// @Summary      获取K8s Pod列表
+// @Description  获取K8s Pod列表 接口
+// @Tags         k8s-pod
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取K8s Pod列表 响应结果"
+// @Router       /k8s/getK8sPodList [get]
+// @Security     Bearer
 func getK8sPodList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -276,7 +290,14 @@ func getK8sPodList(c *gin.Context) {
 	}, "ok", c)
 }
 
-// getK8sPodYaml 获取单个 Pod 的完整 YAML 源码
+// @Summary      获取指定Pod声明YAML
+// @Description  获取指定Pod声明YAML 接口
+// @Tags         k8s-pod
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取指定Pod声明YAML 响应结果"
+// @Router       /k8s/getK8sPodYaml [get]
+// @Security     Bearer
 func getK8sPodYaml(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -340,7 +361,14 @@ func getK8sPodYaml(c *gin.Context) {
 	common.OkWithDetailed(string(yamlBytes), "ok", c)
 }
 
-// createK8sPod 新建 Pod (动态 Apply)
+// @Summary      创建/应用Pod声明
+// @Description  创建/应用Pod声明 接口
+// @Tags         k8s-pod
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建/应用Pod声明 响应结果"
+// @Router       /k8s/createK8sPod [post]
+// @Security     Bearer
 func createK8sPod(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sCreatePodReq
@@ -370,7 +398,14 @@ func createK8sPod(c *gin.Context) {
 	common.OkWithMessage("Pod 创建/应用成功", c)
 }
 
-// updateK8sPod 更新 Pod (动态 Apply)
+// @Summary      更新Pod配置
+// @Description  更新Pod配置 接口
+// @Tags         k8s-pod
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新Pod配置 响应结果"
+// @Router       /k8s/updateK8sPod [post]
+// @Security     Bearer
 func updateK8sPod(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sCreatePodReq
@@ -400,7 +435,14 @@ func updateK8sPod(c *gin.Context) {
 	common.OkWithMessage("Pod 更新成功", c)
 }
 
-// deleteK8sPod 删除单个 Pod
+// @Summary      删除Pod
+// @Description  删除Pod 接口
+// @Tags         k8s-pod
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除Pod 响应结果"
+// @Router       /k8s/deleteK8sPod [post]
+// @Security     Bearer
 func deleteK8sPod(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sDeletePodReq
@@ -433,7 +475,14 @@ func deleteK8sPod(c *gin.Context) {
 	common.OkWithMessage(fmt.Sprintf("Pod [%s] 删除请求已提交", reqObj.Name), c)
 }
 
-// deleteK8sPodBatch 批量删除 Pod
+// @Summary      批量删除Pod
+// @Description  批量删除Pod 接口
+// @Tags         k8s-pod
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "批量删除Pod 响应结果"
+// @Router       /k8s/deleteK8sPodBatch [post]
+// @Security     Bearer
 func deleteK8sPodBatch(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sDeletePodBatchReq
@@ -511,7 +560,14 @@ func deleteK8sPodBatch(c *gin.Context) {
 	}, "批量删除完成", c)
 }
 
-// getK8sPodLogs 获取 Pod 日志
+// @Summary      获取Pod容器日志
+// @Description  获取Pod容器日志 接口
+// @Tags         k8s-pod
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Pod容器日志 响应结果"
+// @Router       /k8s/getK8sPodLogs [get]
+// @Security     Bearer
 func getK8sPodLogs(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -915,7 +971,18 @@ func wsK8sPodLogs(c *gin.Context) {
 	}
 }
 
-// downloadK8sPodFile 下载 Pod 容器内部的文件
+// @Summary      下载容器内部文件
+// @Description  从 Pod 目标容器内导出并下载二进制或文本文件
+// @Tags         k8s-pod
+// @Produce      octet-stream
+// @Param        clusterName query string true "K8s集群名称"
+// @Param        namespace   query string true "命名空间"
+// @Param        name        query string true "Pod名称"
+// @Param        container   query string false "容器名称"
+// @Param        path        query string true "目标文件路径"
+// @Success      200 {file} file "文件下载流"
+// @Router       /k8s/downloadK8sPodFile [get]
+// @Security     Bearer
 func downloadK8sPodFile(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -1177,7 +1244,19 @@ func parseLsOutputLine(line, parentPath string) *PodFileItem {
 	}
 }
 
-// getK8sPodFileList 获取 Pod 容器内指定目录的文件/文件夹列表 (像 Kuboard 一样文件浏览器)
+// @Summary      获取容器内文件与目录列表
+// @Description  在 Pod 目标容器内执行 ls 命令拉取目录下所有文件与子文件夹信息 (像 Kuboard 一样文件浏览器)
+// @Tags         k8s-pod
+// @Accept       json
+// @Produce      json
+// @Param        clusterName query string true "K8s集群名称"
+// @Param        namespace   query string true "命名空间"
+// @Param        name        query string true "Pod名称"
+// @Param        container   query string false "容器名称"
+// @Param        path        query string false "目标目录路径 (默认 /)"
+// @Success      200 {object} common.BaseResp "成功返回文件与文件夹列表"
+// @Router       /k8s/getK8sPodFileList [get]
+// @Security     Bearer
 func getK8sPodFileList(c *gin.Context) {
 	clusterName := c.Query("clusterName")
 	namespace := c.Query("namespace")
@@ -1242,7 +1321,20 @@ func getK8sPodFileList(c *gin.Context) {
 	}, "ok", c)
 }
 
-// uploadK8sPodFile 上传本地文件到容器内部指定目录
+// @Summary      上传文件到容器内部
+// @Description  上传本地文件写入到 Pod 目标容器指定的目录中
+// @Tags         k8s-pod
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        clusterName formData string true "K8s集群名称"
+// @Param        namespace   formData string true "命名空间"
+// @Param        name        formData string true "Pod名称"
+// @Param        container   formData string false "容器名称"
+// @Param        path        formData string false "目标目录路径"
+// @Param        file        formData file   true "待上传的文件"
+// @Success      200 {object} common.BaseResp "上传成功"
+// @Router       /k8s/uploadK8sPodFile [post]
+// @Security     Bearer
 func uploadK8sPodFile(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.PostForm("clusterName")
@@ -1294,7 +1386,15 @@ func uploadK8sPodFile(c *gin.Context) {
 	common.OkWithMessage(fmt.Sprintf("文件 [%s] 成功上传至容器 %s", fileHeader.Filename, destFilePath), c)
 }
 
-// deleteK8sPodFile 删除容器内的指定文件或目录
+// @Summary      删除容器内部文件或目录
+// @Description  删除 Pod 目标容器指定的单文件或递归删除目录 (禁止删除根目录/)
+// @Tags         k8s-pod
+// @Accept       json
+// @Produce      json
+// @Param        data body object true "删除请求参数(clusterName, namespace, name, container, path)"
+// @Success      200 {object} common.BaseResp "删除成功"
+// @Router       /k8s/deleteK8sPodFile [post]
+// @Security     Bearer
 func deleteK8sPodFile(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj struct {
@@ -1340,7 +1440,19 @@ func deleteK8sPodFile(c *gin.Context) {
 	common.OkWithMessage(fmt.Sprintf("容器文件 [%s] 已删除", reqObj.Path), c)
 }
 
-// readK8sPodFileContent 预览/读取容器内文本文件内容
+// @Summary      在线预览容器内文本文件
+// @Description  获取 Pod 目标容器内文本文件内容 (限制最大 512KB)
+// @Tags         k8s-pod
+// @Accept       json
+// @Produce      json
+// @Param        clusterName query string true "K8s集群名称"
+// @Param        namespace   query string true "命名空间"
+// @Param        name        query string true "Pod名称"
+// @Param        container   query string false "容器名称"
+// @Param        path        query string true "目标文件路径"
+// @Success      200 {object} common.BaseResp "成功返回文件内容"
+// @Router       /k8s/readK8sPodFileContent [get]
+// @Security     Bearer
 func readK8sPodFileContent(c *gin.Context) {
 	clusterName := c.Query("clusterName")
 	namespace := c.Query("namespace")
@@ -1375,7 +1487,15 @@ func readK8sPodFileContent(c *gin.Context) {
 	}, "ok", c)
 }
 
-// saveK8sPodFileContent 在线修改并保存容器内文本文件内容
+// @Summary      在线修改保存容器内文本文件
+// @Description  修改并覆盖 Pod 目标容器内的文本文件内容
+// @Tags         k8s-pod
+// @Accept       json
+// @Produce      json
+// @Param        data body object true "保存内容请求体(clusterName, namespace, name, container, path, content)"
+// @Success      200 {object} common.BaseResp "保存成功"
+// @Router       /k8s/saveK8sPodFileContent [post]
+// @Security     Bearer
 func saveK8sPodFileContent(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj struct {

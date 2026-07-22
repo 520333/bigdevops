@@ -13,6 +13,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      获取工单模板列表
+// @Description  获取工单模板列表 接口
+// @Tags         workorder-template
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取工单模板列表 响应结果"
+// @Router       /workorder/getWorkOrderTemplateList [get]
+// @Security     Bearer
 func getWorkOrderTemplateList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -86,6 +94,14 @@ func getWorkOrderTemplateList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      获取工单模板详情
+// @Description  获取工单模板详情 接口
+// @Tags         workorder-template
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取工单模板详情 响应结果"
+// @Router       /workorder/getWorkOrderTemplateDetail/{id} [get]
+// @Security     Bearer
 func getWorkOrderTemplateDetail(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
@@ -103,6 +119,14 @@ func getWorkOrderTemplateDetail(c *gin.Context) {
 	common.OkWithDetailed(dbObj, "ok", c)
 }
 
+// @Summary      创建工单模板
+// @Description  创建工单模板 接口
+// @Tags         workorder-template
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建工单模板 响应结果"
+// @Router       /workorder/createWorkOrderTemplate [post]
+// @Security     Bearer
 func createWorkOrderTemplate(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj models.WorkOrderTemplate
@@ -136,6 +160,14 @@ func createWorkOrderTemplate(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      更新工单模板
+// @Description  更新工单模板 接口
+// @Tags         workorder-template
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新工单模板 响应结果"
+// @Router       /workorder/updateWorkOrderTemplate [post]
+// @Security     Bearer
 func updateWorkOrderTemplate(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj models.WorkOrderTemplate
@@ -171,6 +203,14 @@ func updateWorkOrderTemplate(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// @Summary      删除工单模板
+// @Description  删除工单模板 接口
+// @Tags         workorder-template
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除工单模板 响应结果"
+// @Router       /workorder/deleteWorkOrderTemplate/{id} [delete]
+// @Security     Bearer
 func deleteWorkOrderTemplate(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")

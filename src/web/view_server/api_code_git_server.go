@@ -16,7 +16,14 @@ import (
 	"go.uber.org/zap"
 )
 
-// 创建 Git 实例配置
+// @Summary      创建GitServer服务器实例
+// @Description  创建GitServer服务器实例 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建GitServer服务器实例 响应结果"
+// @Router       /code/createCodeGitServer [post]
+// @Security     Bearer
 func createCodeGitServer(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj models.CodeGitServer
@@ -43,7 +50,14 @@ func createCodeGitServer(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
-// 更新 Git 实例配置
+// @Summary      更新GitServer服务器实例
+// @Description  更新GitServer服务器实例 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新GitServer服务器实例 响应结果"
+// @Router       /code/updateCodeGitServer [post]
+// @Security     Bearer
 func updateCodeGitServer(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj models.CodeGitServer
@@ -65,7 +79,14 @@ func updateCodeGitServer(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
-// 删除 Git 实例配置
+// @Summary      删除GitServer服务器实例
+// @Description  删除GitServer服务器实例 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除GitServer服务器实例 响应结果"
+// @Router       /code/deleteCodeGitServer/{id} [delete]
+// @Security     Bearer
 func deleteCodeGitServer(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id, _ := strconv.Atoi(c.Param("id"))
@@ -84,7 +105,14 @@ func deleteCodeGitServer(c *gin.Context) {
 	common.OkWithMessage("删除成功", c)
 }
 
-// 获取 Git 实例列表 (带分页)
+// @Summary      获取GitServer服务器实例列表
+// @Description  获取GitServer服务器实例列表 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取GitServer服务器实例列表 响应结果"
+// @Router       /code/getCodeGitServerList [get]
+// @Security     Bearer
 func getCodeGitServerList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -114,7 +142,14 @@ func getCodeGitServerList(c *gin.Context) {
 	}, "ok", c)
 }
 
-// Ping 测试连通性 (支持在创建前发送 JSON 测试，或直接测试已有配置)
+// @Summary      测试GitServer连接连通性
+// @Description  测试GitServer连接连通性 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "测试GitServer连接连通性 响应结果"
+// @Router       /code/pingCodeGitServer [post]
+// @Security     Bearer
 func pingCodeGitServer(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj models.CodeGitServer

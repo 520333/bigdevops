@@ -12,6 +12,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      获取系统API权限接口列表
+// @Description  获取系统API权限接口列表 接口
+// @Tags         system-api
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取系统API权限接口列表 响应结果"
+// @Router       /system/getApiList [get]
+// @Security     Bearer
 func getApiList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	apis, err := models.GetApiAll()
@@ -60,6 +68,14 @@ func getApiList(c *gin.Context) {
 
 }
 
+// @Summary      获取全量系统API接口列表
+// @Description  获取全量系统API接口列表 接口
+// @Tags         system-api
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取全量系统API接口列表 响应结果"
+// @Router       /system/getApiListAll [get]
+// @Security     Bearer
 func getApiListAll(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	apis, err := models.GetApiAll()
@@ -79,6 +95,14 @@ func getApiListAll(c *gin.Context) {
 	common.OkWithDetailed(fatherApiMap, "ok", c)
 }
 
+// @Summary      创建API接口定义
+// @Description  创建API接口定义 接口
+// @Tags         system-api
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建API接口定义 响应结果"
+// @Router       /system/createApi [post]
+// @Security     Bearer
 func createApi(c *gin.Context) {
 	// 校验Api字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
@@ -113,6 +137,14 @@ func createApi(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      更新API接口定义
+// @Description  更新API接口定义 接口
+// @Tags         system-api
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新API接口定义 响应结果"
+// @Router       /system/updateApi [post]
+// @Security     Bearer
 func updateApi(c *gin.Context) {
 	// 校验Api字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
@@ -174,6 +206,14 @@ func updateApi(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// @Summary      删除API接口定义
+// @Description  删除API接口定义 接口
+// @Tags         system-api
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除API接口定义 响应结果"
+// @Router       /system/deleteApi/{id} [delete]
+// @Security     Bearer
 func deleteApi(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")

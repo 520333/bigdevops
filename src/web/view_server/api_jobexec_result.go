@@ -11,6 +11,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      查询作业任务在各主机的执行日志结果
+// @Description  查询作业任务在各主机的执行日志结果 接口
+// @Tags         jobexec-task
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "查询作业任务在各主机的执行日志结果 响应结果"
+// @Router       /jobexec/getJobExecResultByJobId [get]
+// @Security     Bearer
 func getJobExecResultByJobId(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 

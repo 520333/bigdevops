@@ -43,7 +43,14 @@ func getGiteaClient(server *models.CodeGitServer) (*gitea.Client, error) {
 	return gitea.NewClient(server.Endpoint, gitea.SetToken(server.Token), gitea.SetHTTPClient(httpClient))
 }
 
-// createCodeGitRepo 创建仓库记录
+// @Summary      创建Git代码仓库
+// @Description  创建Git代码仓库 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建Git代码仓库 响应结果"
+// @Router       /code/createCodeGitRepo [post]
+// @Security     Bearer
 func createCodeGitRepo(c *gin.Context) {
 	var reqObj models.CodeGitRepo
 	if err := c.ShouldBindJSON(&reqObj); err != nil {
@@ -75,7 +82,14 @@ func createCodeGitRepo(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
-// updateCodeGitRepo 更新仓库记录
+// @Summary      更新Git代码仓库配置
+// @Description  更新Git代码仓库配置 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新Git代码仓库配置 响应结果"
+// @Router       /code/updateCodeGitRepo [post]
+// @Security     Bearer
 func updateCodeGitRepo(c *gin.Context) {
 	var reqObj models.CodeGitRepo
 
@@ -109,7 +123,14 @@ func updateCodeGitRepo(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
-// getCodeGitRepoList 获取仓库列表（分页）
+// @Summary      获取Git代码仓库列表
+// @Description  获取Git代码仓库列表 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Git代码仓库列表 响应结果"
+// @Router       /code/getCodeGitRepoList [get]
+// @Security     Bearer
 func getCodeGitRepoList(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
@@ -497,7 +518,14 @@ func mapRoleToGitea(unifiedRole int) string {
 	}
 }
 
-// GetRepoMembers 获取仓库成员列表
+// @Summary      获取代码仓库成员列表
+// @Description  获取代码仓库成员列表 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取代码仓库成员列表 响应结果"
+// @Router       /code/getRepoMembers [get]
+// @Security     Bearer
 func getRepoMembers(c *gin.Context) {
 	serverId, _ := strconv.Atoi(c.Query("serverId"))
 	repoId, _ := strconv.Atoi(c.Query("repoId"))
@@ -586,7 +614,14 @@ func getRepoMembers(c *gin.Context) {
 	common.OkWithData(members, c)
 }
 
-// AddRepoMember 添加或更新仓库成员
+// @Summary      添加/更新仓库成员权限
+// @Description  添加/更新仓库成员权限 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "添加/更新仓库成员权限 响应结果"
+// @Router       /code/addRepoMember [post]
+// @Security     Bearer
 func addRepoMember(c *gin.Context) {
 	var req MemberReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -663,7 +698,14 @@ func addRepoMember(c *gin.Context) {
 	common.OkWithMessage("成员权限配置成功", c)
 }
 
-// RemoveRepoMember 移除仓库成员
+// @Summary      移除仓库成员
+// @Description  移除仓库成员 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "移除仓库成员 响应结果"
+// @Router       /code/removeRepoMember [delete]
+// @Security     Bearer
 func removeRepoMember(c *gin.Context) {
 	var req MemberReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -717,7 +759,14 @@ type GitBranch struct {
 	Name string `json:"name"`
 }
 
-// getRepoBranches 获取仓库分支列表
+// @Summary      获取代码仓库分支列表
+// @Description  获取代码仓库分支列表 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取代码仓库分支列表 响应结果"
+// @Router       /code/getRepoBranches [get]
+// @Security     Bearer
 func getRepoBranches(c *gin.Context) {
 	serverId, _ := strconv.Atoi(c.Query("serverId"))
 	repoId, _ := strconv.Atoi(c.Query("repoId"))
@@ -797,7 +846,14 @@ type CreateNamespaceReq struct {
 	Visibility string `json:"visibility"` // private, internal, public
 }
 
-// ------------------- [API] 获取命名空间列表 -------------------
+// @Summary      获取Git系统命名空间/Group列表
+// @Description  获取Git系统命名空间/Group列表 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Git系统命名空间/Group列表 响应结果"
+// @Router       /code/getGitNamespaces [get]
+// @Security     Bearer
 func getGitNamespaces(c *gin.Context) {
 	serverId, _ := strconv.Atoi(c.Query("serverId"))
 	if serverId == 0 {
@@ -888,7 +944,14 @@ func getGitNamespaces(c *gin.Context) {
 	common.OkWithData(filteredResults, c)
 }
 
-// ------------------- [API] 新建命名空间 -------------------
+// @Summary      创建Git命名空间
+// @Description  创建Git命名空间 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建Git命名空间 响应结果"
+// @Router       /code/createGitNamespace [post]
+// @Security     Bearer
 func createGitNamespace(c *gin.Context) {
 	var req CreateNamespaceReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -951,7 +1014,14 @@ func createGitNamespace(c *gin.Context) {
 	common.OkWithMessage("命名空间创建成功", c)
 }
 
-// ------------------- [API] 更新命名空间 -------------------
+// @Summary      更新Git命名空间
+// @Description  更新Git命名空间 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新Git命名空间 响应结果"
+// @Router       /code/updateGitNamespace [post]
+// @Security     Bearer
 func updateGitNamespace(c *gin.Context) {
 	var req CreateNamespaceReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -1080,7 +1150,14 @@ type UpdateGitUserReq struct {
 	State    string `json:"state"`
 }
 
-// ------------------- [API] 获取远端用户列表 -------------------
+// @Summary      获取Git端用户列表
+// @Description  获取Git端用户列表 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Git端用户列表 响应结果"
+// @Router       /code/getGitUsers [get]
+// @Security     Bearer
 func getGitUsers(c *gin.Context) {
 	serverId, _ := strconv.Atoi(c.Query("serverId"))
 	if serverId == 0 {
@@ -1168,7 +1245,14 @@ func getGitUsers(c *gin.Context) {
 	common.OkWithData(filteredResults, c)
 }
 
-// ------------------- [API] 创建远端用户 -------------------
+// @Summary      创建Git端用户
+// @Description  创建Git端用户 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建Git端用户 响应结果"
+// @Router       /code/createGitUser [post]
+// @Security     Bearer
 func createGitUser(c *gin.Context) {
 	var req CreateGitUserReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -1227,7 +1311,14 @@ func createGitUser(c *gin.Context) {
 	common.OkWithMessage("用户创建成功", c)
 }
 
-// ------------------- [API] 更新远端用户 -------------------
+// @Summary      更新Git端用户
+// @Description  更新Git端用户 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新Git端用户 响应结果"
+// @Router       /code/updateGitUser [post]
+// @Security     Bearer
 func updateGitUser(c *gin.Context) {
 	var req UpdateGitUserReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -1473,6 +1564,14 @@ type CreateMergeRequestReq struct {
 	TargetBranch string `json:"targetBranch" binding:"required"`
 }
 
+// @Summary      获取代码合并请求 (MR/PR) 列表
+// @Description  获取代码合并请求 (MR/PR) 列表 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取代码合并请求 (MR/PR) 列表 响应结果"
+// @Router       /code/getMergeRequests [get]
+// @Security     Bearer
 func getMergeRequests(c *gin.Context) {
 	serverId, _ := strconv.Atoi(c.Query("serverId"))
 	repoId, _ := strconv.Atoi(c.Query("repoId"))
@@ -1617,6 +1716,14 @@ func getMergeRequests(c *gin.Context) {
 	common.OkWithDetailed(gin.H{"items": results, "total": len(results)}, "获取成功", c)
 }
 
+// @Summary      执行合并代码请求
+// @Description  执行合并代码请求 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "执行合并代码请求 响应结果"
+// @Router       /code/mergeMergeRequest [post]
+// @Security     Bearer
 func mergeMergeRequest(c *gin.Context) {
 	var req DoMergeRequestReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -1698,6 +1805,14 @@ func mergeMergeRequest(c *gin.Context) {
 	common.OkWithMessage("合并成功", c)
 }
 
+// @Summary      关闭代码合并请求
+// @Description  关闭代码合并请求 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "关闭代码合并请求 响应结果"
+// @Router       /code/closeMergeRequest [post]
+// @Security     Bearer
 func closeMergeRequest(c *gin.Context) {
 	var req DoMergeRequestReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -1759,6 +1874,14 @@ func closeMergeRequest(c *gin.Context) {
 	common.OkWithMessage("合并请求已拒绝/关闭", c)
 }
 
+// @Summary      创建代码合并请求
+// @Description  创建代码合并请求 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建代码合并请求 响应结果"
+// @Router       /code/createMergeRequest [post]
+// @Security     Bearer
 func createMergeRequest(c *gin.Context) {
 	var req CreateMergeRequestReq
 	if err := c.ShouldBindJSON(&req); err != nil {

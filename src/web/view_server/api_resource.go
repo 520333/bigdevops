@@ -18,6 +18,14 @@ type ResponseResourceCommon struct {
 	Items interface{} `json:"items"`
 }
 
+// @Summary      查询服务树节点关联的所有CMDB资源
+// @Description  查询服务树节点关联的所有CMDB资源 接口
+// @Tags         stree
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "查询服务树节点关联的所有CMDB资源 响应结果"
+// @Router       /stree/fetchResourceByNode [get]
+// @Security     Bearer
 func fetchResourceByNode(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	nodeId := c.DefaultQuery("nodeId", "")

@@ -12,6 +12,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      获取未绑定的ELB负载均衡列表
+// @Description  获取未绑定的ELB负载均衡列表 接口
+// @Tags         resource-elb
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取未绑定的ELB负载均衡列表 响应结果"
+// @Router       /stree/getResourceElbUnbindList [get]
+// @Security     Bearer
 func getResourceElbUnbindList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	allElb, err := models.GetResourceELbAll()
@@ -32,6 +40,14 @@ func getResourceElbUnbindList(c *gin.Context) {
 	common.OkWithDetailed(allElb, "ok", c)
 }
 
+// @Summary      绑定ELB到服务树节点
+// @Description  绑定ELB到服务树节点 接口
+// @Tags         resource-elb
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "绑定ELB到服务树节点 响应结果"
+// @Router       /stree/bindElbToStreeNode [post]
+// @Security     Bearer
 func bindElbToStreeNode(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -95,6 +111,14 @@ func bindElbToStreeNode(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// @Summary      解绑ELB与服务树关系
+// @Description  解绑ELB与服务树关系 接口
+// @Tags         resource-elb
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "解绑ELB与服务树关系 响应结果"
+// @Router       /stree/unBindElbToStreeNode [post]
+// @Security     Bearer
 func unBindElbToStreeNode(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 

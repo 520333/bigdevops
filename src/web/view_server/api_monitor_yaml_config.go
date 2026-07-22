@@ -22,6 +22,14 @@ func downloadPrometheusMainConfigYaml(c *gin.Context) {
 	c.String(200, mainConfigYaml)
 }
 
+// @Summary      获取Prometheus生成的主YAML配置文件
+// @Description  获取Prometheus生成的主YAML配置文件 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Prometheus生成的主YAML配置文件 响应结果"
+// @Router       /monitor/getMonitorPrometheusYamlOne [get]
+// @Security     Bearer
 func getMonitorPrometheusYamlOne(c *gin.Context) {
 	mainConfigYaml := fetchPrometheusMainConfigYaml(c)
 	common.OkWithData(mainConfigYaml, c)
@@ -42,6 +50,14 @@ func downloadAlertManagerMainConfigYaml(c *gin.Context) {
 	c.String(200, mainConfigYaml)
 }
 
+// @Summary      获取AlertManager主配置文件YAML
+// @Description  获取AlertManager主配置文件YAML 接口
+// @Tags         monitor-alert
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取AlertManager主配置文件YAML 响应结果"
+// @Router       /monitor/getMonitorAlertManagerYamlOne [get]
+// @Security     Bearer
 func getMonitorAlertManagerYamlOne(c *gin.Context) {
 	mainConfigYaml := fetchAlertManagerMainConfigYaml(c)
 	common.OkWithData(mainConfigYaml, c)
@@ -60,6 +76,14 @@ func downloadPrometheusAlertRuleMainConfigYaml(c *gin.Context) {
 	c.String(200, mainConfigYaml)
 }
 
+// @Summary      获取Prometheus生成的告警规则YAML
+// @Description  获取Prometheus生成的告警规则YAML 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Prometheus生成的告警规则YAML 响应结果"
+// @Router       /monitor/getMonitorPrometheusAlertRuleYamlOne [get]
+// @Security     Bearer
 func getMonitorPrometheusAlertRuleYamlOne(c *gin.Context) {
 	mainConfigYaml := fetchPrometheusAlertRuleMainConfigYaml(c)
 	common.OkWithData(mainConfigYaml, c)
@@ -78,6 +102,14 @@ func downloadPrometheusRecordRuleMainConfigYaml(c *gin.Context) {
 	c.String(200, mainConfigYaml)
 }
 
+// @Summary      获取Prometheus生成的预聚合规则YAML
+// @Description  获取Prometheus生成的预聚合规则YAML 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Prometheus生成的预聚合规则YAML 响应结果"
+// @Router       /monitor/getMonitorPrometheusRecordRuleYamlOne [get]
+// @Security     Bearer
 func getMonitorPrometheusRecordRuleYamlOne(c *gin.Context) {
 	mainConfigYaml := fetchPrometheusRecordRuleMainConfigYaml(c)
 	common.OkWithData(mainConfigYaml, c)

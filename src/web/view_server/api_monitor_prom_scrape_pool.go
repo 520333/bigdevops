@@ -12,6 +12,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      获取Prometheus采集集群池列表
+// @Description  获取Prometheus采集集群池列表 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Prometheus采集集群池列表 响应结果"
+// @Router       /monitor/getMonitorPromScrapePoolList [get]
+// @Security     Bearer
 func getMonitorPromScrapePoolList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -84,6 +92,14 @@ func getMonitorPromScrapePoolList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      创建Prometheus采集集群池
+// @Description  创建Prometheus采集集群池 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建Prometheus采集集群池 响应结果"
+// @Router       /monitor/createMonitorPromScrapePool [post]
+// @Security     Bearer
 func createMonitorPromScrapePool(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -119,6 +135,14 @@ func createMonitorPromScrapePool(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      更新Prometheus采集集群池
+// @Description  更新Prometheus采集集群池 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新Prometheus采集集群池 响应结果"
+// @Router       /monitor/updateMonitorPromScrapePool [post]
+// @Security     Bearer
 func updateMonitorPromScrapePool(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -154,6 +178,14 @@ func updateMonitorPromScrapePool(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// @Summary      删除Prometheus采集集群池
+// @Description  删除Prometheus采集集群池 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除Prometheus采集集群池 响应结果"
+// @Router       /monitor/deleteMonitorPromScrapePool/{id} [delete]
+// @Security     Bearer
 func deleteMonitorPromScrapePool(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")

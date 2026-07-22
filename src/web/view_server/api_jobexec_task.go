@@ -15,6 +15,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      获取作业执行任务列表
+// @Description  获取作业执行任务列表 接口
+// @Tags         jobexec-task
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取作业执行任务列表 响应结果"
+// @Router       /jobexec/getJobExecTaskList [get]
+// @Security     Bearer
 func getJobExecTaskList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -88,6 +96,14 @@ func getJobExecTaskList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      获取指定作业执行任务详情
+// @Description  获取指定作业执行任务详情 接口
+// @Tags         jobexec-task
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取指定作业执行任务详情 响应结果"
+// @Router       /jobexec/getJobExecTaskOne/{id} [get]
+// @Security     Bearer
 func getJobExecTaskOne(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
@@ -105,6 +121,14 @@ func getJobExecTaskOne(c *gin.Context) {
 	common.OkWithDetailed(dbObj, "ok", c)
 }
 
+// @Summary      创建作业执行任务
+// @Description  创建作业执行任务 接口
+// @Tags         jobexec-task
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建作业执行任务 响应结果"
+// @Router       /jobexec/createJobExecTask [post]
+// @Security     Bearer
 func createJobExecTask(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj models.JobTask
@@ -182,6 +206,14 @@ func createJobExecTask(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      更新作业执行任务
+// @Description  更新作业执行任务 接口
+// @Tags         jobexec-task
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新作业执行任务 响应结果"
+// @Router       /jobexec/updateJobExecTask [post]
+// @Security     Bearer
 func updateJobExecTask(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj models.JobTask
@@ -217,6 +249,14 @@ func updateJobExecTask(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// @Summary      删除作业执行任务
+// @Description  删除作业执行任务 接口
+// @Tags         jobexec-task
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除作业执行任务 响应结果"
+// @Router       /jobexec/deleteJobExecTask/{id} [delete]
+// @Security     Bearer
 func deleteJobExecTask(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
@@ -243,6 +283,14 @@ func deleteJobExecTask(c *gin.Context) {
 	common.OkWithMessage("删除成功", c)
 }
 
+// @Summary      触发/执行/终止作业任务
+// @Description  触发/执行/终止作业任务 接口
+// @Tags         jobexec-task
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "触发/执行/终止作业任务 响应结果"
+// @Router       /jobexec/actionJobExecTaskOne/{id} [post]
+// @Security     Bearer
 func actionJobExecTaskOne(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")

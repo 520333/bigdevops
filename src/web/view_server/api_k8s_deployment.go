@@ -123,7 +123,14 @@ func deploymentConvert(d *appsv1.Deployment) *OneDeployment {
 	}
 }
 
-// getK8sDeploymentList 获取指定集群与命名空间的 Deployment 控制器列表
+// @Summary      获取Deployment无状态控制器列表
+// @Description  获取Deployment无状态控制器列表 接口
+// @Tags         k8s-deployment
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Deployment无状态控制器列表 响应结果"
+// @Router       /k8s/getK8sDeploymentList [get]
+// @Security     Bearer
 func getK8sDeploymentList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -182,7 +189,14 @@ func getK8sDeploymentList(c *gin.Context) {
 	}, "ok", c)
 }
 
-// getK8sDeploymentYaml 获取单个 Deployment 的完整 YAML 源码
+// @Summary      获取Deployment声明YAML
+// @Description  获取Deployment声明YAML 接口
+// @Tags         k8s-deployment
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Deployment声明YAML 响应结果"
+// @Router       /k8s/getK8sDeploymentYaml [get]
+// @Security     Bearer
 func getK8sDeploymentYaml(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -245,7 +259,14 @@ func getK8sDeploymentYaml(c *gin.Context) {
 	common.OkWithDetailed(string(yamlBytes), "ok", c)
 }
 
-// createK8sDeployment 新建 Deployment (动态 Apply)
+// @Summary      创建Deployment应用
+// @Description  创建Deployment应用 接口
+// @Tags         k8s-deployment
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建Deployment应用 响应结果"
+// @Router       /k8s/createK8sDeployment [post]
+// @Security     Bearer
 func createK8sDeployment(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sCreateDeploymentReq
@@ -310,12 +331,26 @@ func createK8sDeployment(c *gin.Context) {
 	common.OkWithMessage("Deployment 创建/应用成功", c)
 }
 
-// updateK8sDeployment 更新 Deployment
+// @Summary      更新Deployment配置
+// @Description  更新Deployment配置 接口
+// @Tags         k8s-deployment
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新Deployment配置 响应结果"
+// @Router       /k8s/updateK8sDeployment [post]
+// @Security     Bearer
 func updateK8sDeployment(c *gin.Context) {
 	createK8sDeployment(c)
 }
 
-// scaleK8sDeployment 扩缩容 Deployment 副本数
+// @Summary      调整Deployment副本数(Scale)
+// @Description  调整Deployment副本数(Scale) 接口
+// @Tags         k8s-deployment
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "调整Deployment副本数(Scale) 响应结果"
+// @Router       /k8s/scaleK8sDeployment [post]
+// @Security     Bearer
 func scaleK8sDeployment(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sScaleDeploymentReq
@@ -361,7 +396,14 @@ func scaleK8sDeployment(c *gin.Context) {
 	common.OkWithMessage(fmt.Sprintf("Deployment [%s] 副本数已调整为 %d", reqObj.Name, replicas), c)
 }
 
-// restartK8sDeployment 滚动重启 Deployment (Rollout Restart)
+// @Summary      滚动重启Deployment(Restart)
+// @Description  滚动重启Deployment(Restart) 接口
+// @Tags         k8s-deployment
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "滚动重启Deployment(Restart) 响应结果"
+// @Router       /k8s/restartK8sDeployment [post]
+// @Security     Bearer
 func restartK8sDeployment(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sRestartDeploymentReq
@@ -406,7 +448,14 @@ func restartK8sDeployment(c *gin.Context) {
 	common.OkWithMessage(fmt.Sprintf("Deployment [%s] 重新滚动重启指令已下发", reqObj.Name), c)
 }
 
-// deleteK8sDeployment 删除单个 Deployment
+// @Summary      删除Deployment
+// @Description  删除Deployment 接口
+// @Tags         k8s-deployment
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除Deployment 响应结果"
+// @Router       /k8s/deleteK8sDeployment [post]
+// @Security     Bearer
 func deleteK8sDeployment(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sDeleteDeploymentReq
@@ -442,7 +491,14 @@ func deleteK8sDeployment(c *gin.Context) {
 	common.OkWithMessage(fmt.Sprintf("Deployment [%s] 已删除", reqObj.Name), c)
 }
 
-// deleteK8sDeploymentBatch 批量删除 Deployment
+// @Summary      批量删除Deployment
+// @Description  批量删除Deployment 接口
+// @Tags         k8s-deployment
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "批量删除Deployment 响应结果"
+// @Router       /k8s/deleteK8sDeploymentBatch [post]
+// @Security     Bearer
 func deleteK8sDeploymentBatch(c *gin.Context) {
 	var reqObj K8sDeleteDeploymentBatchReq
 	if err := c.ShouldBindJSON(&reqObj); err != nil {

@@ -15,6 +15,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      审批工单申请
+// @Description  审批工单申请 接口
+// @Tags         workorder-instance
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "审批工单申请 响应结果"
+// @Router       /workorder/approvalWorkOrderInstance/{id} [post]
+// @Security     Bearer
 func approvalWorkOrderInstance(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	userName := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)
@@ -141,6 +149,14 @@ type actionWorkOrderOneResult struct {
 	Output    string `json:"output"  validate:"required,min=1"`
 }
 
+// @Summary      处理执行工单节点
+// @Description  处理执行工单节点 接口
+// @Tags         workorder-instance
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "处理执行工单节点 响应结果"
+// @Router       /workorder/actionWorkOrderInstance/{id} [post]
+// @Security     Bearer
 func actionWorkOrderInstance(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	userName := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)
@@ -244,6 +260,14 @@ func actionWorkOrderInstance(c *gin.Context) {
 	common.OkWithMessage("执行结果提交成功", c)
 }
 
+// @Summary      发表工单评论/留言
+// @Description  发表工单评论/留言 接口
+// @Tags         workorder-instance
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "发表工单评论/留言 响应结果"
+// @Router       /workorder/commentWorkOrderInstance/{id} [post]
+// @Security     Bearer
 func commentWorkOrderInstance(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	userName := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)
@@ -296,6 +320,14 @@ func commentWorkOrderInstance(c *gin.Context) {
 	common.OkWithMessage("评论成功", c)
 }
 
+// @Summary      获取工单申请实例列表
+// @Description  获取工单申请实例列表 接口
+// @Tags         workorder-instance
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取工单申请实例列表 响应结果"
+// @Router       /workorder/getWorkOrderInstanceList [get]
+// @Security     Bearer
 func getWorkOrderInstanceList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -473,6 +505,14 @@ func getWorkOrderInstanceList(c *gin.Context) {
 	}
 }
 
+// @Summary      获取工单申请实例详情与流转轨迹
+// @Description  获取工单申请实例详情与流转轨迹 接口
+// @Tags         workorder-instance
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取工单申请实例详情与流转轨迹 响应结果"
+// @Router       /workorder/getWorkOrderInstanceDetail/{id} [get]
+// @Security     Bearer
 func getWorkOrderInstanceDetail(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
@@ -497,6 +537,14 @@ type CreateInstanceReq struct {
 	DesireFinishTime string `json:"desireFinishTime"` // 接收字符串
 }
 
+// @Summary      提交流程工单申请
+// @Description  提交流程工单申请 接口
+// @Tags         workorder-instance
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "提交流程工单申请 响应结果"
+// @Router       /workorder/createWorkOrderInstance [post]
+// @Security     Bearer
 func createWorkOrderInstance(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -548,6 +596,14 @@ func createWorkOrderInstance(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      更新工单申请实例
+// @Description  更新工单申请实例 接口
+// @Tags         workorder-instance
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新工单申请实例 响应结果"
+// @Router       /workorder/updateWorkOrderInstance [post]
+// @Security     Bearer
 func updateWorkOrderInstance(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj models.WorkOrderInstance
@@ -583,6 +639,14 @@ func updateWorkOrderInstance(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// @Summary      删除工单申请实例
+// @Description  删除工单申请实例 接口
+// @Tags         workorder-instance
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除工单申请实例 响应结果"
+// @Router       /workorder/deleteWorkOrderInstance/{id} [delete]
+// @Security     Bearer
 func deleteWorkOrderInstance(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")

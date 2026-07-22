@@ -14,6 +14,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      获取Prometheus告警规则列表
+// @Description  获取Prometheus告警规则列表 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Prometheus告警规则列表 响应结果"
+// @Router       /monitor/getMonitorPromAlertRuleList [get]
+// @Security     Bearer
 func getMonitorPromAlertRuleList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -91,6 +99,14 @@ func getMonitorPromAlertRuleList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      创建Prometheus告警规则
+// @Description  创建Prometheus告警规则 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建Prometheus告警规则 响应结果"
+// @Router       /monitor/createMonitorPromAlertRule [post]
+// @Security     Bearer
 func createMonitorPromAlertRule(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -131,6 +147,14 @@ func createMonitorPromAlertRule(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      更新Prometheus告警规则
+// @Description  更新Prometheus告警规则 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新Prometheus告警规则 响应结果"
+// @Router       /monitor/updateMonitorPromAlertRule [post]
+// @Security     Bearer
 func updateMonitorPromAlertRule(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -167,6 +191,14 @@ func updateMonitorPromAlertRule(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// @Summary      删除Prometheus告警规则
+// @Description  删除Prometheus告警规则 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除Prometheus告警规则 响应结果"
+// @Router       /monitor/deleteMonitorPromAlertRule/{id} [delete]
+// @Security     Bearer
 func deleteMonitorPromAlertRule(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
@@ -193,7 +225,14 @@ type deleteMonitorPromAlertRuleBatchReq struct {
 	Ids []uint `json:"ids" validate:"required,min=1"` // 要求至少传 1 个 ID
 }
 
-// 2. 批量删除的处理函数
+// @Summary      批量删除Prometheus告警规则
+// @Description  批量删除Prometheus告警规则 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "批量删除Prometheus告警规则 响应结果"
+// @Router       /monitor/deleteMonitorPromAlertRuleBatch [delete]
+// @Security     Bearer
 func deleteMonitorPromAlertRuleBatch(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -223,7 +262,14 @@ type setMonitorPromAlertRuleEnableReq struct {
 	Enable int  `json:"enable" validate:"required,oneof=1 2"` // 假设 1=启用 2=禁用
 }
 
-// setMonitorPromAlertRuleStatus 设置告警规则配置的启用/禁用状态
+// @Summary      设置Prometheus告警规则启用状态
+// @Description  设置Prometheus告警规则启用状态 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "设置Prometheus告警规则启用状态 响应结果"
+// @Router       /monitor/setMonitorPromAlertRuleStatus [post]
+// @Security     Bearer
 func setMonitorPromAlertRuleStatus(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -266,6 +312,14 @@ func setMonitorPromAlertRuleStatus(c *gin.Context) {
 	common.OkWithMessage("状态修改成功", c)
 }
 
+// @Summary      批量设置Prometheus告警规则状态
+// @Description  批量设置Prometheus告警规则状态 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "批量设置Prometheus告警规则状态 响应结果"
+// @Router       /monitor/setMonitorPromAlertRuleStatusBatch [post]
+// @Security     Bearer
 func setMonitorPromAlertRuleStatusBatch(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -312,6 +366,14 @@ func commonPromqlExprCheck(ql string) (pt PromQLCheckResult) {
 	return
 }
 
+// @Summary      PromQL语法在线校验
+// @Description  PromQL语法在线校验 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "PromQL语法在线校验 响应结果"
+// @Router       /monitor/promqlExprCheck [get]
+// @Security     Bearer
 func promqlExprCheck(c *gin.Context) {
 	ql := c.DefaultQuery("ql", "")
 	pt := commonPromqlExprCheck(ql)

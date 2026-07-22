@@ -12,6 +12,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      获取AlertManager集群列表
+// @Description  获取AlertManager集群列表 接口
+// @Tags         monitor-alert
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取AlertManager集群列表 响应结果"
+// @Router       /monitor/getMonitorAlertManagerPoolList [get]
+// @Security     Bearer
 func getMonitorAlertManagerPoolList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -84,6 +92,14 @@ func getMonitorAlertManagerPoolList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      创建AlertManager集群实例
+// @Description  创建AlertManager集群实例 接口
+// @Tags         monitor-alert
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建AlertManager集群实例 响应结果"
+// @Router       /monitor/createMonitorAlertManagerPool [post]
+// @Security     Bearer
 func createMonitorAlertManagerPool(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -120,6 +136,14 @@ func createMonitorAlertManagerPool(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      更新AlertManager集群实例
+// @Description  更新AlertManager集群实例 接口
+// @Tags         monitor-alert
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新AlertManager集群实例 响应结果"
+// @Router       /monitor/updateMonitorAlertManagerPool [post]
+// @Security     Bearer
 func updateMonitorAlertManagerPool(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -155,6 +179,14 @@ func updateMonitorAlertManagerPool(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// @Summary      删除AlertManager集群实例
+// @Description  删除AlertManager集群实例 接口
+// @Tags         monitor-alert
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除AlertManager集群实例 响应结果"
+// @Router       /monitor/deleteMonitorAlertManagerPool/{id} [delete]
+// @Security     Bearer
 func deleteMonitorAlertManagerPool(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")

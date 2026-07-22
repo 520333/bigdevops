@@ -54,7 +54,13 @@ func UserLogin(c *gin.Context) {
 	models.TokenNext(dbUser, c)
 }
 
-// UserLogout 处理用户退出
+// @Summary      用户登出
+// @Description  用户登出 接口
+// @Tags         system-user
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "用户登出 响应结果"
+// @Router       /logout [get]
 func UserLogout(c *gin.Context) {
 	// 1. 获取 Token (假设中间件已经通过 Header 拿到了)
 	token := c.GetHeader("Authorization")
@@ -81,7 +87,14 @@ func UserLogout(c *gin.Context) {
 	})
 }
 
-// 登录后获取用户信息 来自于jwt header
+// @Summary      获取当前登录用户信息
+// @Description  获取当前登录用户信息 接口
+// @Tags         system-user
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取当前登录用户信息 响应结果"
+// @Router       /getUserInfo [get]
+// @Security     Bearer
 func getUserAfterLogin(c *gin.Context) {
 	userName := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
@@ -94,6 +107,14 @@ func getUserAfterLogin(c *gin.Context) {
 	common.OkWithDetailed(dbUser, "ok", c)
 }
 
+// @Summary      获取当前用户权限码
+// @Description  获取当前用户权限码 接口
+// @Tags         system-user
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取当前用户权限码 响应结果"
+// @Router       /getPermCode [get]
+// @Security     Bearer
 func getPermCode(c *gin.Context) {
 	// 1. 从 JWT 或上下文获取当前登录用户的角色
 	userNameInter, exists := c.Get(common.GIN_CTX_JWT_USER_NAME)
@@ -152,6 +173,14 @@ func getPermCode(c *gin.Context) {
 	common.OkWithDetailed(permCodes, "ok", c)
 }
 
+// @Summary      创建系统账号
+// @Description  创建系统账号 接口
+// @Tags         system-account
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建系统账号 响应结果"
+// @Router       /system/createAccount [post]
+// @Security     Bearer
 func createAccount(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
@@ -196,6 +225,14 @@ func createAccount(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      检查账号是否存在
+// @Description  检查账号是否存在 接口
+// @Tags         system-account
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "检查账号是否存在 响应结果"
+// @Router       /system/accountExist [post]
+// @Security     Bearer
 func accountExist(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
@@ -225,6 +262,14 @@ func accountExist(c *gin.Context) {
 	common.OkWithMessage("用户名可用", c)
 }
 
+// @Summary      更新系统账号
+// @Description  更新系统账号 接口
+// @Tags         system-account
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新系统账号 响应结果"
+// @Router       /system/updateAccount [post]
+// @Security     Bearer
 func updateAccount(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
@@ -272,6 +317,14 @@ func updateAccount(c *gin.Context) {
 	common.OkWithMessage("编辑成功", c)
 }
 
+// @Summary      删除系统账号
+// @Description  删除系统账号 接口
+// @Tags         system-account
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除系统账号 响应结果"
+// @Router       /system/deleteAccount/{id} [delete]
+// @Security     Bearer
 func deleteAccount(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
@@ -294,6 +347,14 @@ func deleteAccount(c *gin.Context) {
 	common.OkWithMessage("删除成功", c)
 }
 
+// @Summary      获取系统账号列表
+// @Description  获取系统账号列表 接口
+// @Tags         system-account
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取系统账号列表 响应结果"
+// @Router       /system/getAccountList [get]
+// @Security     Bearer
 func getAccountList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	// 数据库中拿到所有的menu列表
@@ -307,6 +368,14 @@ func getAccountList(c *gin.Context) {
 	common.OkWithDetailed(users, "ok", c)
 }
 
+// @Summary      修改当前用户密码
+// @Description  修改当前用户密码 接口
+// @Tags         system-account
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "修改当前用户密码 响应结果"
+// @Router       /system/changePassword [post]
+// @Security     Bearer
 func changePassword(c *gin.Context) {
 	//{"passwordOld":"123456","passwordNew":"1"}
 	// 校验menu字段
@@ -357,6 +426,14 @@ type DefineUserOrGroup struct {
 	Type  string `json:"type"`
 }
 
+// @Summary      获取全量用户与角色下拉列表
+// @Description  获取全量用户与角色下拉列表 接口
+// @Tags         system-account
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取全量用户与角色下拉列表 响应结果"
+// @Router       /system/getAllUserAndRoles [get]
+// @Security     Bearer
 func getAllUserAndRoles(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	users, err := models.GetUserAll()
@@ -401,6 +478,14 @@ type setAccountEnableReq struct {
 	Enable int  `json:"enable" validate:"required,oneof=1 2"` // 假设 1=启用 2=禁用
 }
 
+// @Summary      设置账号启用状态
+// @Description  设置账号启用状态 接口
+// @Tags         system-account
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "设置账号启用状态 响应结果"
+// @Router       /system/setAccountStatus [post]
+// @Security     Bearer
 func setAccountStatus(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 

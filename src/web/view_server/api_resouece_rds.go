@@ -12,7 +12,14 @@ import (
 	"go.uber.org/zap"
 )
 
-// getResourceRdsUnbindList 获取所有 RDS 列表 (供前端穿梭框或绑定弹窗使用)
+// @Summary      获取未绑定的RDS数据库列表
+// @Description  获取未绑定的RDS数据库列表 接口
+// @Tags         resource-rds
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取未绑定的RDS数据库列表 响应结果"
+// @Router       /stree/getResourceRdsUnbindList [get]
+// @Security     Bearer
 func getResourceRdsUnbindList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	allRds, err := models.GetResourceRdsAll()
@@ -26,7 +33,14 @@ func getResourceRdsUnbindList(c *gin.Context) {
 	common.OkWithDetailed(allRds, "ok", c)
 }
 
-// bindRdsToStreeNode 将 RDS 绑定到服务树节点
+// @Summary      绑定RDS到服务树节点
+// @Description  绑定RDS到服务树节点 接口
+// @Tags         resource-rds
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "绑定RDS到服务树节点 响应结果"
+// @Router       /stree/bindRdsToStreeNode [post]
+// @Security     Bearer
 func bindRdsToStreeNode(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -92,7 +106,14 @@ func bindRdsToStreeNode(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
-// unBindRdsToStreeNode 解除 RDS 与服务树节点的绑定
+// @Summary      解绑RDS与服务树关系
+// @Description  解绑RDS与服务树关系 接口
+// @Tags         resource-rds
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "解绑RDS与服务树关系 响应结果"
+// @Router       /stree/unBindRdsToStreeNode [post]
+// @Security     Bearer
 func unBindRdsToStreeNode(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 

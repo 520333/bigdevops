@@ -101,6 +101,14 @@ func getK8sClusterList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      创建/注册K8s集群
+// @Description  创建/注册K8s集群 接口
+// @Tags         k8s-cluster
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建/注册K8s集群 响应结果"
+// @Router       /k8s/createK8sCluster [post]
+// @Security     Bearer
 func createK8sCluster(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -141,6 +149,14 @@ func createK8sCluster(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      更新K8s集群配置
+// @Description  更新K8s集群配置 接口
+// @Tags         k8s-cluster
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新K8s集群配置 响应结果"
+// @Router       /k8s/updateK8sCluster [post]
+// @Security     Bearer
 func updateK8sCluster(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -175,6 +191,14 @@ func updateK8sCluster(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// @Summary      删除/移除K8s集群
+// @Description  删除/移除K8s集群 接口
+// @Tags         k8s-cluster
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除/移除K8s集群 响应结果"
+// @Router       /k8s/deleteK8sCluster/{id} [delete]
+// @Security     Bearer
 func deleteK8sCluster(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
@@ -201,7 +225,14 @@ type deleteK8sClusterBatchReq struct {
 	Ids []uint `json:"ids" validate:"required,min=1"` // 要求至少传 1 个 ID
 }
 
-// 2. 批量删除的处理函数
+// @Summary      批量删除K8s集群
+// @Description  批量删除K8s集群 接口
+// @Tags         k8s-cluster
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "批量删除K8s集群 响应结果"
+// @Router       /k8s/deleteK8sClusterBatch [delete]
+// @Security     Bearer
 func deleteK8sClusterBatch(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 

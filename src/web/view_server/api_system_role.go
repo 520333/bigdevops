@@ -12,6 +12,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      获取全量系统角色列表
+// @Description  获取全量系统角色列表 接口
+// @Tags         system-role
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取全量系统角色列表 响应结果"
+// @Router       /system/getRoleListAll [get]
+// @Security     Bearer
 func getRoleListAll(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	// 数据库中拿到所有的menu列表
@@ -34,6 +42,14 @@ func getRoleListAll(c *gin.Context) {
 
 }
 
+// @Summary      创建系统角色
+// @Description  创建系统角色 接口
+// @Tags         system-role
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建系统角色 响应结果"
+// @Router       /system/createRole [post]
+// @Security     Bearer
 func createRole(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
@@ -88,6 +104,14 @@ func createRole(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      更新系统角色
+// @Description  更新系统角色 接口
+// @Tags         system-role
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新系统角色 响应结果"
+// @Router       /system/updateRole [post]
+// @Security     Bearer
 func updateRole(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
@@ -189,6 +213,14 @@ func updateRole(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// @Summary      设置角色启用状态
+// @Description  设置角色启用状态 接口
+// @Tags         system-role
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "设置角色启用状态 响应结果"
+// @Router       /system/setRoleStatus [post]
+// @Security     Bearer
 func setRoleStatus(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
@@ -226,6 +258,14 @@ func setRoleStatus(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      删除系统角色
+// @Description  删除系统角色 接口
+// @Tags         system-role
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除系统角色 响应结果"
+// @Router       /system/deleteRole/{id} [delete]
+// @Security     Bearer
 func deleteRole(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")

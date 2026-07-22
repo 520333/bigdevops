@@ -12,6 +12,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      创建工单审批流程
+// @Description  创建工单审批流程 接口
+// @Tags         workorder-process
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建工单审批流程 响应结果"
+// @Router       /workorder/createProcess [post]
+// @Security     Bearer
 func createProcess(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj models.WorkOrderProcess
@@ -45,6 +53,14 @@ func createProcess(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      获取工单审批流程列表
+// @Description  获取工单审批流程列表 接口
+// @Tags         workorder-process
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取工单审批流程列表 响应结果"
+// @Router       /workorder/getProcessList [get]
+// @Security     Bearer
 func getProcessList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -83,6 +99,14 @@ func getProcessList(c *gin.Context) {
 	common.OkWithDetailed(gin.H{"items": pagedObjs, "total": total}, "ok", c)
 }
 
+// @Summary      更新工单审批流程
+// @Description  更新工单审批流程 接口
+// @Tags         workorder-process
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新工单审批流程 响应结果"
+// @Router       /workorder/updateProcess [post]
+// @Security     Bearer
 func updateProcess(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj models.WorkOrderProcess
@@ -124,6 +148,14 @@ func updateProcess(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// @Summary      删除工单审批流程
+// @Description  删除工单审批流程 接口
+// @Tags         workorder-process
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除工单审批流程 响应结果"
+// @Router       /workorder/deleteProcess/{id} [delete]
+// @Security     Bearer
 func deleteProcess(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")

@@ -6,7 +6,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetSystemSetting 获取系统全局设置
+// @Summary      获取系统全局设置
+// @Description  获取系统全局设置 接口
+// @Tags         system-setting
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取系统全局设置 响应结果"
+// @Router       /system/setting/get [get]
+// @Security     Bearer
 func GetSystemSetting(c *gin.Context) {
 	var setting models.SystemSetting
 	err := models.Db.First(&setting).Error
@@ -22,7 +29,14 @@ func GetSystemSetting(c *gin.Context) {
 	common.OkWithData(setting, c)
 }
 
-// UpdateSystemSetting 更新系统全局设置
+// @Summary      更新系统全局设置
+// @Description  更新系统全局设置 接口
+// @Tags         system-setting
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新系统全局设置 响应结果"
+// @Router       /system/setting/update [put]
+// @Security     Bearer
 func UpdateSystemSetting(c *gin.Context) {
 	var req models.SystemSetting
 	if err := c.ShouldBindJSON(&req); err != nil {

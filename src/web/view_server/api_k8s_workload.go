@@ -113,6 +113,14 @@ func statefulSetConvert(s *appsv1.StatefulSet) *OneStatefulSet {
 	}
 }
 
+// @Summary      获取StatefulSet有状态控制器列表
+// @Description  获取StatefulSet有状态控制器列表 接口
+// @Tags         k8s-workload
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取StatefulSet有状态控制器列表 响应结果"
+// @Router       /k8s/getK8sStatefulSetList [get]
+// @Security     Bearer
 func getK8sStatefulSetList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -170,6 +178,14 @@ func getK8sStatefulSetList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      获取StatefulSet声明YAML
+// @Description  获取StatefulSet声明YAML 接口
+// @Tags         k8s-workload
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取StatefulSet声明YAML 响应结果"
+// @Router       /k8s/getK8sStatefulSetYaml [get]
+// @Security     Bearer
 func getK8sStatefulSetYaml(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -295,9 +311,34 @@ func createStatefulSetHelper(c *gin.Context, isUpdate bool) {
 	common.OkWithMessage("StatefulSet 保存/应用成功", c)
 }
 
+// @Summary      创建StatefulSet应用
+// @Description  创建StatefulSet应用 接口
+// @Tags         k8s-workload
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建StatefulSet应用 响应结果"
+// @Router       /k8s/createK8sStatefulSet [post]
+// @Security     Bearer
 func createK8sStatefulSet(c *gin.Context) { createStatefulSetHelper(c, false) }
+
+// @Summary      更新StatefulSet配置
+// @Description  更新StatefulSet配置 接口
+// @Tags         k8s-workload
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新StatefulSet配置 响应结果"
+// @Router       /k8s/updateK8sStatefulSet [post]
+// @Security     Bearer
 func updateK8sStatefulSet(c *gin.Context) { createStatefulSetHelper(c, true) }
 
+// @Summary      调整StatefulSet副本数
+// @Description  调整StatefulSet副本数 接口
+// @Tags         k8s-workload
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "调整StatefulSet副本数 响应结果"
+// @Router       /k8s/scaleK8sStatefulSet [post]
+// @Security     Bearer
 func scaleK8sStatefulSet(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sScaleStatefulSetReq
@@ -338,6 +379,14 @@ func scaleK8sStatefulSet(c *gin.Context) {
 	common.OkWithMessage(fmt.Sprintf("StatefulSet [%s] 副本数已调整为 %d", reqObj.Name, replicas), c)
 }
 
+// @Summary      重启StatefulSet应用
+// @Description  重启StatefulSet应用 接口
+// @Tags         k8s-workload
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "重启StatefulSet应用 响应结果"
+// @Router       /k8s/restartK8sStatefulSet [post]
+// @Security     Bearer
 func restartK8sStatefulSet(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sRestartStatefulSetReq
@@ -377,6 +426,14 @@ func restartK8sStatefulSet(c *gin.Context) {
 	common.OkWithMessage(fmt.Sprintf("StatefulSet [%s] 滚动重启指令已下发", reqObj.Name), c)
 }
 
+// @Summary      删除StatefulSet
+// @Description  删除StatefulSet 接口
+// @Tags         k8s-workload
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除StatefulSet 响应结果"
+// @Router       /k8s/deleteK8sStatefulSet [post]
+// @Security     Bearer
 func deleteK8sStatefulSet(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sDeleteStatefulSetReq
@@ -407,6 +464,14 @@ func deleteK8sStatefulSet(c *gin.Context) {
 	common.OkWithMessage(fmt.Sprintf("StatefulSet [%s] 已删除", reqObj.Name), c)
 }
 
+// @Summary      批量删除StatefulSet
+// @Description  批量删除StatefulSet 接口
+// @Tags         k8s-workload
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "批量删除StatefulSet 响应结果"
+// @Router       /k8s/deleteK8sStatefulSetBatch [post]
+// @Security     Bearer
 func deleteK8sStatefulSetBatch(c *gin.Context) {
 	var reqObj K8sDeleteStatefulSetBatchReq
 	if err := c.ShouldBindJSON(&reqObj); err != nil {
@@ -543,6 +608,14 @@ func daemonSetConvert(ds *appsv1.DaemonSet) *OneDaemonSet {
 	}
 }
 
+// @Summary      获取DaemonSet守护进程列表
+// @Description  获取DaemonSet守护进程列表 接口
+// @Tags         k8s-workload
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取DaemonSet守护进程列表 响应结果"
+// @Router       /k8s/getK8sDaemonSetList [get]
+// @Security     Bearer
 func getK8sDaemonSetList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -600,6 +673,14 @@ func getK8sDaemonSetList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      获取DaemonSet声明YAML
+// @Description  获取DaemonSet声明YAML 接口
+// @Tags         k8s-workload
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取DaemonSet声明YAML 响应结果"
+// @Router       /k8s/getK8sDaemonSetYaml [get]
+// @Security     Bearer
 func getK8sDaemonSetYaml(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -725,9 +806,34 @@ func createDaemonSetHelper(c *gin.Context, isUpdate bool) {
 	common.OkWithMessage("DaemonSet 保存/应用成功", c)
 }
 
+// @Summary      创建DaemonSet应用
+// @Description  创建DaemonSet应用 接口
+// @Tags         k8s-workload
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建DaemonSet应用 响应结果"
+// @Router       /k8s/createK8sDaemonSet [post]
+// @Security     Bearer
 func createK8sDaemonSet(c *gin.Context) { createDaemonSetHelper(c, false) }
+
+// @Summary      更新DaemonSet配置
+// @Description  更新DaemonSet配置 接口
+// @Tags         k8s-workload
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新DaemonSet配置 响应结果"
+// @Router       /k8s/updateK8sDaemonSet [post]
+// @Security     Bearer
 func updateK8sDaemonSet(c *gin.Context) { createDaemonSetHelper(c, true) }
 
+// @Summary      重启DaemonSet应用
+// @Description  重启DaemonSet应用 接口
+// @Tags         k8s-workload
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "重启DaemonSet应用 响应结果"
+// @Router       /k8s/restartK8sDaemonSet [post]
+// @Security     Bearer
 func restartK8sDaemonSet(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sRestartDaemonSetReq
@@ -767,6 +873,14 @@ func restartK8sDaemonSet(c *gin.Context) {
 	common.OkWithMessage(fmt.Sprintf("DaemonSet [%s] 滚动重启指令已下发", reqObj.Name), c)
 }
 
+// @Summary      删除DaemonSet
+// @Description  删除DaemonSet 接口
+// @Tags         k8s-workload
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除DaemonSet 响应结果"
+// @Router       /k8s/deleteK8sDaemonSet [post]
+// @Security     Bearer
 func deleteK8sDaemonSet(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sDeleteDaemonSetReq
@@ -797,6 +911,14 @@ func deleteK8sDaemonSet(c *gin.Context) {
 	common.OkWithMessage(fmt.Sprintf("DaemonSet [%s] 已删除", reqObj.Name), c)
 }
 
+// @Summary      批量删除DaemonSet
+// @Description  批量删除DaemonSet 接口
+// @Tags         k8s-workload
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "批量删除DaemonSet 响应结果"
+// @Router       /k8s/deleteK8sDaemonSetBatch [post]
+// @Security     Bearer
 func deleteK8sDaemonSetBatch(c *gin.Context) {
 	var reqObj K8sDeleteDaemonSetBatchReq
 	if err := c.ShouldBindJSON(&reqObj); err != nil {

@@ -14,6 +14,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      获取Prometheus预聚合规则列表
+// @Description  获取Prometheus预聚合规则列表 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Prometheus预聚合规则列表 响应结果"
+// @Router       /monitor/getMonitorPromRecordRuleList [get]
+// @Security     Bearer
 func getMonitorPromRecordRuleList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -91,6 +99,14 @@ func getMonitorPromRecordRuleList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      创建Prometheus预聚合规则
+// @Description  创建Prometheus预聚合规则 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建Prometheus预聚合规则 响应结果"
+// @Router       /monitor/createMonitorPromRecordRule [post]
+// @Security     Bearer
 func createMonitorPromRecordRule(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -131,6 +147,14 @@ func createMonitorPromRecordRule(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      更新Prometheus预聚合规则
+// @Description  更新Prometheus预聚合规则 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新Prometheus预聚合规则 响应结果"
+// @Router       /monitor/updateMonitorPromRecordRule [post]
+// @Security     Bearer
 func updateMonitorPromRecordRule(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -167,6 +191,14 @@ func updateMonitorPromRecordRule(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// @Summary      删除Prometheus预聚合规则
+// @Description  删除Prometheus预聚合规则 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除Prometheus预聚合规则 响应结果"
+// @Router       /monitor/deleteMonitorPromRecordRule/{id} [delete]
+// @Security     Bearer
 func deleteMonitorPromRecordRule(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
@@ -193,7 +225,14 @@ type deleteMonitorPromRecordRuleBatchReq struct {
 	Ids []uint `json:"ids" validate:"required,min=1"` // 要求至少传 1 个 ID
 }
 
-// 2. 批量删除的处理函数
+// @Summary      批量删除Prometheus预聚合规则
+// @Description  批量删除Prometheus预聚合规则 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "批量删除Prometheus预聚合规则 响应结果"
+// @Router       /monitor/deleteMonitorPromRecordRuleBatch [delete]
+// @Security     Bearer
 func deleteMonitorPromRecordRuleBatch(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -223,7 +262,14 @@ type setMonitorPromRecordRuleEnableReq struct {
 	Enable int  `json:"enable" validate:"required,oneof=1 2"` // 假设 1=启用 2=禁用
 }
 
-// setMonitorPromScrapeJobStatus 设置聚合规则配置的启用/禁用状态
+// @Summary      设置Prometheus预聚合规则状态
+// @Description  设置Prometheus预聚合规则状态 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "设置Prometheus预聚合规则状态 响应结果"
+// @Router       /monitor/setMonitorPromRecordRuleStatus [post]
+// @Security     Bearer
 func setMonitorPromRecordRuleStatus(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -266,6 +312,14 @@ func setMonitorPromRecordRuleStatus(c *gin.Context) {
 	common.OkWithMessage("状态修改成功", c)
 }
 
+// @Summary      批量设置Prometheus预聚合规则状态
+// @Description  批量设置Prometheus预聚合规则状态 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "批量设置Prometheus预聚合规则状态 响应结果"
+// @Router       /monitor/setMonitorPromRecordRuleStatusBatch [post]
+// @Security     Bearer
 func setMonitorPromRecordRuleStatusBatch(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -312,6 +366,14 @@ func recordRuleCommonPromqlExprCheck(ql string) (pt RecordRulePromQLCheckResult)
 	return
 }
 
+// @Summary      RecordRule PromQL语法在线校验
+// @Description  RecordRule PromQL语法在线校验 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "RecordRule PromQL语法在线校验 响应结果"
+// @Router       /monitor/recordRulePromqlExprCheck [get]
+// @Security     Bearer
 func recordRulePromqlExprCheck(c *gin.Context) {
 	ql := c.DefaultQuery("ql", "")
 	pt := recordRuleCommonPromqlExprCheck(ql)

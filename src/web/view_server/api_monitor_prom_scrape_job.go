@@ -13,6 +13,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      获取Prometheus采集Job任务列表
+// @Description  获取Prometheus采集Job任务列表 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Prometheus采集Job任务列表 响应结果"
+// @Router       /monitor/getMonitorPromScrapeJobList [get]
+// @Security     Bearer
 func getMonitorPromScrapeJobList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -91,6 +99,14 @@ func getMonitorPromScrapeJobList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      获取指定Prometheus采集Job详情
+// @Description  获取指定Prometheus采集Job详情 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取指定Prometheus采集Job详情 响应结果"
+// @Router       /monitor/getMonitorPromScrapeJobOne [get]
+// @Security     Bearer
 func getMonitorPromScrapeJobOne(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
@@ -108,6 +124,14 @@ func getMonitorPromScrapeJobOne(c *gin.Context) {
 	common.OkWithDetailed(dbObj, "ok", c)
 }
 
+// @Summary      创建Prometheus采集Job
+// @Description  创建Prometheus采集Job 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建Prometheus采集Job 响应结果"
+// @Router       /monitor/createMonitorPromScrapeJob [post]
+// @Security     Bearer
 func createMonitorPromScrapeJob(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -145,6 +169,14 @@ func createMonitorPromScrapeJob(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      更新Prometheus采集Job
+// @Description  更新Prometheus采集Job 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新Prometheus采集Job 响应结果"
+// @Router       /monitor/updateMonitorPromScrapeJob [post]
+// @Security     Bearer
 func updateMonitorPromScrapeJob(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -186,7 +218,14 @@ type setScrapeJobEnableReq struct {
 	Enable int  `json:"enable" validate:"required,oneof=1 2"` // 假设 1=启用 2=禁用
 }
 
-// setMonitorPromScrapeJobStatus 设置采集任务的启用/禁用状态
+// @Summary      设置Prometheus采集Job启用状态
+// @Description  设置Prometheus采集Job启用状态 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "设置Prometheus采集Job启用状态 响应结果"
+// @Router       /monitor/setMonitorPromScrapeJobStatus [post]
+// @Security     Bearer
 func setMonitorPromScrapeJobStatus(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -229,6 +268,14 @@ func setMonitorPromScrapeJobStatus(c *gin.Context) {
 	common.OkWithMessage("状态修改成功", c)
 }
 
+// @Summary      删除Prometheus采集Job
+// @Description  删除Prometheus采集Job 接口
+// @Tags         monitor-prom
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除Prometheus采集Job 响应结果"
+// @Router       /monitor/deleteMonitorPromScrapeJob/{id} [delete]
+// @Security     Bearer
 func deleteMonitorPromScrapeJob(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")

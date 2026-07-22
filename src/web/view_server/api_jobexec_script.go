@@ -18,6 +18,14 @@ type CommonSelectResponse struct {
 	Value string `json:"value"`
 }
 
+// @Summary      获取作业脚本列表
+// @Description  获取作业脚本列表 接口
+// @Tags         jobexec-script
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取作业脚本列表 响应结果"
+// @Router       /jobexec/getJobExecScriptList [get]
+// @Security     Bearer
 func getJobExecScriptList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -99,6 +107,14 @@ func getJobExecScriptList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      获取作业脚本下拉选项
+// @Description  获取作业脚本下拉选项 接口
+// @Tags         jobexec-script
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取作业脚本下拉选项 响应结果"
+// @Router       /jobexec/getJobExecScriptSelect [get]
+// @Security     Bearer
 func getJobExecScriptSelect(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -121,6 +137,14 @@ func getJobExecScriptSelect(c *gin.Context) {
 	common.OkWithDetailed(res, "ok", c)
 }
 
+// @Summary      获取指定作业脚本基础信息
+// @Description  获取指定作业脚本基础信息 接口
+// @Tags         jobexec-script
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取指定作业脚本基础信息 响应结果"
+// @Router       /jobexec/getJobExecScriptOne/{id} [get]
+// @Security     Bearer
 func getJobExecScriptOne(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
@@ -137,6 +161,14 @@ func getJobExecScriptOne(c *gin.Context) {
 
 }
 
+// @Summary      获取作业脚本源码详情
+// @Description  获取作业脚本源码详情 接口
+// @Tags         jobexec-script
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取作业脚本源码详情 响应结果"
+// @Router       /jobexec/getJobExecScriptDetail/{id} [get]
+// @Security     Bearer
 func getJobExecScriptDetail(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
@@ -154,6 +186,14 @@ func getJobExecScriptDetail(c *gin.Context) {
 	common.OkWithDetailed(dbObj, "ok", c)
 }
 
+// @Summary      创建作业脚本
+// @Description  创建作业脚本 接口
+// @Tags         jobexec-script
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建作业脚本 响应结果"
+// @Router       /jobexec/createJobExecScript [post]
+// @Security     Bearer
 func createJobExecScript(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj models.JobScript
@@ -187,6 +227,14 @@ func createJobExecScript(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      更新作业脚本
+// @Description  更新作业脚本 接口
+// @Tags         jobexec-script
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新作业脚本 响应结果"
+// @Router       /jobexec/updateJobExecScript [post]
+// @Security     Bearer
 func updateJobExecScript(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj models.JobScript
@@ -222,6 +270,14 @@ func updateJobExecScript(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// @Summary      删除作业脚本
+// @Description  删除作业脚本 接口
+// @Tags         jobexec-script
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除作业脚本 响应结果"
+// @Router       /jobexec/deleteJobExecScript/{id} [delete]
+// @Security     Bearer
 func deleteJobExecScript(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")

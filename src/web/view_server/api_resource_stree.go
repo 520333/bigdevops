@@ -24,6 +24,14 @@ type tmpNode struct {
 	Level    int        `json:"level"`
 }
 
+// @Summary      获取服务树全量节点列表
+// @Description  获取服务树全量节点列表 接口
+// @Tags         stree
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取服务树全量节点列表 响应结果"
+// @Router       /stree/getStreeNodeList [get]
+// @Security     Bearer
 func getStreeNodeList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	streeNodes, err := models.GetStreeNodeAll()
@@ -89,6 +97,14 @@ func getStreeNodeList(c *gin.Context) {
 	common.OkWithDetailed(finalNodes, "ok", c)
 }
 
+// @Summary      获取服务树节点选择下拉框
+// @Description  获取服务树节点选择下拉框 接口
+// @Tags         stree
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取服务树节点选择下拉框 响应结果"
+// @Router       /stree/getStreeNodeSelect [get]
+// @Security     Bearer
 func getStreeNodeSelect(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	streeNodes, err := models.GetStreeNodeAll()
@@ -185,6 +201,14 @@ func streeNodeOpsAdminPermissionCheck(node *models.StreeNode, c *gin.Context) (b
 
 }
 
+// @Summary      创建服务树节点
+// @Description  创建服务树节点 接口
+// @Tags         stree
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建服务树节点 响应结果"
+// @Router       /stree/createStreeNode [post]
+// @Security     Bearer
 func createStreeNode(c *gin.Context) {
 	// 校验StreeNode字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
@@ -240,6 +264,14 @@ func createStreeNode(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      删除服务树节点
+// @Description  删除服务树节点 接口
+// @Tags         stree
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除服务树节点 响应结果"
+// @Router       /stree/deleteStreeNode/{id} [delete]
+// @Security     Bearer
 func deleteStreeNode(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
@@ -285,6 +317,14 @@ func deleteStreeNode(c *gin.Context) {
 	common.OkWithMessage("删除成功", c)
 }
 
+// @Summary      获取服务树所有叶子节点
+// @Description  获取服务树所有叶子节点 接口
+// @Tags         stree
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取服务树所有叶子节点 响应结果"
+// @Router       /stree/getLeafStreeNodes [get]
+// @Security     Bearer
 func getLeafStreeNodes(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	topNodes, err := models.GetStreeNodeAllLeaf()
@@ -314,7 +354,14 @@ func getLeafStreeNodes(c *gin.Context) {
 	common.OkWithDetailed(leafNodes, "ok", c)
 }
 
-// 获取所有的叶子节点
+// @Summary      获取服务树顶级一级节点
+// @Description  获取服务树顶级一级节点 接口
+// @Tags         stree
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取服务树顶级一级节点 响应结果"
+// @Router       /stree/getTopStreeNodes [get]
+// @Security     Bearer
 func getTopStreeNodes(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	topNodes, err := models.GetStreeNodeByLevel(1)
@@ -336,7 +383,14 @@ func getTopStreeNodes(c *gin.Context) {
 	common.OkWithDetailed(topNodes, "ok", c)
 }
 
-// 根据id查下一级接口
+// @Summary      获取指定节点的子节点
+// @Description  获取指定节点的子节点 接口
+// @Tags         stree
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取指定节点的子节点 响应结果"
+// @Router       /stree/getChildrenStreeNodes/{pid} [get]
+// @Security     Bearer
 func getChildrenStreeNodes(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	pid := c.Param("pid")
@@ -361,6 +415,14 @@ func getChildrenStreeNodes(c *gin.Context) {
 	common.OkWithDetailed(childrens, "ok", c)
 }
 
+// @Summary      更新服务树节点
+// @Description  更新服务树节点 接口
+// @Tags         stree
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新服务树节点 响应结果"
+// @Router       /stree/updateStreeNode [post]
+// @Security     Bearer
 func updateStreeNode(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)

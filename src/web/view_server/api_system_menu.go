@@ -13,6 +13,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      获取当前用户可访问菜单树
+// @Description  获取当前用户可访问菜单树 接口
+// @Tags         system-menu
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取当前用户可访问菜单树 响应结果"
+// @Router       /system/getMenuList [get]
+// @Security     Bearer
 func getMenuList(c *gin.Context) {
 	// 拿到用户对应的role列表 遍历role列表 找到Menu List 拼接父子结构 返回的是组数 第一层father 第二层 children
 	userName := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)
@@ -127,6 +135,14 @@ func getMenuList(c *gin.Context) {
 
 }
 
+// @Summary      获取全量系统菜单树
+// @Description  获取全量系统菜单树 接口
+// @Tags         system-menu
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取全量系统菜单树 响应结果"
+// @Router       /system/getMenuListAll [get]
+// @Security     Bearer
 func getMenuListAll(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	// 数据库中拿到所有的menu列表
@@ -155,6 +171,14 @@ func getMenuListAll(c *gin.Context) {
 
 }
 
+// @Summary      更新系统菜单
+// @Description  更新系统菜单 接口
+// @Tags         system-menu
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新系统菜单 响应结果"
+// @Router       /system/updateMenu [post]
+// @Security     Bearer
 func updateMenu(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
@@ -189,6 +213,14 @@ func updateMenu(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// @Summary      创建系统菜单
+// @Description  创建系统菜单 接口
+// @Tags         system-menu
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建系统菜单 响应结果"
+// @Router       /system/createMenu [post]
+// @Security     Bearer
 func createMenu(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
@@ -217,6 +249,14 @@ func createMenu(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      删除系统菜单
+// @Description  删除系统菜单 接口
+// @Tags         system-menu
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除系统菜单 响应结果"
+// @Router       /system/deleteMenu/{id} [delete]
+// @Security     Bearer
 func deleteMenu(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")

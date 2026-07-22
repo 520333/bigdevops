@@ -40,6 +40,14 @@ type SilenceResponse struct {
 	SilenceID string `json:"silenceID"`
 }
 
+// @Summary      获取AlertManager告警事件列表
+// @Description  获取AlertManager告警事件列表 接口
+// @Tags         monitor-alert
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取AlertManager告警事件列表 响应结果"
+// @Router       /monitor/getMonitorAlertManagerEventList [get]
+// @Security     Bearer
 func getMonitorAlertManagerEventList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -112,6 +120,14 @@ func getMonitorAlertManagerEventList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      重新触发/重响指定告警事件
+// @Description  重新触发/重响指定告警事件 接口
+// @Tags         monitor-alert
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "重新触发/重响指定告警事件 响应结果"
+// @Router       /monitor/alertManagerEventReLing/{id} [post]
+// @Security     Bearer
 func alertManagerEventReLing(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")
@@ -289,7 +305,14 @@ type BatchUnSilenceRequest struct {
 	EventIDs []int `json:"eventIds" binding:"required"`
 }
 
-// alertManagerEventBatchSilence handles silencing multiple alerts at once
+// @Summary      批量静音告警事件
+// @Description  批量静音告警事件 接口
+// @Tags         monitor-alert
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "批量静音告警事件 响应结果"
+// @Router       /monitor/alertManagerEventBatchSilence [post]
+// @Security     Bearer
 func alertManagerEventBatchSilence(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -334,7 +357,14 @@ func alertManagerEventBatchSilence(c *gin.Context) {
 	common.OkWithMessage("批量静默成功", c)
 }
 
-// alertManagerEventBatchUnSilence handles removing silences for multiple alerts
+// @Summary      批量解除告警事件静音
+// @Description  批量解除告警事件静音 接口
+// @Tags         monitor-alert
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "批量解除告警事件静音 响应结果"
+// @Router       /monitor/alertManagerEventBatchUnSilence [post]
+// @Security     Bearer
 func alertManagerEventBatchUnSilence(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -373,6 +403,14 @@ func alertManagerEventBatchUnSilence(c *gin.Context) {
 	common.OkWithMessage("批量解除屏蔽成功", c)
 }
 
+// @Summary      对指定告警事件进行静音
+// @Description  对指定告警事件进行静音 接口
+// @Tags         monitor-alert
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "对指定告警事件进行静音 响应结果"
+// @Router       /monitor/alertManagerEventSilence/{id} [post]
+// @Security     Bearer
 func alertManagerEventSilence(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -407,6 +445,14 @@ func alertManagerEventSilence(c *gin.Context) {
 	common.OkWithMessage("静默成功", c)
 }
 
+// @Summary      取消指定告警事件的静音
+// @Description  取消指定告警事件的静音 接口
+// @Tags         monitor-alert
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "取消指定告警事件的静音 响应结果"
+// @Router       /monitor/alertManagerEventUnSilence/{id} [post]
+// @Security     Bearer
 func alertManagerEventUnSilence(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 

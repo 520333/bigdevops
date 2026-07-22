@@ -13,6 +13,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      获取工单表单设计列表
+// @Description  获取工单表单设计列表 接口
+// @Tags         workorder-form
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取工单表单设计列表 响应结果"
+// @Router       /workorder/getFormDesignList [get]
+// @Security     Bearer
 func getFormDesignList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -85,6 +93,14 @@ func getFormDesignList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      创建工单动态表单设计
+// @Description  创建工单动态表单设计 接口
+// @Tags         workorder-form
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建工单动态表单设计 响应结果"
+// @Router       /workorder/createFormDesign [post]
+// @Security     Bearer
 func createFormDesign(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj models.WorkOrderFormDesign
@@ -118,6 +134,14 @@ func createFormDesign(c *gin.Context) {
 	common.OkWithMessage("创建成功", c)
 }
 
+// @Summary      更新工单动态表单设计
+// @Description  更新工单动态表单设计 接口
+// @Tags         workorder-form
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新工单动态表单设计 响应结果"
+// @Router       /workorder/updateFormDesign [post]
+// @Security     Bearer
 func updateFormDesign(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj models.WorkOrderFormDesign
@@ -153,6 +177,14 @@ func updateFormDesign(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// @Summary      删除工单动态表单设计
+// @Description  删除工单动态表单设计 接口
+// @Tags         workorder-form
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除工单动态表单设计 响应结果"
+// @Router       /workorder/deleteFormDesign/{id} [delete]
+// @Security     Bearer
 func deleteFormDesign(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id := c.Param("id")

@@ -12,6 +12,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// @Summary      获取未绑定的ECS主机列表
+// @Description  获取未绑定的ECS主机列表 接口
+// @Tags         resource-ecs
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取未绑定的ECS主机列表 响应结果"
+// @Router       /stree/getResourceEcsUnbindList [get]
+// @Security     Bearer
 func getResourceEcsUnbindList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	allEcs, err := models.GetResourceEcsAll()
@@ -32,6 +40,14 @@ func getResourceEcsUnbindList(c *gin.Context) {
 	common.OkWithDetailed(finnalList, "ok", c)
 }
 
+// @Summary      绑定ECS主机到服务树节点
+// @Description  绑定ECS主机到服务树节点 接口
+// @Tags         resource-ecs
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "绑定ECS主机到服务树节点 响应结果"
+// @Router       /stree/bindEcsToStreeNode [post]
+// @Security     Bearer
 func bindEcsToStreeNode(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -95,6 +111,14 @@ func bindEcsToStreeNode(c *gin.Context) {
 	common.OkWithMessage("更新成功", c)
 }
 
+// @Summary      解绑ECS主机与服务树关系
+// @Description  解绑ECS主机与服务树关系 接口
+// @Tags         resource-ecs
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "解绑ECS主机与服务树关系 响应结果"
+// @Router       /stree/unBindEcsToStreeNode [post]
+// @Security     Bearer
 func unBindEcsToStreeNode(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
@@ -158,7 +182,14 @@ func unBindEcsToStreeNode(c *gin.Context) {
 	common.OkWithMessage("解绑成功", c)
 }
 
-// 根据树节点 ID，拉取当前节点及所有子节点下绑定的完整 ECS 列表
+// @Summary      获取服务树节点下的ECS主机列表
+// @Description  获取服务树节点下的ECS主机列表 接口
+// @Tags         resource-ecs
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取服务树节点下的ECS主机列表 响应结果"
+// @Router       /stree/getStreeNodeEcsList/{id} [get]
+// @Security     Bearer
 func getStreeNodeEcsList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	id, _ := strconv.Atoi(c.Param("id"))
@@ -198,6 +229,14 @@ func getStreeNodeEcsList(c *gin.Context) {
 	common.OkWithDetailed(ecsList, "ok", c)
 }
 
+// @Summary      获取ECS云主机全量/分页列表
+// @Description  获取ECS云主机全量/分页列表 接口
+// @Tags         resource-ecs
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取ECS云主机全量/分页列表 响应结果"
+// @Router       /stree/getResourceEcsList [get]
+// @Security     Bearer
 func getResourceEcsList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))

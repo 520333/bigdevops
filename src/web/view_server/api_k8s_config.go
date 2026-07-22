@@ -80,6 +80,14 @@ func configMapConvert(cm *v1.ConfigMap) *OneConfigMap {
 	}
 }
 
+// @Summary      获取ConfigMap配置字典列表
+// @Description  获取ConfigMap配置字典列表 接口
+// @Tags         k8s-config
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取ConfigMap配置字典列表 响应结果"
+// @Router       /k8s/getK8sConfigMapList [get]
+// @Security     Bearer
 func getK8sConfigMapList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -125,6 +133,14 @@ func getK8sConfigMapList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      获取ConfigMap声明YAML
+// @Description  获取ConfigMap声明YAML 接口
+// @Tags         k8s-config
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取ConfigMap声明YAML 响应结果"
+// @Router       /k8s/getK8sConfigMapYaml [get]
+// @Security     Bearer
 func getK8sConfigMapYaml(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -250,9 +266,34 @@ func createConfigMapHelper(c *gin.Context, isUpdate bool) {
 	common.OkWithMessage("ConfigMap 保存应用成功", c)
 }
 
+// @Summary      创建ConfigMap配置字典
+// @Description  创建ConfigMap配置字典 接口
+// @Tags         k8s-config
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建ConfigMap配置字典 响应结果"
+// @Router       /k8s/createK8sConfigMap [post]
+// @Security     Bearer
 func createK8sConfigMap(c *gin.Context) { createConfigMapHelper(c, false) }
+
+// @Summary      更新ConfigMap配置字典
+// @Description  更新ConfigMap配置字典 接口
+// @Tags         k8s-config
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新ConfigMap配置字典 响应结果"
+// @Router       /k8s/updateK8sConfigMap [post]
+// @Security     Bearer
 func updateK8sConfigMap(c *gin.Context) { createConfigMapHelper(c, true) }
 
+// @Summary      删除ConfigMap
+// @Description  删除ConfigMap 接口
+// @Tags         k8s-config
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除ConfigMap 响应结果"
+// @Router       /k8s/deleteK8sConfigMap [post]
+// @Security     Bearer
 func deleteK8sConfigMap(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sDeleteConfigMapReq
@@ -280,6 +321,14 @@ func deleteK8sConfigMap(c *gin.Context) {
 	common.OkWithMessage(fmt.Sprintf("ConfigMap [%s] 已删除", reqObj.Name), c)
 }
 
+// @Summary      批量删除ConfigMap
+// @Description  批量删除ConfigMap 接口
+// @Tags         k8s-config
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "批量删除ConfigMap 响应结果"
+// @Router       /k8s/deleteK8sConfigMapBatch [post]
+// @Security     Bearer
 func deleteK8sConfigMapBatch(c *gin.Context) {
 	var reqObj K8sDeleteConfigMapBatchReq
 	if err := c.ShouldBindJSON(&reqObj); err != nil {
@@ -383,6 +432,14 @@ func secretConvert(sec *v1.Secret) *OneSecret {
 	}
 }
 
+// @Summary      获取Secret密钥凭据列表
+// @Description  获取Secret密钥凭据列表 接口
+// @Tags         k8s-config
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Secret密钥凭据列表 响应结果"
+// @Router       /k8s/getK8sSecretList [get]
+// @Security     Bearer
 func getK8sSecretList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -428,6 +485,14 @@ func getK8sSecretList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      获取Secret声明YAML
+// @Description  获取Secret声明YAML 接口
+// @Tags         k8s-config
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取Secret声明YAML 响应结果"
+// @Router       /k8s/getK8sSecretYaml [get]
+// @Security     Bearer
 func getK8sSecretYaml(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	clusterName := c.Query("clusterName")
@@ -553,9 +618,34 @@ func createSecretHelper(c *gin.Context, isUpdate bool) {
 	common.OkWithMessage("Secret 保存应用成功", c)
 }
 
+// @Summary      创建Secret密钥凭据
+// @Description  创建Secret密钥凭据 接口
+// @Tags         k8s-config
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "创建Secret密钥凭据 响应结果"
+// @Router       /k8s/createK8sSecret [post]
+// @Security     Bearer
 func createK8sSecret(c *gin.Context) { createSecretHelper(c, false) }
+
+// @Summary      更新Secret密钥凭据
+// @Description  更新Secret密钥凭据 接口
+// @Tags         k8s-config
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "更新Secret密钥凭据 响应结果"
+// @Router       /k8s/updateK8sSecret [post]
+// @Security     Bearer
 func updateK8sSecret(c *gin.Context) { createSecretHelper(c, true) }
 
+// @Summary      删除Secret
+// @Description  删除Secret 接口
+// @Tags         k8s-config
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "删除Secret 响应结果"
+// @Router       /k8s/deleteK8sSecret [post]
+// @Security     Bearer
 func deleteK8sSecret(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var reqObj K8sDeleteSecretReq
@@ -583,6 +673,14 @@ func deleteK8sSecret(c *gin.Context) {
 	common.OkWithMessage(fmt.Sprintf("Secret [%s] 已删除", reqObj.Name), c)
 }
 
+// @Summary      批量删除Secret
+// @Description  批量删除Secret 接口
+// @Tags         k8s-config
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "批量删除Secret 响应结果"
+// @Router       /k8s/deleteK8sSecretBatch [post]
+// @Security     Bearer
 func deleteK8sSecretBatch(c *gin.Context) {
 	var reqObj K8sDeleteSecretBatchReq
 	if err := c.ShouldBindJSON(&reqObj); err != nil {
