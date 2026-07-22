@@ -15,6 +15,9 @@ func JWTAuthMiddleWare() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		// 01.去Header里面找Authorization 没有报401
 		authHeaderString := c.Request.Header.Get("Authorization")
+		if authHeaderString == "" && c.Query("token") != "" {
+			authHeaderString = "Bearer " + c.Query("token")
+		}
 		if authHeaderString == "" {
 			common.Req401WithDetailed(gin.H{"reload": true}, "未登录或非法访问 header没有Authorization", c)
 			c.Abort()

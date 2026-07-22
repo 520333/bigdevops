@@ -248,6 +248,76 @@ func ConfigRouter(r *gin.Engine) {
 		K8sGroup.POST("/deleteK8sPodBatch", deleteK8sPodBatch)
 		K8sGroup.GET("/getK8sPodLogs", getK8sPodLogs)
 		K8sGroup.GET("/wsK8sPodExec", wsK8sPodExec)
+		K8sGroup.GET("/wsK8sPodWatch", wsK8sPodWatch)
+		K8sGroup.GET("/wsK8sPodLogs", wsK8sPodLogs)
+		K8sGroup.GET("/downloadK8sPodFile", downloadK8sPodFile)
+		K8sGroup.GET("/getK8sPodFileList", getK8sPodFileList)
+		K8sGroup.POST("/uploadK8sPodFile", uploadK8sPodFile)
+		K8sGroup.POST("/deleteK8sPodFile", deleteK8sPodFile)
+		K8sGroup.GET("/readK8sPodFileContent", readK8sPodFileContent)
+		K8sGroup.POST("/saveK8sPodFileContent", saveK8sPodFileContent)
+
+		// 🚀 K8s Deployment 控制器管理
+		K8sGroup.GET("/getK8sDeploymentList", getK8sDeploymentList)
+		K8sGroup.GET("/getK8sDeploymentYaml", getK8sDeploymentYaml)
+		K8sGroup.POST("/createK8sDeployment", createK8sDeployment)
+		K8sGroup.POST("/updateK8sDeployment", updateK8sDeployment)
+		K8sGroup.POST("/scaleK8sDeployment", scaleK8sDeployment)
+		K8sGroup.POST("/restartK8sDeployment", restartK8sDeployment)
+		K8sGroup.POST("/deleteK8sDeployment", deleteK8sDeployment)
+		K8sGroup.POST("/deleteK8sDeploymentBatch", deleteK8sDeploymentBatch)
+		K8sGroup.GET("/wsK8sDeploymentWatch", wsK8sDeploymentWatch)
+
+		// 🚀 K8s StatefulSet 控制器管理
+		K8sGroup.GET("/getK8sStatefulSetList", getK8sStatefulSetList)
+		K8sGroup.GET("/getK8sStatefulSetYaml", getK8sStatefulSetYaml)
+		K8sGroup.POST("/createK8sStatefulSet", createK8sStatefulSet)
+		K8sGroup.POST("/updateK8sStatefulSet", updateK8sStatefulSet)
+		K8sGroup.POST("/scaleK8sStatefulSet", scaleK8sStatefulSet)
+		K8sGroup.POST("/restartK8sStatefulSet", restartK8sStatefulSet)
+		K8sGroup.POST("/deleteK8sStatefulSet", deleteK8sStatefulSet)
+		K8sGroup.POST("/deleteK8sStatefulSetBatch", deleteK8sStatefulSetBatch)
+
+		// 🚀 K8s DaemonSet 控制器管理
+		K8sGroup.GET("/getK8sDaemonSetList", getK8sDaemonSetList)
+		K8sGroup.GET("/getK8sDaemonSetYaml", getK8sDaemonSetYaml)
+		K8sGroup.POST("/createK8sDaemonSet", createK8sDaemonSet)
+		K8sGroup.POST("/updateK8sDaemonSet", updateK8sDaemonSet)
+		K8sGroup.POST("/restartK8sDaemonSet", restartK8sDaemonSet)
+		K8sGroup.POST("/deleteK8sDaemonSet", deleteK8sDaemonSet)
+		K8sGroup.POST("/deleteK8sDaemonSetBatch", deleteK8sDaemonSetBatch)
+
+		// 🚀 K8s ConfigMap 配置字典
+		K8sGroup.GET("/getK8sConfigMapList", getK8sConfigMapList)
+		K8sGroup.GET("/getK8sConfigMapYaml", getK8sConfigMapYaml)
+		K8sGroup.POST("/createK8sConfigMap", createK8sConfigMap)
+		K8sGroup.POST("/updateK8sConfigMap", updateK8sConfigMap)
+		K8sGroup.POST("/deleteK8sConfigMap", deleteK8sConfigMap)
+		K8sGroup.POST("/deleteK8sConfigMapBatch", deleteK8sConfigMapBatch)
+
+		// 🚀 K8s Secret 密钥凭据
+		K8sGroup.GET("/getK8sSecretList", getK8sSecretList)
+		K8sGroup.GET("/getK8sSecretYaml", getK8sSecretYaml)
+		K8sGroup.POST("/createK8sSecret", createK8sSecret)
+		K8sGroup.POST("/updateK8sSecret", updateK8sSecret)
+		K8sGroup.POST("/deleteK8sSecret", deleteK8sSecret)
+		K8sGroup.POST("/deleteK8sSecretBatch", deleteK8sSecretBatch)
+
+		// 🚀 K8s Service 服务
+		K8sGroup.GET("/getK8sServiceList", getK8sServiceList)
+		K8sGroup.GET("/getK8sServiceYaml", getK8sServiceYaml)
+		K8sGroup.POST("/createK8sService", createK8sService)
+		K8sGroup.POST("/updateK8sService", updateK8sService)
+		K8sGroup.POST("/deleteK8sService", deleteK8sService)
+		K8sGroup.POST("/deleteK8sServiceBatch", deleteK8sServiceBatch)
+
+		// 🚀 K8s Ingress 路由
+		K8sGroup.GET("/getK8sIngressList", getK8sIngressList)
+		K8sGroup.GET("/getK8sIngressYaml", getK8sIngressYaml)
+		K8sGroup.POST("/createK8sIngress", createK8sIngress)
+		K8sGroup.POST("/updateK8sIngress", updateK8sIngress)
+		K8sGroup.POST("/deleteK8sIngress", deleteK8sIngress)
+		K8sGroup.POST("/deleteK8sIngressBatch", deleteK8sIngressBatch)
 
 		// 🚀 K8s YAML 模板管理
 		K8sGroup.GET("/getK8sYamlTemplateList", getK8sYamlTemplateList)
