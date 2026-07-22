@@ -239,6 +239,29 @@ func ConfigRouter(r *gin.Engine) {
 		K8sGroup.POST("/taintK8sNodes", taintK8sNodes)
 		K8sGroup.POST("/drainK8sNodes", drainK8sNodes)
 		K8sGroup.GET("/getPodListByNodeName", getPodListByNodeName)
+		K8sGroup.GET("/getK8sNamespaceList", getK8sNamespaceList)
+		K8sGroup.GET("/getK8sPodList", getK8sPodList)
+		K8sGroup.GET("/getK8sPodYaml", getK8sPodYaml)
+		K8sGroup.POST("/createK8sPod", createK8sPod)
+		K8sGroup.POST("/updateK8sPod", updateK8sPod)
+		K8sGroup.POST("/deleteK8sPod", deleteK8sPod)
+		K8sGroup.POST("/deleteK8sPodBatch", deleteK8sPodBatch)
+		K8sGroup.GET("/getK8sPodLogs", getK8sPodLogs)
+		K8sGroup.GET("/wsK8sPodExec", wsK8sPodExec)
+
+		// 🚀 K8s YAML 模板管理
+		K8sGroup.GET("/getK8sYamlTemplateList", getK8sYamlTemplateList)
+		K8sGroup.POST("/createK8sYamlTemplate", createK8sYamlTemplate)
+		K8sGroup.POST("/updateK8sYamlTemplate", updateK8sYamlTemplate)
+		K8sGroup.DELETE("/deleteK8sYamlTemplate/:id", deleteK8sYamlTemplate)
+
+		// 🚀 K8s YAML 任务发布管理
+		K8sGroup.GET("/getK8sYamlTaskList", getK8sYamlTaskList)
+		K8sGroup.POST("/createK8sYamlTask", createK8sYamlTask)
+		K8sGroup.POST("/updateK8sYamlTask", updateK8sYamlTask)
+		K8sGroup.DELETE("/deleteK8sYamlTask/:id", deleteK8sYamlTask)
+		K8sGroup.POST("/applyK8sYamlTaskOne/:id", applyK8sYamlTaskOne)
+		K8sGroup.GET("/getK8sYamlTaskLogList", getK8sYamlTaskLogList)
 	}
 
 	CodeGroup := afterLoginApiGroup.Group("/code")

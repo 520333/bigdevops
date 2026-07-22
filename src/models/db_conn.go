@@ -124,6 +124,10 @@ func MigrateTable() error {
 
 		// k8s
 		&K8sCluster{},
+		&K8sYamlTemplate{},
+		&K8sYamlTask{},
+		&K8sYamlTaskLog{},
+
 		// git
 		&CodeGitServer{},
 	)

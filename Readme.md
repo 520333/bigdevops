@@ -55,3 +55,6 @@ swag init -g cmd/server/main.go -o docs
 ## agent grpc相关
 cd src/proto
 protoc --go_out=. --go-grpc_out=. *.proto
+
+# websocket
+go get github.com/gorilla/websocket

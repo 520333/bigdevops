@@ -6,12 +6,30 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"go.uber.org/zap"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+var (
+	yamlTemplate1 = `
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: VAR_NGX_DEP_NAME
+spec:
+  ingressClassName: "nginx"
+  rules:
+  - host: books.xxx.me
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: guestbook-svc    # guestbook的service名称
+            port:
+              name: http  # 可以写
+              #number: 80`
 )
 
 func mockK8sData(sc *config.ServerConfig, adminUser *User) {
@@ -68,7 +86,7 @@ func mockK8sData(sc *config.ServerConfig, adminUser *User) {
 	// mock节点
 	num = 5
 	clusters, _ := GetK8sClusterAll()
-	for _, cluster := range clusters {
+	/*for _, cluster := range clusters {
 		cluster := cluster
 
 		// 每个集群仅解析生成一次 Clientset
@@ -134,6 +152,30 @@ func mockK8sData(sc *config.ServerConfig, adminUser *User) {
 			}()
 			nodes = append(nodes, node)
 		}
+	}*/
+
+	// mock yaml模板
+	num = 5
+	for i := 0; i < num; i++ {
+		template := K8sYamlTemplate{
+			Name:    fmt.Sprintf("yaml-template-%d", i),
+			UserID:  1,
+			Content: yamlTemplate1,
+		}
+		_ = template.CreateOne()
+	}
+	// 构造yaml 任务
+	for _, cluster := range clusters {
+		task := K8sYamlTask{
+			Name:        fmt.Sprintf("yaml-task-%v-%v", 1, cluster.Name),
+			UserID:      1,
+			TemplateId:  1,
+			ClusterName: cluster.Name,
+			Variables:   []string{fmt.Sprintf(`VAR_NGX_DEP_NAME=nginx-%v`, cluster.Name)},
+			Status:      common.K8S_YAMLTASK_STATUS_PENDING,
+			ApplyResult: "",
+		}
+		_ = task.CreateOne()
 	}
 
 	sc.Logger.Info("k8s集群模块 Mock 数据注入成功")

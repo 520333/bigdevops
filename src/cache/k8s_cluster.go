@@ -10,6 +10,7 @@ import (
 
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	metricsClientSet "k8s.io/metrics/pkg/client/clientset/versioned"
 )
@@ -18,6 +19,7 @@ type K8sClusterCache struct {
 	sync.RWMutex
 	KubeClientsMap        map[uint]*kubernetes.Clientset
 	MetricsClientSetMap   map[uint]*metricsClientSet.Clientset
+	DynamicClientMap      map[uint]*dynamic.DynamicClient
 	KubeClientsProbErrMsg map[uint]string
 	Sc                    *config.ServerConfig
 }
@@ -26,6 +28,7 @@ func NewK8sClusterCache(sc *config.ServerConfig) *K8sClusterCache {
 	kc := &K8sClusterCache{
 		KubeClientsMap:        make(map[uint]*kubernetes.Clientset),
 		MetricsClientSetMap:   make(map[uint]*metricsClientSet.Clientset),
+		DynamicClientMap:      make(map[uint]*dynamic.DynamicClient),
 		KubeClientsProbErrMsg: make(map[uint]string),
 		Sc:                    sc,
 	}
@@ -51,11 +54,12 @@ func (obj *K8sClusterCache) ReNewClientsMap(ctx context.Context) {
 
 	m := make(map[uint]*kubernetes.Clientset)
 	sm := make(map[uint]*metricsClientSet.Clientset)
+	dm := make(map[uint]*dynamic.DynamicClient)
 	lastErrM := make(map[uint]string)
 	for _, kc := range kcs {
 		kc := kc
-		// 1. 生成 Clientset 及 MetricsClientSet (并在函数内部自动应用 ActionTimeoutSeconds 超时设置)
-		_, kClientSet, mClientSet, err := common.GenK8sClientSetByKubeconfigContent(kc.KubeConfigContent, kc.ActionTimeoutSeconds)
+		// 1. 生成 Clientset、MetricsClientSet 及 DynamicClient (并在函数内部自动应用 ActionTimeoutSeconds 超时设置)
+		restConfig, kClientSet, mClientSet, err := common.GenK8sClientSetByKubeconfigContent(kc.KubeConfigContent, kc.ActionTimeoutSeconds)
 		if err != nil {
 			obj.Sc.Logger.Error("[k8s模块]解析KubeConfig内存内容失败", zap.Error(err), zap.Any("集群名称", kc.Name))
 			lastErrM[kc.ID] = "解析KubeConfig失败: " + err.Error()
@@ -64,6 +68,12 @@ func (obj *K8sClusterCache) ReNewClientsMap(ctx context.Context) {
 		m[kc.ID] = kClientSet
 		if mClientSet != nil {
 			sm[kc.ID] = mClientSet
+		}
+		dyClient, err := dynamic.NewForConfig(restConfig)
+		if err != nil {
+			obj.Sc.Logger.Error("[k8s模块]生成DynamicClient失败", zap.Error(err), zap.Any("集群名称", kc.Name))
+		} else {
+			dm[kc.ID] = dyClient
 		}
 
 		// 2. 发起探活
@@ -81,6 +91,7 @@ func (obj *K8sClusterCache) ReNewClientsMap(ctx context.Context) {
 	obj.Lock()
 	obj.KubeClientsMap = m
 	obj.MetricsClientSetMap = sm
+	obj.DynamicClientMap = dm
 	obj.KubeClientsProbErrMsg = lastErrM
 	obj.Unlock()
 }
@@ -108,4 +119,10 @@ func (obj *K8sClusterCache) GetClusterMetricsSetById(id uint) *metricsClientSet.
 	obj.RLock()
 	defer obj.RUnlock()
 	return obj.MetricsClientSetMap[id]
+}
+
+func (obj *K8sClusterCache) GetClusterDynamicClientById(id uint) *dynamic.DynamicClient {
+	obj.RLock()
+	defer obj.RUnlock()
+	return obj.DynamicClientMap[id]
 }
