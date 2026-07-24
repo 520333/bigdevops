@@ -1273,7 +1273,12 @@ func getK8sPodFileList(c *gin.Context) {
 		targetPath = "/"
 	}
 
-	cmdStr := fmt.Sprintf("ls -la --time-style=long-iso '%s' || ls -la '%s' || /bin/ls -la '%s' || /usr/bin/ls -la '%s' || busybox ls -la '%s'", targetPath, targetPath, targetPath, targetPath, targetPath)
+	execPath := targetPath
+	if execPath != "/" && !strings.HasSuffix(execPath, "/") {
+		execPath = execPath + "/"
+	}
+
+	cmdStr := fmt.Sprintf("ls -laL --time-style=long-iso '%s' || ls -laL '%s' || ls -la --time-style=long-iso '%s' || ls -la '%s' || /bin/ls -la '%s' || /usr/bin/ls -la '%s' || busybox ls -la '%s'", execPath, execPath, execPath, execPath, execPath, execPath, execPath)
 
 	stdoutBytes, stderrBytes, err := execContainerShellCmd(c, clusterName, namespace, name, container, cmdStr, nil)
 	if err != nil && len(stdoutBytes) == 0 {
@@ -1465,9 +1470,15 @@ func readK8sPodFileContent(c *gin.Context) {
 		return
 	}
 
-	cmdStr := fmt.Sprintf("head -c 524288 '%s' || cat '%s'", targetPath, targetPath)
+	cmdStr := fmt.Sprintf("if [ -d '%s' ]; then echo 'K8S_ERR_IS_DIR'; else head -c 524288 '%s' || cat '%s'; fi", targetPath, targetPath, targetPath)
 
 	stdoutBytes, stderrBytes, err := execContainerShellCmd(c, clusterName, namespace, name, container, cmdStr, nil)
+	outStr := strings.TrimSpace(string(stdoutBytes))
+	if outStr == "K8S_ERR_IS_DIR" {
+		common.FailWithMessage("该路径是一个目录或指向目录的软链接，无法作为文本读取，请点击【打开】进入目录", c)
+		return
+	}
+
 	if err != nil && len(stdoutBytes) == 0 {
 		errMsg := string(stderrBytes)
 		if errMsg == "" {

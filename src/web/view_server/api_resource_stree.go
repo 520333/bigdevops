@@ -107,6 +107,9 @@ func getStreeNodeList(c *gin.Context) {
 // @Security     Bearer
 func getStreeNodeSelect(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+	queryLevel := c.DefaultQuery("levelNum", c.Query("level"))
+	levelNum, _ := strconv.Atoi(queryLevel)
+
 	streeNodes, err := models.GetStreeNodeAll()
 	if err != nil {
 		sc.Logger.Error("去数据库中拿所有的树节点错误", zap.Error(err))
@@ -114,42 +117,37 @@ func getStreeNodeSelect(c *gin.Context) {
 		return
 	}
 
-	// 🚀 1. 在内存中建立一个 ID -> 节点的映射 Map，用于 O(1) 复杂度的快速父节点查找
 	nodeMap := make(map[uint]*models.StreeNode)
 	for i := range streeNodes {
-		// 这样写能完美兼容返回的是结构体切片还是指针切片
 		nodeMap[streeNodes[i].ID] = streeNodes[i]
 	}
 
-	// 🚀 2. 遍历所有节点，动态回溯拼接完整路径 (NodePath)
+	var finalNodes []*models.StreeNode
 	for i := range streeNodes {
 		node := streeNodes[i]
-
-		// 填充原有的虚拟 Key 字段
 		node.Key = node.ID
 
-		// 初始化当前节点的路径为它自己的 Title
 		path := node.Title
 		currPid := node.Pid
 
-		// 核心回溯算法：只要父 ID 不为 0，就一直往上找
 		for currPid != 0 {
 			parentNode, exists := nodeMap[currPid]
 			if !exists {
-				// 如果在 map 里找不到父节点（可能数据脏了），直接中断防止死循环
 				break
 			}
-			// 将父节点的 Title 拼在当前路径的前面
-			path = parentNode.Title + " / " + path
-			// 将当前查找的指针指向爷爷节点的 Pid，继续向上追溯
+			path = parentNode.Title + "." + path
 			currPid = parentNode.Pid
 		}
 
-		// 🚀 3. 将计算好的多级完整层级路径赋值给虚拟字段 NodePath
 		node.NodePath = path
+
+		if levelNum > 0 && node.Level != levelNum {
+			continue
+		}
+		finalNodes = append(finalNodes, node)
 	}
 
-	common.OkWithDetailed(streeNodes, "ok", c)
+	common.OkWithDetailed(finalNodes, "ok", c)
 }
 
 // crud权限通用校验方法

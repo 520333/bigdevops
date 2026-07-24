@@ -3,16 +3,18 @@ package models
 import (
 	"bigdevops/src/common"
 	"bigdevops/src/config"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 var (
-	yamlTemplate1 = `
-apiVersion: networking.k8s.io/v1
+	yamlTemplate1 = `apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: VAR_NGX_DEP_NAME
@@ -164,6 +166,7 @@ func mockK8sData(sc *config.ServerConfig, adminUser *User) {
 		}
 		_ = template.CreateOne()
 	}
+
 	// 构造yaml 任务
 	for _, cluster := range clusters {
 		task := K8sYamlTask{
@@ -176,6 +179,64 @@ func mockK8sData(sc *config.ServerConfig, adminUser *User) {
 			ApplyResult: "",
 		}
 		_ = task.CreateOne()
+	}
+
+	// 构造项目和应用
+	clusterName := clusters[0].Name
+	num = 1 // 一个项目
+	for i := 0; i < num; i++ {
+		projectName := fmt.Sprintf("k8s-project-%d", i+1)
+		anum := 1 // 2个应用
+		var apps []K8sApp
+		for j := 0; j < anum; j++ {
+			appName := fmt.Sprintf("k8s-app-%d", j+1)
+			//ins := []*K8sInstance{
+			//	{
+			//		Name:   fmt.Sprintf("k8s-ins-%d", j+1),
+			//		UserID: 1,
+			//	},
+			//}
+
+			app := K8sApp{
+				Name:         appName,
+				K8sProjectId: 1,
+				TreeNodeId:   4,
+				UserID:       1,
+				//K8sInstances: ins,
+			}
+			app.Envs = []string{"k1=v1", "k2=v2"}
+			app.Labels = []string{"l1=v1", "l2=v2"}
+			app.Commands = `sh -c "echo the app is running! &&sleep infinity"`
+			app.VolumeJsonFront = []OneVolume{{
+				Type:      "hostPath",
+				Name:      "log",
+				MountPath: "/log",
+				SubPath:   "/aaa",
+				PvcName:   "",
+			}}
+			vs, _ := json.Marshal(app.VolumeJsonFront)
+			app.VolumeJson = string(vs)
+
+			app.PortJsonFront = []corev1.ServicePort{{
+				Name:       "http",
+				Protocol:   "TCP",
+				Port:       80,
+				TargetPort: intstr.FromInt32(80),
+			}}
+			sp, _ := json.Marshal(app.PortJsonFront)
+			app.VolumeJson = string(sp)
+
+			apps = append(apps, app)
+		}
+		kt := K8sProject{
+			Name:       projectName,
+			NameZh:     projectName,
+			TreeNodeId: 3,
+			UserID:     1,
+			K8sApps:    apps,
+			Cluster:    clusterName,
+		}
+		_ = kt.CreateOne()
 	}
 
 	sc.Logger.Info("k8s集群模块 Mock 数据注入成功")

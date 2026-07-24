@@ -122,11 +122,16 @@ func MigrateTable() error {
 
 		&MonitorAlertManagerEvent{},
 
-		// k8s
+		// k8s 集群管理
 		&K8sCluster{},
 		&K8sYamlTemplate{},
 		&K8sYamlTask{},
 		&K8sYamlTaskLog{},
+
+		// k8s 项目管理
+		&K8sProject{},
+		&K8sApp{},
+		&K8sInstance{},
 
 		// git
 		&CodeGitServer{},

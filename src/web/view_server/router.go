@@ -332,6 +332,26 @@ func ConfigRouter(r *gin.Engine) {
 		K8sGroup.DELETE("/deleteK8sYamlTask/:id", deleteK8sYamlTask)
 		K8sGroup.POST("/applyK8sYamlTaskOne/:id", applyK8sYamlTaskOne)
 		K8sGroup.GET("/getK8sYamlTaskLogList", getK8sYamlTaskLogList)
+
+		// 🚀 K8s 项目、应用与实例管理
+		K8sGroup.GET("/getK8sProjectList", getK8sProjectList)
+		K8sGroup.GET("/getK8sProjectOne/:id", getK8sProjectOne)
+		K8sGroup.POST("/createK8sProject", createK8sProject)
+		K8sGroup.POST("/updateK8sProject", updateK8sProject)
+		K8sGroup.DELETE("/deleteK8sProject/:id", deleteK8sProject)
+
+		K8sGroup.GET("/getK8sAppList", getK8sAppList)
+		K8sGroup.GET("/getK8sAppOne/:id", getK8sAppOne)
+		K8sGroup.POST("/createK8sApp", createK8sApp)
+		K8sGroup.POST("/updateK8sApp", updateK8sApp)
+		K8sGroup.DELETE("/deleteK8sApp/:id", deleteK8sApp)
+
+		K8sGroup.GET("/getK8sInstanceList", getK8sInstanceList)
+		K8sGroup.GET("/getK8sInstanceOne/:id", getK8sInstanceOne)
+		K8sGroup.POST("/createK8sInstance", createK8sInstance)
+		K8sGroup.POST("/updateK8sInstance", updateK8sInstance)
+		K8sGroup.DELETE("/deleteK8sInstance/:id", deleteK8sInstance)
+		K8sGroup.POST("/deployK8sInstance/:id", deployK8sInstance)
 	}
 
 	CodeGroup := afterLoginApiGroup.Group("/code")
