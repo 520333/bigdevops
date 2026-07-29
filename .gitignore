@@ -1,0 +1,30 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Configurations (Exclude real config, include template)
+server.yml
+alert_webhook.yml
+
+# 如果有临时目录
+tmp/
+
+# OS files
+.DS_Store
+Thumbs.db
+./server.yml
+.gitignore
+agent_job_exec
+/docs/
