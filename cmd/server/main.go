@@ -99,6 +99,9 @@ func main() {
 	// 初始化 k8s模块的cache
 	kc := cache.NewK8sClusterCache(sc)
 
+	// 初始化 jenkins模块的cacge
+	jc := cache.NewJenkinsCache(sc)
+
 	// 初始化group
 	group, stopChan := esl.SetupStopSignalContext()
 	ctxAll, cancelAll := context.WithCancel(context.Background())
@@ -205,11 +208,27 @@ func main() {
 		}
 	}
 
+	// cicd 模块
+	{
+		if sc.CicdC.Enable {
+			group.Go(func() error {
+				logger.Info("计划任务-jenkins模块-启动")
+				err := jc.JenkinsCacheManager(ctxAll)
+				if err != nil {
+					logger.Error("计划任务-jenkins模块-报错", zap.Error(err))
+				}
+				return err
+			})
+		} else {
+			logger.Info("计划任务-jenkins模块-关闭")
+		}
+	}
+
 	// GIN-WEB
 	group.Go(func() error {
 		errChan := make(chan error, 1)
 		go func() {
-			errChan <- web.ServerStartGin(sc, mc, kc)
+			errChan <- web.ServerStartGin(sc, mc, kc, jc)
 		}()
 		logger.Info("[web启动成功]")
 		select {

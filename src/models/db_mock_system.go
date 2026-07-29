@@ -87,13 +87,14 @@ func mockSystemData(sc *config.ServerConfig) *User {
 
 		// cicd
 		{
-			Parent: &Menu{Name: "CiCdManagement", Title: "持续交付", Icon: "ant-design:rocket-filled", Type: "0", Show: "1", OrderNo: 60, Component: "LAYOUT", Path: "/cicd", Redirect: "/cicd/workorder"},
+			Parent: &Menu{Name: "CiCdManagement", Title: "持续交付", Icon: "ant-design:rocket-filled", Type: "0", Show: "1", OrderNo: 60, Component: "LAYOUT", Path: "/cicd", Redirect: "/cicd/baseline"},
 			Children: []*Menu{
-				{Name: "CiCdWorkList", Title: "工单列表", Icon: "ant-design:audit-outlined", Type: "1", Show: "1", OrderNo: 61, Component: "cicd/workorder/index", Path: "workorder"},
-				{Name: "CiCdDeployList", Title: "发布工单", Icon: "ant-design:send-outlined", Type: "1", Show: "1", OrderNo: 62, Component: "cicd/deploy/index", Path: "deploy"},
-				{Name: "CiCdServiceBaseline", Title: "服务基线", Icon: "ant-design:sliders-outlined", Type: "1", Show: "1", OrderNo: 63, Component: "cicd/baseline/index", Path: "baseline"},
-				{Name: "CiCdPipeline", Title: "流水线管理", Icon: "ant-design:partition-outlined", Type: "1", Show: "1", OrderNo: 64, Component: "cicd/pipeline/index", Path: "pipeline"},
-				{Name: "CiCdEnvManagement", Title: "环境配置", Icon: "ant-design:cloud-server-outlined", Type: "1", Show: "1", OrderNo: 65, Component: "cicd/environment/index", Path: "environment"},
+				{Name: "JenkinsInstanceManagement", Title: "实例管理", Icon: "ant-design:cloud-server-outlined", Type: "1", Show: "1", OrderNo: 61, Component: "cicd/instance/index", Path: "instance"},
+				{Name: "CiCdWorkList", Title: "工单列表", Icon: "ant-design:audit-outlined", Type: "1", Show: "1", OrderNo: 62, Component: "cicd/workorder/index", Path: "workorder"},
+				{Name: "CiCdDeployList", Title: "发布工单", Icon: "ant-design:send-outlined", Type: "1", Show: "1", OrderNo: 63, Component: "cicd/deploy/index", Path: "deploy"},
+				{Name: "CiCdServiceBaseline", Title: "服务基线", Icon: "ant-design:sliders-outlined", Type: "1", Show: "1", OrderNo: 64, Component: "cicd/baseline/index", Path: "baseline"},
+				{Name: "CiCdPipeline", Title: "流水线管理", Icon: "ant-design:partition-outlined", Type: "1", Show: "1", OrderNo: 65, Component: "cicd/pipeline/index", Path: "pipeline"},
+				//{Name: "CiCdEnvManagement", Title: "环境配置", Icon: "ant-design:cloud-server-outlined", Type: "1", Show: "1", OrderNo: 65, Component: "cicd/environment/index", Path: "environment"},
 			},
 		},
 
@@ -458,6 +459,26 @@ func mockSystemData(sc *config.ServerConfig) *User {
 				{Path: "/api/k8s/updateK8sInstance", Method: "POST", Title: "[k8s应用管理]更新实例", Type: "1"},
 				{Path: "/api/k8s/deleteK8sInstance/:id", Method: "DELETE", Title: "[k8s应用管理]删除实例", Type: "1"},
 				{Path: "/api/k8s/deployK8sInstance/:id", Method: "POST", Title: "[k8s应用管理]部署实例到集群", Type: "1"},
+			},
+		},
+
+		{
+			Parent: &Api{Path: "/api/cicd", Method: "GET", Title: "Jenkins服务模块", Type: "0"},
+			Children: []*Api{
+				{Path: "/api/cicd/getJenkinsInstanceList", Method: "GET", Title: "[Jenkins]获取实例列表", Type: "1"},
+				{Path: "/api/cicd/createJenkinsInstance", Method: "POST", Title: "[Jenkins]创建实例", Type: "1"},
+				{Path: "/api/cicd/updateJenkinsInstance", Method: "POST", Title: "[Jenkins]更新实例", Type: "1"},
+				{Path: "/api/cicd/deleteJenkinsInstance", Method: "DELETE", Title: "[Jenkins]删除实例", Type: "1"},
+				{Path: "/api/cicd/getJenkinsJobList", Method: "GET", Title: "[Jenkins]获取Job列表", Type: "1"},
+				{Path: "/api/cicd/createJenkinsJob", Method: "POST", Title: "[Jenkins]创建Job", Type: "1"},
+				{Path: "/api/cicd/updateJenkinsJob", Method: "POST", Title: "[Jenkins]更新Job", Type: "1"},
+				{Path: "/api/cicd/deleteJenkinsJob", Method: "DELETE", Title: "[Jenkins]删除Job", Type: "1"},
+				{Path: "/api/cicd/triggerJenkinsBuild", Method: "POST", Title: "[Jenkins]触发构建", Type: "1"},
+				{Path: "/api/cicd/getJenkinsBuildLogs", Method: "GET", Title: "[Jenkins]获取构建日志", Type: "1"},
+				{Path: "/api/cicd/getJenkinsPipelineList", Method: "GET", Title: "[Jenkins]获取流水线配置列表", Type: "1"},
+				{Path: "/api/cicd/createJenkinsPipeline", Method: "POST", Title: "[Jenkins]创建流水线配置", Type: "1"},
+				{Path: "/api/cicd/updateJenkinsPipeline", Method: "POST", Title: "[Jenkins]更新流水线配置", Type: "1"},
+				{Path: "/api/cicd/deleteJenkinsPipeline", Method: "DELETE", Title: "[Jenkins]删除流水线配置", Type: "1"},
 			},
 		},
 
@@ -922,3 +943,141 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		{Path: "/api/system/setting/get", Method: "GET", Pid: 149, Title: "系统管理-全局设置", Type: "1"},
 	}
 */
+
+func EnsureJenkinsPipelineMenu(sc *config.ServerConfig) {
+	var parent Menu
+	err := Db.Where("name = ?", "JenkinsManagement").First(&parent).Error
+	if err != nil || parent.ID == 0 {
+		return
+	}
+
+	var menu Menu
+	err = Db.Where("name = ?", "JenkinsPipelineManagement").First(&menu).Error
+	if err == nil && menu.ID > 0 {
+		if menu.Title != "流水线配置" {
+			_ = Db.Model(&menu).Update("title", "流水线配置").Error
+		}
+		return
+	}
+
+	newMenu := &Menu{
+		Name:      "JenkinsPipelineManagement",
+		Title:     "流水线配置",
+		Icon:      "ant-design:branches-outlined",
+		Type:      "1",
+		Show:      "1",
+		OrderNo:   79,
+		Component: "cicd/pipeline/index",
+		Path:      "pipeline",
+		Pid:       int(parent.ID),
+	}
+	if err := Db.Create(newMenu).Error; err == nil {
+		sc.Logger.Info("自动插入菜单：[Jenkins] 流水线配置 成功 🚀")
+		var superAdminRole Role
+		if Db.Where("role_name = ?", "超级管理员").First(&superAdminRole).Error == nil {
+			_ = Db.Model(&superAdminRole).Association("Menus").Append(newMenu)
+		}
+	}
+	SeedJenkinsPipelinePresets(sc)
+}
+
+func SeedJenkinsPipelinePresets(sc *config.ServerConfig) {
+	var stageCount int64
+	Db.Model(&JenkinsStage{}).Count(&stageCount)
+	if stageCount == 0 {
+		stages := []*JenkinsStage{
+			{Name: "获取代码", CodeKey: "stg-checkout", Category: "frontend", AgentType: "none", Steps: "cleanWs()\ncheckout scmGit(branches: [[name: \"${params.分支名}\"]], userRemoteConfigs: [[url: \"${GIT仓库}\"]])", Description: "清空工作区并获取 Git 仓库分支源码", OrderNo: 1, Enabled: true},
+			{Name: "编译代码", CodeKey: "stg-build", Category: "frontend", AgentType: "docker", DockerImage: "harbor.cathayquantum.net/devops/node:${params.NODE版本}", Steps: "script {\n    sh \"\"\"\n    cd ${WORK_SPACES}\n    ${构建命令}\n    \"\"\"\n}", Description: "Docker Node 容器编译前端静态产物", OrderNo: 2, Enabled: true},
+			{Name: "代码漏扫", CodeKey: "stg-sonar", Category: "frontend", AgentType: "none", WhenExpr: "expression { 扫描代码 == 'true' }", Steps: `script {
+    ID = sh returnStdout: true, script: "git rev-parse HEAD"
+    echo "${ID}"
+    withSonarQubeEnv(credentialsId: 'sonar-token') {
+        sh """
+            /opt/sonar-scanner/bin/sonar-scanner \
+            -Dsonar.token=sqa_b0ea8ca78578f35f6b097a3c86a42874404eb6ef -Dsonar.projectVersion=${params.分支名} \
+            -Dsonar.projectKey=${JOB_BASE_NAME} \
+            -Dsonar.projectName=${JOB_BASE_NAME} \
+            -Dsonar.sources=src \
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/coverage/** \
+            -Dsonar.javascript.file.suffixes=.js,.jsx,.ts,.tsx,.vue \
+            -Dsonar.typescript.tsconfigPath=tsconfig.json \
+            -Dsonar.sourceEncoding=UTF-8 \
+            -Dsonar.branch.name=${params.分支名}
+        """
+    }
+}`, Description: "SonarQube 静态代码质量与安全性检测", OrderNo: 3, Enabled: true},
+			{Name: "生成镜像tag", CodeKey: "stg-tag", Category: "frontend", AgentType: "none", Steps: `script {
+    env.COMMITID = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%h'").trim()
+    env.COMMIT_LOG = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%cn：%s'").trim()
+    env.BUILDTIME = sh(returnStdout: true, script: "date +%Y%m%d_%H%M%S").trim()
+    env.IMAGE_TAG = COMMITID + "_" + BUILDTIME
+}`, Description: "提取 Git Commit 与时间戳生成 IMAGE_TAG", OrderNo: 4, Enabled: true},
+			{Name: "构建容器镜像", CodeKey: "stg-docker", Category: "frontend", AgentType: "none", Steps: `script {
+    withCredentials([usernamePassword(credentialsId: 'art', usernameVariable: 'ART_USER', passwordVariable: 'ART_PASS')]) {
+        sh '''
+            curl -u "$ART_USER:$ART_PASS" -O https://artifactory.cathayquantum.net/artifactory/huahua/nginx.conf
+            curl -u "$ART_USER:$ART_PASS" -O https://artifactory.cathayquantum.net/artifactory/huahua/Dockerfile
+        '''
+    }
+}
+withCredentials([usernamePassword(credentialsId: 'harbor-local', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]) {
+    sh 'echo "${PASSWORD}" | docker login ${HARBOR_URL} -u "${USERNAME}" --password-stdin'
+    sh 'cd ${WORK_SPACES} && docker build -t ${HARBOR_URL}/${JOB_NAME}:${IMAGE_TAG} . --push'
+    sh 'docker rmi ${HARBOR_URL}/${JOB_NAME}:${IMAGE_TAG}'
+}`, Description: "打包 Docker 镜像并推送至 Harbor 镜像仓库", OrderNo: 5, Enabled: true},
+			{Name: "启动前端容器", CodeKey: "stg-deploy", Category: "frontend", AgentType: "none", Steps: `script {
+    def hosts = params.目标主机.split(',')
+    for (host in hosts) {
+        def ip = host.split('【')[0]
+        echo ">>>>执行主机: ${ip}"
+        sh """
+            export ANSIBLE_PYTHON_INTERPRETER=/usr/bin/python3.12
+            ansible all -m shell -a "docker pull ${HARBOR_URL}/${JOB_NAME}:${IMAGE_TAG}" -i ${ip},
+            ansible all -m shell -a "docker rm -f ${JOB_BASE_NAME}" -i ${ip},
+            ansible all -m shell -a "docker run -d --name ${JOB_BASE_NAME} -p82:80 ${HARBOR_URL}/${JOB_NAME}:${IMAGE_TAG}" -i ${ip},
+        """
+    }
+}`, Description: "Ansible 批量拉取镜像并部署运行容器", OrderNo: 6, Enabled: true},
+		}
+		for _, s := range stages {
+			_ = Db.Create(s).Error
+		}
+		sc.Logger.Info("预置数据插入：[JenkinsStage] 6 大标准 Stage 模块注入成功 🚀")
+	}
+
+	var envCount int64
+	Db.Model(&JenkinsEnvVar{}).Count(&envCount)
+	if envCount == 0 {
+		envs := []*JenkinsEnvVar{
+			{EnvGroup: "global", Key: "WORK_SPACES", Value: "${WORKSPACE}", Description: "工作区目录路径"},
+			{EnvGroup: "global", Key: "HARBOR_URL", Value: "harbor.cathayquantum.net", Description: "Harbor 镜像仓库域名"},
+			{EnvGroup: "global", Key: "ANSIBLE_FORCE_COLOR", Value: "true", Description: "Ansible 染色输出选项"},
+		}
+		for _, e := range envs {
+			_ = Db.Create(e).Error
+		}
+		sc.Logger.Info("预置数据插入：[JenkinsEnvVar] 环境变量注入成功 🚀")
+	}
+
+	var paramCount int64
+	Db.Model(&JenkinsBuildParam{}).Count(&paramCount)
+	if paramCount == 0 {
+		params := []*JenkinsBuildParam{
+			{Name: "扫描代码", Type: "boolean", DefaultValue: "false", Description: "是否对分支代码质量扫描、安全性静态分析"},
+			{Name: "分支名", Type: "reactiveChoice", Script: `def gettags = ("git ls-remote -t -h ssh://git@gitlab.cathayquantum.net:222/centurypay/centurypay_admin.git" ).execute()
+def repoNameList=gettags.text.readLines().collect {it.split()[1].replaceAll('refs/heads/', '').replaceAll('refs/tags/', '')}
+repoNameList.add(0, 'release:selected')
+return repoNameList`, Description: "动态 Git 远程分支与 Tag 列表"},
+			{Name: "GIT仓库", Type: "string", DefaultValue: "ssh://git@gitlab.cathayquantum.net:222/centurypay/centurypay_admin.git", Description: "Git 源代码仓库地址"},
+			{Name: "构建节点", Type: "choice", Choices: []string{"master", "ec2-jp", "ec2-hk"}, Description: "选择 Jenkins 构建 Node 节点"},
+			{Name: "NODE版本", Type: "choice", Choices: []string{"16"}, Description: "Node.js 编译版本"},
+			{Name: "构建命令", Type: "string", DefaultValue: "npm install --prefer-offline --registry=https://registry.npmmirror.com/ --loglevel=error && npm run build:prod -- --silent", Description: "前端编译构建指令"},
+			{Name: "构建产出目录", Type: "string", DefaultValue: "dist", Description: "构建产物产出目录名称"},
+			{Name: "目标主机", Type: "choice", Choices: []string{"172.30.12.255"}, Description: "172.30.12.255 --- 生产目标主机"},
+		}
+		for _, p := range params {
+			_ = Db.Create(p).Error
+		}
+		sc.Logger.Info("预置数据插入：[JenkinsBuildParam] 构建参数注入成功 🚀")
+	}
+}

@@ -133,12 +133,21 @@ func MigrateTable() error {
 		&K8sApp{},
 		&K8sInstance{},
 
+		// cicd
+		&JenkinsInstance{},
+		&JenkinsJob{},
+		&JenkinsPipelineConfig{},
+		&JenkinsStage{},
+		&JenkinsEnvVar{},
+		&JenkinsBuildParam{},
+
 		// git
 		&CodeGitServer{},
 	)
 }
 
 func MockUserRegister(sc *config.ServerConfig) {
+	EnsureJenkinsPipelineMenu(sc)
 	var count int64
 	err := Db.Model(&User{}).Where("username = ?", "admin").Count(&count).Error
 	if err == nil && count > 0 {

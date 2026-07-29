@@ -19,7 +19,7 @@ import (
 
 // ServerStartGin 启动gin
 // view_server 路由放专门目录下
-func ServerStartGin(sc *config.ServerConfig, mc *cache.MonitorCache, kc *cache.K8sClusterCache) error {
+func ServerStartGin(sc *config.ServerConfig, mc *cache.MonitorCache, kc *cache.K8sClusterCache, jc *cache.JenkinsCache) error {
 	// 初始化引擎
 	gin.SetMode(gin.ReleaseMode)
 	gin.DisableConsoleColor()
@@ -38,6 +38,7 @@ func ServerStartGin(sc *config.ServerConfig, mc *cache.MonitorCache, kc *cache.K
 	varMap[common.GIN_CTX_CONFIG_CONFIG] = sc
 	varMap[common.GIN_CTX_MONITOR_CACHE] = mc
 	varMap[common.GIN_CTX_K8S_CACHE] = kc
+	varMap[common.GIN_CTX_JENKINS_CACHE] = jc
 	r.Use(middleware.ConfigMiddleware(varMap))
 	//r.Use(middleware.TimeCost())
 	r.Use(requestid.New())

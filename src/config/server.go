@@ -23,10 +23,20 @@ type ServerConfig struct {
 	JobExec                         *ServerJobExec       `yaml:"job_exec"`
 	K8sClusterC                     *K8sCluster          `yaml:"k8s_cluster"`
 	MonitorComputeC                 *MonitorCompute      `yaml:"monitor_compute"`
+	CicdC                           *CiCd                `yaml:"ci_cd"`
 	Logger                          *zap.Logger          `yaml:"-"`
 	Domain                          string               `yaml:"front_domain"`
 	ImC                             *IMConfig            `yaml:"im"`
 	AlertManagerApi                 string               `yaml:"alert_manager_api"`
+	OIDC                            *KeycloakOIDC        `yaml:"oidc"`
+}
+
+type KeycloakOIDC struct {
+	Issuer       string `yaml:"issuer"`        // 如: http://keycloak.example.com/realms/master
+	ClientID     string `yaml:"client_id"`     // 如: big-devops-platform
+	ClientSecret string `yaml:"client_secret"` // 如果是 Confidential Client
+	RedirectURL  string `yaml:"redirect_url"`  // 如: http://localhost:3100/#/oauth/callback
+	Enable       bool   `yaml:"enable"`
 }
 
 type K8sCluster struct {
@@ -34,6 +44,12 @@ type K8sCluster struct {
 	RunIntervalSeconds int  `yaml:"run_interval_seconds"`
 	ExecTimeoutSeconds int  `yaml:"execTimeoutSeconds"`
 }
+type CiCd struct {
+	Enable             bool `yaml:"enable"`
+	RunIntervalSeconds int  `yaml:"run_interval_seconds"`
+	ExecTimeoutSeconds int  `yaml:"execTimeoutSeconds"`
+}
+
 type ServerJobExec struct {
 	Enable             bool `yaml:"enable"`
 	RunIntervalSeconds int  `yaml:"run_interval_seconds"`

@@ -58,3 +58,10 @@ protoc --go_out=. --go-grpc_out=. *.proto
 
 # websocket
 go get github.com/gorilla/websocket
+
+# jenkins 对接相关
+go get github.com/bndr/gojenkins
+
+# OIDC
+go get github.com/coreos/go-oidc/v3/oidc
+go get golang.org/x/oauth2

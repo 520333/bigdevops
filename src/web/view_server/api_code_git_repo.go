@@ -767,66 +767,84 @@ type GitBranch struct {
 // @Success      200 {object} common.BaseResp "获取代码仓库分支列表 响应结果"
 // @Router       /code/getRepoBranches [get]
 // @Security     Bearer
+func fetchBranchesForServer(server models.CodeGitServer, repoId int, fullName string) ([]GitBranch, error) {
+	branches := make([]GitBranch, 0)
+	if server.Platform == "gitlab" {
+		client, err := getGitLabClient(&server)
+		if err != nil {
+			return nil, err
+		}
+		var pid interface{} = repoId
+		if repoId == 0 && fullName != "" {
+			pid = fullName
+		}
+		gitlabBranches, _, err := client.Branches.ListBranches(pid, &gitlab.ListBranchesOptions{})
+		if err != nil {
+			return nil, err
+		}
+		for _, b := range gitlabBranches {
+			branches = append(branches, GitBranch{Name: b.Name})
+		}
+		return branches, nil
+	} else if server.Platform == "gitea" {
+		client, err := getGiteaClient(&server)
+		if err != nil {
+			return nil, err
+		}
+		parts := strings.Split(fullName, "/")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid fullName format")
+		}
+		owner, repoName := parts[0], parts[1]
+		giteaBranches, _, err := client.ListRepoBranches(owner, repoName, gitea.ListRepoBranchesOptions{})
+		if err != nil {
+			return nil, err
+		}
+		for _, b := range giteaBranches {
+			branches = append(branches, GitBranch{Name: b.Name})
+		}
+		return branches, nil
+	}
+	return nil, fmt.Errorf("unsupported platform")
+}
+
 func getRepoBranches(c *gin.Context) {
 	serverId, _ := strconv.Atoi(c.Query("serverId"))
 	repoId, _ := strconv.Atoi(c.Query("repoId"))
 	fullName := c.Query("fullName")
 
-	if serverId == 0 || (repoId == 0 && fullName == "") {
-		common.ReqBadFailWithMessage("缺少必要的参数(serverId, repoId, fullName)", c)
+	if repoId == 0 && fullName == "" {
+		common.OkWithData([]GitBranch{}, c)
 		return
 	}
 
-	server, err := models.GetCodeGitServerById(serverId)
-	if err != nil {
-		common.FailWithMessage("Git 实例配置不存在", c)
-		return
+	if serverId > 0 {
+		server, err := models.GetCodeGitServerById(serverId)
+		if err == nil {
+			if branches, err := fetchBranchesForServer(*server, repoId, fullName); err == nil && len(branches) > 0 {
+				common.OkWithData(branches, c)
+				return
+			}
+		}
 	}
 
-	branches := make([]GitBranch, 0)
-
-	if server.Platform == "gitlab" {
-		client, err := getGitLabClient(server)
-		if err != nil {
-			common.FailWithMessage("初始化 GitLab 客户端失败", c)
-			return
-		}
-
-		gitlabBranches, _, err := client.Branches.ListBranches(repoId, &gitlab.ListBranchesOptions{})
-		if err == nil {
-			for _, b := range gitlabBranches {
-				branches = append(branches, GitBranch{Name: b.Name})
-			}
-		} else {
-			common.FailWithMessage("获取 GitLab 分支失败", c)
-			return
-		}
-	} else if server.Platform == "gitea" {
-		client, err := getGiteaClient(server)
-		if err != nil {
-			common.FailWithMessage("初始化 Gitea 客户端失败", c)
-			return
-		}
-
-		parts := strings.Split(fullName, "/")
-		if len(parts) != 2 {
-			common.FailWithMessage("无效的仓库名称格式", c)
-			return
-		}
-		owner, repoName := parts[0], parts[1]
-
-		giteaBranches, _, err := client.ListRepoBranches(owner, repoName, gitea.ListRepoBranchesOptions{})
-		if err == nil {
-			for _, b := range giteaBranches {
-				branches = append(branches, GitBranch{Name: b.Name})
-			}
-		} else {
-			common.FailWithMessage("获取 Gitea 分支失败", c)
+	// 如果未指定 serverId 或特定 server 获取失败，遍历系统包含的所有 Git 实例匹配
+	var servers []models.CodeGitServer
+	_ = models.Db.Find(&servers).Error
+	for _, s := range servers {
+		if branches, err := fetchBranchesForServer(s, repoId, fullName); err == nil && len(branches) > 0 {
+			common.OkWithData(branches, c)
 			return
 		}
 	}
 
-	common.OkWithData(branches, c)
+	// 保底逻辑：返回默认主流分支
+	fallback := []GitBranch{
+		{Name: "main"},
+		{Name: "master"},
+		{Name: "develop"},
+	}
+	common.OkWithData(fallback, c)
 }
 
 // 统一的命名空间结构，返给前端

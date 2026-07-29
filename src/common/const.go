@@ -6,6 +6,7 @@ const (
 	GIN_CTX_CONFIG_ALERTRECEIVEQ = "alertReceiveQ"
 	GIN_CTX_MONITOR_CACHE        = "monitor_cache"
 	GIN_CTX_K8S_CACHE            = "k8s_cache"
+	GIN_CTX_JENKINS_CACHE        = "jenkins_cache"
 	GIN_CTX_JWT_CLAIM            = "jwt_claim"
 	GIN_CTX_JWT_USER_NAME        = "jwt_user_name"
 	COMMON_STATUS_ENABLE         = "1"

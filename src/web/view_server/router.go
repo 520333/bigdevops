@@ -15,6 +15,8 @@ func ConfigRouter(r *gin.Engine) {
 	base.GET("/long", longRequest)
 	base.POST("/login", UserLogin)
 	base.GET("/logout", UserLogout)
+	base.GET("/auth/oidc/login", GetOidcLoginUrl) // sso单点登录
+	base.POST("/auth/oidc/callback", OidcCallback)
 
 	noAuth := r.Group("/noAuth")
 	{
@@ -384,6 +386,52 @@ func ConfigRouter(r *gin.Engine) {
 		CodeGroup.POST("/mergeMergeRequest", mergeMergeRequest)
 		CodeGroup.POST("/closeMergeRequest", closeMergeRequest)
 
+	}
+
+	JenkinsGroup := afterLoginApiGroup.Group("/cicd")
+	{
+		// 实例管理路由
+		JenkinsGroup.GET("/getJenkinsInstanceList", getJenkinsInstanceList)
+		JenkinsGroup.POST("/createJenkinsInstance", createJenkinsInstance)
+		JenkinsGroup.POST("/updateJenkinsInstance", updateJenkinsInstance)
+		JenkinsGroup.DELETE("/deleteJenkinsInstance", deleteJenkinsInstance)
+
+		// Job 管理路由
+		JenkinsGroup.GET("/getJenkinsJobList", getJenkinsJobList)
+		JenkinsGroup.POST("/createJenkinsJob", createJenkinsJob)
+		JenkinsGroup.POST("/updateJenkinsJob", updateJenkinsJob)
+		JenkinsGroup.DELETE("/deleteJenkinsJob", deleteJenkinsJob)
+		JenkinsGroup.POST("/triggerJenkinsBuild", triggerJenkinsBuild)
+		JenkinsGroup.POST("/stopJenkinsBuild", stopJenkinsBuild)
+		JenkinsGroup.GET("/getJenkinsBuildLogs", getJenkinsBuildLogs)
+		JenkinsGroup.GET("/getJenkinsJobRemotePipeline", getJenkinsJobRemotePipeline)
+		JenkinsGroup.GET("/getJenkinsJobStageView", getJenkinsJobStageView)
+		JenkinsGroup.POST("/toggleJenkinsJobDeleteLock", toggleJenkinsJobDeleteLock)
+
+		// Pipeline 模版与 Stage 配置路由
+		JenkinsGroup.GET("/getJenkinsPipelineList", getJenkinsPipelineList)
+		JenkinsGroup.POST("/createJenkinsPipeline", createJenkinsPipeline)
+		JenkinsGroup.POST("/updateJenkinsPipeline", updateJenkinsPipeline)
+		JenkinsGroup.DELETE("/deleteJenkinsPipeline", deleteJenkinsPipeline)
+		JenkinsGroup.POST("/validateJenkinsPipeline", validateJenkinsPipeline)
+
+		// 独立 Stage 模块路由
+		JenkinsGroup.GET("/getJenkinsStageList", getJenkinsStageList)
+		JenkinsGroup.POST("/createJenkinsStage", createJenkinsStage)
+		JenkinsGroup.POST("/updateJenkinsStage", updateJenkinsStage)
+		JenkinsGroup.DELETE("/deleteJenkinsStage", deleteJenkinsStage)
+
+		// 独立 环境变量 路由
+		JenkinsGroup.GET("/getJenkinsEnvList", getJenkinsEnvList)
+		JenkinsGroup.POST("/createJenkinsEnv", createJenkinsEnv)
+		JenkinsGroup.POST("/updateJenkinsEnv", updateJenkinsEnv)
+		JenkinsGroup.DELETE("/deleteJenkinsEnv", deleteJenkinsEnv)
+
+		// 独立 构建参数 路由
+		JenkinsGroup.GET("/getJenkinsParamList", getJenkinsParamList)
+		JenkinsGroup.POST("/createJenkinsParam", createJenkinsParam)
+		JenkinsGroup.POST("/updateJenkinsParam", updateJenkinsParam)
+		JenkinsGroup.DELETE("/deleteJenkinsParam", deleteJenkinsParam)
 	}
 
 }
