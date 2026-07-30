@@ -671,6 +671,41 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		_, _ = CasbinEnforcer.AddPolicy("k8s_admin", api.Path, api.Method)
 	}
 
+	var userMenus []*Menu
+	for _, m := range menus {
+		if m.Name == "Dashboard" || m.Name == "Analysis" || m.Name == "System" || m.Name == "ChangePassword" {
+			userMenus = append(userMenus, m)
+		}
+	}
+	// 2. 筛选普通用户（user）所需的 API 接口
+	var userApis []*Api
+	userApiPathMap := map[string]bool{
+		"/api/getUserInfo":        true,
+		"/api/getPermCode":        true,
+		"/api/system/getMenuList": true,
+		"/api/system/setting/get": true,
+	}
+	for _, api := range apis {
+		if userApiPathMap[api.Path] {
+			userApis = append(userApis, api)
+		}
+	}
+	// 3. 定义并创建“普通用户”角色对象
+	roleUser := &Role{
+		RoleName:  "普通用户",
+		RoleValue: "user",
+		Menus:     userMenus,
+	}
+	if err := Db.Create(roleUser).Error; err != nil {
+		sc.Logger.Error("模拟普通用户角色创建失败", zap.Error(err))
+	}
+	// 4. 绑定 API 接口关联表 (同步更新 role_apis 中间表)
+	_ = roleUser.UpdateApis(userApis)
+	// 5. 将该角色的接口访问权限写入 Casbin RBAC 策略表
+	for _, api := range userApis {
+		_, _ = CasbinEnforcer.AddPolicy("user", api.Path, api.Method)
+	}
+
 	sc.Logger.Info("系统模块 Mock 数据注入成功")
 	return adminUser
 }
