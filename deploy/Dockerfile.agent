@@ -1,0 +1,38 @@
+# ==========================================
+# Agent 服务多阶段构建 Dockerfile
+# ==========================================
+
+# 1. 编译阶段
+FROM golang:1.23-alpine AS builder
+
+ENV CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64 \
+    GOPROXY=https://goproxy.cn,direct
+
+RUN apk add --no-cache git ca-certificates tzdata
+
+WORKDIR /build
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN go build -ldflags="-s -w" -o /build/agent ./cmd/agent
+
+# 2. 运行阶段
+FROM alpine:3.20 AS runner
+
+# Agent 可能执行 Python 或 Bash 任务脚本（参考 agent.yml 中的 python_bin_path / bash_bin_path）
+RUN apk add --no-cache ca-certificates tzdata bash python3 \
+    && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+    && echo "Asia/Shanghai" > /etc/timezone
+
+WORKDIR /app
+
+COPY --from=builder /build/agent /app/agent
+COPY agent.yml /app/agent.yml
+
+EXPOSE 8082
+
+ENTRYPOINT ["/app/agent", "-config_file", "/app/agent.yml"]

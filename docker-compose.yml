@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.server
+    container_name: bigdevops-server
+    restart: always
+    ports:
+      - "8080:8080" # web端口
+      - "8083:8083" # gpc端口
+    volumes:
+      - ./server.yml:/app/server.yml
+    environment:
+      - TZ=Asia/Shanghai
+
+  agent:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.agent
+    container_name: bigdevops-agent
+    restart: always
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./agent.yml:/app/agent.yml
+    environment:
+      - TZ=Asia/Shanghai
+
+  alert_webhook:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.alert_webhook
+    container_name: bigdevops-alert-webhook
+    restart: always
+    ports:
+      - "8085:8085"
+    volumes:
+      - ./alert_webhook.yml:/app/alert_webhook.yml
+    environment:
+      - TZ=Asia/Shanghai

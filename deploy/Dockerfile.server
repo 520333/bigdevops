@@ -1,0 +1,39 @@
+# ==========================================
+# Server 服务多阶段构建 Dockerfile
+# ==========================================
+
+# 1. 编译阶段
+FROM golang:1.23-alpine AS builder
+
+ENV CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64 \
+    GOPROXY=https://goproxy.cn,direct
+
+RUN apk add --no-cache git ca-certificates tzdata
+
+WORKDIR /build
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN go build -ldflags="-s -w" -o /build/server ./cmd/server
+
+# 2. 运行阶段
+FROM alpine:3.20 AS runner
+
+RUN apk add --no-cache ca-certificates tzdata \
+    && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+    && echo "Asia/Shanghai" > /etc/timezone
+
+WORKDIR /app
+
+# 从 builder 拷贝产物
+COPY --from=builder /build/server /app/server
+COPY server.yml /app/server.yml
+
+# HTTP 8080, gRPC 8083
+EXPOSE 8080 8083
+
+ENTRYPOINT ["/app/server", "-config_file", "/app/server.yml"]

@@ -1,0 +1,28 @@
+# Git & IDE
+.git
+.gitignore
+.idea
+.vscode
+
+# Binary outputs & Executables
+*.exe
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+server.exe
+
+# Log files
+*.log
+json.log
+alert_webhook.log
+agent.log
+
+# Temporary & local files
+scratch/
+tmp/
+*.tmp
+
+# Kubeconfig & Sensitive credential folders if any
+kubeconfig/
