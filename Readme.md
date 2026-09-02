@@ -65,3 +65,15 @@ go get github.com/bndr/gojenkins
 # OIDC
 go get github.com/coreos/go-oidc/v3/oidc
 go get golang.org/x/oauth2
+
+
+# 构建命令
+```bash
+# 1. 使用通用 Dockerfile 构建 server 镜像
+docker build -t bigdevops-server:latest --build-arg APP_NAME=server .
+# 2. 使用专用 Dockerfile 构建指定服务
+docker build -t bigdevops-server:latest -f deploy/Dockerfile.server .
+docker build -t bigdevops-agent:latest -f deploy/Dockerfile.agent .
+docker build -t bigdevops-alert-webhook:latest -f deploy/Dockerfile.alert_webhook .
+# 3. Docker Compose 一键构建与启动所有服务
+docker-compose up -d --build

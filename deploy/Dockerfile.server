@@ -19,6 +19,11 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+
+# 自动生成 Swagger API 文档（防止服务器构建环境中缺失 docs 目录）
+RUN go install github.com/swaggo/swag/cmd/swag@v1.16.3 \
+    && swag init -g cmd/server/main.go -o docs || true
+
 RUN go build -ldflags="-s -w" -o /build/server ./cmd/server
 
 # 2. 运行阶段

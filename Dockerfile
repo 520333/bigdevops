@@ -1,7 +1,7 @@
 # ==========================================
 # 第一阶段：构建阶段 (Builder Stage)
 # ==========================================
-FROM golang:1.23-alpine AS builder
+FROM golang:1.26.1-alpine AS builder
 
 # 设置环境变量
 ENV CGO_ENABLED=0 \
@@ -22,6 +22,10 @@ RUN go mod download
 
 # 复制项目源代码
 COPY . .
+
+# 自动生成 Swagger API 文档（防止服务器构建环境中缺失 docs 目录）
+RUN go install github.com/swaggo/swag/cmd/swag@v1.16.3 \
+    && swag init -g cmd/server/main.go -o docs || true
 
 # 编译的目标服务（可选：server, agent, alert_webhook），默认为 server
 ARG APP_NAME=server
