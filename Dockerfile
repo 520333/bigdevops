@@ -7,7 +7,8 @@ FROM golang:1.23-alpine AS builder
 ENV CGO_ENABLED=0 \
     GOOS=linux \
     GOARCH=amd64 \
-    GOPROXY=https://goproxy.cn,direct
+    GOPROXY=https://goproxy.cn,direct \
+    GOTOOLCHAIN=auto
 
 # 安装基础构建工具及 CA 证书
 RUN apk add --no-cache git ca-certificates tzdata

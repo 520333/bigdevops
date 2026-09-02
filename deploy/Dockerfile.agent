@@ -3,12 +3,13 @@
 # ==========================================
 
 # 1. 编译阶段
-FROM golang:1.23-alpine AS builder
+FROM golang:1.26.1-alpine AS builder
 
 ENV CGO_ENABLED=0 \
     GOOS=linux \
     GOARCH=amd64 \
-    GOPROXY=https://goproxy.cn,direct
+    GOPROXY=https://goproxy.cn,direct \
+    GOTOOLCHAIN=auto
 
 RUN apk add --no-cache git ca-certificates tzdata
 
