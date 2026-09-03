@@ -79,6 +79,18 @@ func ConfigRouter(r *gin.Engine) {
 		systemApiGroup.PUT("/setting/update", UpdateSystemSetting)
 	}
 
+	artifactoryApiGroup := afterLoginApiGroup.Group("/artifactory")
+	{
+		artifactoryApiGroup.GET("/repos", getArtifactoryRepositories)
+		artifactoryApiGroup.GET("/info", getArtifactoryFileInfo)
+		artifactoryApiGroup.GET("/tree", getArtifactoryFileTree)
+		artifactoryApiGroup.GET("/content", getArtifactoryFileContent)
+		artifactoryApiGroup.POST("/save", saveArtifactoryFileContent)
+		artifactoryApiGroup.POST("/upload", uploadArtifactoryFile)
+		artifactoryApiGroup.POST("/delete", deleteArtifactoryFile)
+		artifactoryApiGroup.GET("/download", downloadArtifactoryFile)
+	}
+
 	sTreeApiGroup := afterLoginApiGroup.Group("/stree")
 	{
 		sTreeApiGroup.GET("/getStreeNodeList", getStreeNodeList)

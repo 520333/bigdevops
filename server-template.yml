@@ -15,6 +15,32 @@ alert_manager_api: http://192.168.50.200:9093
 # flush privileges;
 # DROP DATABASE IF EXISTS bigdevops; CREATE DATABASE IF NOT EXISTS bigdevops DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+############ 对接keycloak单点登录
+oidc:
+  issuer: http://192.168.50.100:8080/realms/SSO
+  client_id: bigdevops
+  client_secret: tEQUqQ414a3gcDfCESV03dr1UzSyKphv
+  redirect_url: http://192.168.10.240:3100/#/oauth/callback
+  enable: true
+
+############ MinIO OSS 对象存储配置
+oss:
+  enable: true
+  endpoint: 192.168.50.100:9000
+  access_key: oSc0Q5tSVJQK37I6apUl
+  secret_key: h8NhkI1BvTvnWlbgc0xdr4tDnKxIjPdjkOUgzTqt
+  use_ssl: false
+  bucket_name: bigdevops-avatars
+  url_prefix: http://192.168.50.100:9000/bigdevops-avatars
+
+############ JFrog Artifactory 制品与配置仓库配置
+artifactory:
+  enable: true
+  base_url: "http://192.168.50.100:8081/artifactory"
+  username: "admin"
+  password: "your-password-or-access-token"
+
+
 mysql:
   dsn: "root:123456@tcp(192.168.50.100:3306)/bigdevops?charset=utf8mb4&parseTime=True&loc=Local"
 

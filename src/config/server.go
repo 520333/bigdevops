@@ -30,6 +30,14 @@ type ServerConfig struct {
 	AlertManagerApi                 string               `yaml:"alert_manager_api"`
 	OIDC                            *KeycloakOIDC        `yaml:"oidc"`
 	OSSC                            *OSSConfig           `yaml:"oss"`
+	ArtifactoryC                    *ArtifactoryConfig   `yaml:"artifactory"`
+}
+
+type ArtifactoryConfig struct {
+	Enable   bool   `yaml:"enable"`
+	BaseURL  string `yaml:"base_url"` // 如: http://artifactory.example.com/artifactory
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 }
 
 type OSSConfig struct {
