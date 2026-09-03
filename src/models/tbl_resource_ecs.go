@@ -23,7 +23,7 @@ type ResourceEcs struct {
 	InstanceType string `json:"InstanceType,omitempty" gorm:"comment:实例规格"`
 
 	// 绑定的叶子节点 多对多
-	BindNodes []*StreeNode `json:"bind_nodes,omitempty" gorm:"many2many:bind_ecss;"`
+	BindNodes []*StreeNode `json:"bind_nodes,omitempty" gorm:"many2many:resource_stree_bind_ecss;"`
 	// 常见字段
 	VpcId  string `json:"VpcId,omitempty" gorm:"comment:专有网络VPC ID"`
 	VmType int    `json:"VmType" gorm:"default:1;comment:资源种类: 1=云虚拟机, 2=物理机, 3=容器"`

@@ -29,7 +29,7 @@ func getApiList(c *gin.Context) {
 		return
 	}
 
-	fatherApiMap := make(map[uint]*models.Api)
+	fatherApiMap := make(map[uint]*models.SystemApi)
 	for _, api := range apis {
 		api := api
 		api.Key = api.ID
@@ -49,7 +49,7 @@ func getApiList(c *gin.Context) {
 
 		load, ok := fatherApiMap[fatherApi.ID]
 		if !ok {
-			fatherApi.Children = make([]*models.Api, 0)
+			fatherApi.Children = make([]*models.SystemApi, 0)
 			fatherApi.Children = append(fatherApi.Children, api)
 			fatherApiMap[fatherApi.ID] = fatherApi
 		} else {
@@ -57,7 +57,7 @@ func getApiList(c *gin.Context) {
 		}
 	}
 
-	finalApis := make([]*models.Api, 0)
+	finalApis := make([]*models.SystemApi, 0)
 	// 最终遍历fatherApiMap
 	for _, m := range fatherApiMap {
 		m := m
@@ -85,7 +85,7 @@ func getApiListAll(c *gin.Context) {
 		return
 	}
 
-	fatherApiMap := make(map[uint]*models.Api)
+	fatherApiMap := make(map[uint]*models.SystemApi)
 	for _, api := range apis {
 		api := api
 		api.Key = api.ID
@@ -107,7 +107,7 @@ func createApi(c *gin.Context) {
 	// 校验Api字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 
-	var reqApi models.Api
+	var reqApi models.SystemApi
 	err := c.ShouldBindJSON(&reqApi)
 	if err != nil {
 		sc.Logger.Error("解析新增api请求失败", zap.Any("api", reqApi), zap.Error(err))
@@ -148,7 +148,7 @@ func createApi(c *gin.Context) {
 func updateApi(c *gin.Context) {
 	// 校验Api字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	var reqApi models.Api
+	var reqApi models.SystemApi
 	err := c.ShouldBindJSON(&reqApi)
 	if err != nil {
 		sc.Logger.Error("解析更新api请求失败", zap.Any("api", reqApi), zap.Error(err))

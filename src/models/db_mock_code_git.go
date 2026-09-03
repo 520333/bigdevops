@@ -4,7 +4,7 @@ import (
 	"bigdevops/src/config"
 )
 
-func mockCodeGitData(sc *config.ServerConfig, adminUser *User) {
+func mockCodeGitData(sc *config.ServerConfig, adminUser *SystemUser) {
 	// prometheus 实例池
 	//name := []string{"集团自建 GitLab", "研发二部 Gitea", "pre", "prod"}
 	//endpoints := []string{"https://gitlab.mycorp.com", "http://192.168.1.100:3000"}

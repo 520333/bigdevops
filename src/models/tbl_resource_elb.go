@@ -35,7 +35,7 @@ type ResourceElb struct {
 	CrossZoneEnabled bool `json:"crossZoneEnabled"`
 
 	// 💡 如果你的 LB 也需要挂载到服务树上（像 ECS 一样），可以加上多对多关联
-	BindNodes []*StreeNode `json:"bind_nodes,omitempty" gorm:"many2many:bind_elbs;comment:绑定的服务树节点"`
+	BindNodes []*StreeNode `json:"bind_nodes,omitempty" gorm:"many2many:resource_stree_bind_elbs;comment:绑定的服务树节点"`
 }
 
 func (obj *ResourceElb) GenHash() string {

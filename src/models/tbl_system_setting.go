@@ -11,5 +11,5 @@ type SystemSetting struct {
 
 // TableName 设置表名
 func (SystemSetting) TableName() string {
-	return "tbl_system_setting"
+	return "system_setting"
 }

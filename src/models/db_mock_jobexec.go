@@ -65,7 +65,7 @@ print(f"你的新密码是: {generate_password(16)}")`
 }`
 )
 
-func mockJobExecData(sc *config.ServerConfig, adminUser *User) {
+func mockJobExecData(sc *config.ServerConfig, adminUser *SystemUser) {
 	num := 5
 	hosts := []string{"192.168.50.200"}
 	for i := 0; i < num; i++ {

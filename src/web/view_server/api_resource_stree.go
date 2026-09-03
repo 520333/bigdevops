@@ -240,7 +240,7 @@ func createStreeNode(c *gin.Context) {
 		return
 	}
 
-	users := make([]*models.User, 0)
+	users := make([]*models.SystemUser, 0)
 	for _, userName := range reqNode.OpsAdminUsers {
 		dbUser, err := models.GetUserByUsername(userName)
 		if err != nil {
@@ -447,7 +447,7 @@ func updateStreeNode(c *gin.Context) {
 		return
 	}
 
-	users := make([]*models.User, 0)
+	users := make([]*models.SystemUser, 0)
 	for _, userName := range reqNode.OpsAdminUsers {
 		dbUser, err := models.GetUserByUsername(userName)
 		if err != nil {

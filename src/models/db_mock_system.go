@@ -8,33 +8,33 @@ import (
 	"go.uber.org/zap"
 )
 
-func mockSystemData(sc *config.ServerConfig) *User {
+func mockSystemData(sc *config.ServerConfig) *SystemUser {
 	type MenuModule struct {
-		Parent   *Menu
-		Children []*Menu
+		Parent   *SystemMenu
+		Children []*SystemMenu
 	}
 
 	modules := []MenuModule{
 		// 工作台
 		{
-			Parent: &Menu{Name: "Dashboard", Title: "工作台", Icon: "ant-design:dashboard-outlined", Type: "0", Show: "1", OrderNo: 1, Component: "LAYOUT", Path: "/dashboard", Redirect: "/dashboard/analysis"},
-			Children: []*Menu{
+			Parent: &SystemMenu{Name: "Dashboard", Title: "工作台", Icon: "ant-design:dashboard-outlined", Type: "0", Show: "1", OrderNo: 1, Component: "LAYOUT", Path: "/dashboard", Redirect: "/dashboard/analysis"},
+			Children: []*SystemMenu{
 				{Name: "Analysis", Title: "概览分析", Icon: "ant-design:area-chart-outlined", Type: "1", Show: "1", OrderNo: 2, Component: "dashboard/analysis/index", Path: "analysis"},
 			},
 		},
 
 		// 服务树
 		{
-			Parent: &Menu{Name: "ServiceTree", Title: "资产管理", Icon: "ant-design:database-outlined", Type: "0", Show: "1", OrderNo: 10, Component: "LAYOUT", Path: "/serviceTree", Redirect: "/ServiceTree/streeAsync"},
-			Children: []*Menu{
+			Parent: &SystemMenu{Name: "ServiceTree", Title: "资产管理", Icon: "ant-design:database-outlined", Type: "0", Show: "1", OrderNo: 10, Component: "LAYOUT", Path: "/serviceTree", Redirect: "/ServiceTree/streeAsync"},
+			Children: []*SystemMenu{
 				{Name: "ServiceTreeIndexAsync", Title: "CMDB服务树", Icon: "ant-design:node-index-outlined", Type: "1", Show: "1", OrderNo: 11, Component: "stree/stree/indexAsync", Path: "streeAsync"},
 			},
 		},
 
 		// IT工单
 		{
-			Parent: &Menu{Name: "WorkOrder", Title: "工单服务", Icon: "ant-design:reconciliation-outlined", Type: "0", Show: "1", OrderNo: 20, Component: "LAYOUT", Path: "/workOrder", Redirect: "/workOrder/process"},
-			Children: []*Menu{
+			Parent: &SystemMenu{Name: "WorkOrder", Title: "工单服务", Icon: "ant-design:reconciliation-outlined", Type: "0", Show: "1", OrderNo: 20, Component: "LAYOUT", Path: "/workOrder", Redirect: "/workOrder/process"},
+			Children: []*SystemMenu{
 				{Name: "ProcessManagement", Title: "审批流程管理", Icon: "ant-design:apartment-outlined", Type: "1", Show: "1", OrderNo: 21, Component: "workorder/process/index", Path: "process"},
 				{Name: "FormManagement", Title: "表单设计管理", Icon: "ant-design:form-outlined", Type: "1", Show: "1", OrderNo: 22, Component: "workorder/formDesign/index", Path: "formDesign"},
 				{Name: "WorkOrderTemplateManagement", Title: "工单模板管理", Icon: "ant-design:layout-outlined", Type: "1", Show: "1", OrderNo: 23, Component: "workorder/template/index", Path: "template"},
@@ -46,8 +46,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 
 		// 任务执行
 		{
-			Parent: &Menu{Name: "JobExec", Title: "任务执行", Icon: "ant-design:thunderbolt-outlined", Type: "0", Show: "1", OrderNo: 30, Component: "LAYOUT", Path: "/jobExec", Redirect: "/jobExec/script"},
-			Children: []*Menu{
+			Parent: &SystemMenu{Name: "JobExec", Title: "任务执行", Icon: "ant-design:thunderbolt-outlined", Type: "0", Show: "1", OrderNo: 30, Component: "LAYOUT", Path: "/jobExec", Redirect: "/jobExec/script"},
+			Children: []*SystemMenu{
 				{Name: "JobExecTask", Title: "任务管理", Icon: "ant-design:schedule-outlined", Type: "1", Show: "1", OrderNo: 32, Component: "jobExec/task/index", Path: "task"},
 				{Name: "JobExecScript", Title: "脚本管理", Icon: "ant-design:code-outlined", Type: "1", Show: "1", OrderNo: 31, Component: "jobExec/script/index", Path: "script"},
 			},
@@ -55,8 +55,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 
 		// 监控中心
 		{
-			Parent: &Menu{Name: "Monitor", Title: "监控中心", Icon: "ant-design:dashboard-outlined", Type: "0", Show: "1", OrderNo: 40, Component: "LAYOUT", Path: "/monitor", Redirect: "/monitor/prom_instance"},
-			Children: []*Menu{
+			Parent: &SystemMenu{Name: "Monitor", Title: "监控中心", Icon: "ant-design:dashboard-outlined", Type: "0", Show: "1", OrderNo: 40, Component: "LAYOUT", Path: "/monitor", Redirect: "/monitor/prom_instance"},
+			Children: []*SystemMenu{
 				{Name: "MonitorPromPool", Title: "prom集群实例管理", Icon: "ant-design:database-outlined", Type: "1", Show: "1", OrderNo: 41, Component: "monitor/prom_instance/index", Path: "prom_instance"},
 				{Name: "MonitorPromScrapeJob", Title: "prom采集任务管理", Icon: "ant-design:api-outlined", Type: "1", Show: "1", OrderNo: 42, Component: "monitor/prom_scrape/index", Path: "prom_scrape"},
 				{Name: "MonitorPromAlertRule", Title: "prom告警规则管理", Icon: "ant-design:fund-view-outlined", Type: "1", Show: "1", OrderNo: 43, Component: "monitor/prom_alertrule/index", Path: "prom_alertrule"},
@@ -71,8 +71,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 
 		// 容器集群
 		{
-			Parent: &Menu{Name: "K8sManagement", Title: "容器集群", Icon: "ant-design:kubernetes-outlined", Type: "0", Show: "1", OrderNo: 50, Component: "LAYOUT", Path: "/k8s", Redirect: "/k8s/cluster"},
-			Children: []*Menu{
+			Parent: &SystemMenu{Name: "K8sManagement", Title: "容器集群", Icon: "ant-design:kubernetes-outlined", Type: "0", Show: "1", OrderNo: 50, Component: "LAYOUT", Path: "/k8s", Redirect: "/k8s/cluster"},
+			Children: []*SystemMenu{
 				{Name: "K8sClusterManagement", Title: "集群管理", Icon: "ant-design:cloud-outlined", Type: "1", Show: "1", OrderNo: 51, Component: "k8s/cluster/index", Path: "cluster"},
 				{Name: "K8sNodeManagement", Title: "集群节点", Icon: "ant-design:desktop-outlined", Type: "1", Show: "1", OrderNo: 52, Component: "k8s/node/index", Path: "node"},
 				{Name: "K8sPodManagement", Title: "Pod 管理", Icon: "ant-design:appstore-outlined", Type: "1", Show: "1", OrderNo: 53, Component: "k8s/pod/index", Path: "pod"},
@@ -87,8 +87,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 
 		// cicd
 		{
-			Parent: &Menu{Name: "CiCdManagement", Title: "持续交付", Icon: "ant-design:rocket-filled", Type: "0", Show: "1", OrderNo: 60, Component: "LAYOUT", Path: "/cicd", Redirect: "/cicd/baseline"},
-			Children: []*Menu{
+			Parent: &SystemMenu{Name: "CiCdManagement", Title: "持续交付", Icon: "ant-design:rocket-filled", Type: "0", Show: "1", OrderNo: 60, Component: "LAYOUT", Path: "/cicd", Redirect: "/cicd/baseline"},
+			Children: []*SystemMenu{
 				{Name: "JenkinsInstanceManagement", Title: "实例管理", Icon: "ant-design:cloud-server-outlined", Type: "1", Show: "1", OrderNo: 61, Component: "cicd/instance/index", Path: "instance"},
 				{Name: "CiCdWorkList", Title: "工单列表", Icon: "ant-design:audit-outlined", Type: "1", Show: "1", OrderNo: 62, Component: "cicd/workorder/index", Path: "workorder"},
 				{Name: "CiCdDeployList", Title: "发布工单", Icon: "ant-design:send-outlined", Type: "1", Show: "1", OrderNo: 63, Component: "cicd/deploy/index", Path: "deploy"},
@@ -100,8 +100,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 
 		// 代码管理
 		{
-			Parent: &Menu{Name: "CodeManagement", Title: "代码管理", Icon: "ant-design:gitlab-filled", Type: "0", Show: "1", OrderNo: 70, Component: "LAYOUT", Path: "/code", Redirect: "/code/repo"},
-			Children: []*Menu{
+			Parent: &SystemMenu{Name: "CodeManagement", Title: "代码管理", Icon: "ant-design:gitlab-filled", Type: "0", Show: "1", OrderNo: 70, Component: "LAYOUT", Path: "/code", Redirect: "/code/repo"},
+			Children: []*SystemMenu{
 				{Name: "CodeRepoManagement", Title: "仓库管理", Icon: "ant-design:folder-open-outlined", Type: "1", Show: "1", OrderNo: 71, Component: "code/repo/index", Path: "repo"},
 				{Name: "CodeMergeManagement", Title: "合并请求", Icon: "ant-design:merge-cells-outlined", Type: "1", Show: "1", OrderNo: 72, Component: "code/merge/index", Path: "merge"},
 				{Name: "CodeServerManagement", Title: "实例管理", Icon: "ant-design:code-outlined", Type: "1", Show: "1", OrderNo: 73, Component: "code/server/index", Path: "server"},
@@ -112,16 +112,16 @@ func mockSystemData(sc *config.ServerConfig) *User {
 
 		// 效能度量
 		{
-			Parent: &Menu{Name: "DORAManagement", Title: "效能度量", Icon: "ant-design:line-chart-outlined", Type: "0", Show: "1", OrderNo: 80, Component: "LAYOUT", Path: "/dora", Redirect: "/dora/dashboard"},
-			Children: []*Menu{
+			Parent: &SystemMenu{Name: "DORAManagement", Title: "效能度量", Icon: "ant-design:line-chart-outlined", Type: "0", Show: "1", OrderNo: 80, Component: "LAYOUT", Path: "/dora", Redirect: "/dora/dashboard"},
+			Children: []*SystemMenu{
 				{Name: "EffDashboard", Title: "效能看板", Icon: "ant-design:pie-chart-outlined", Type: "1", Show: "1", OrderNo: 81, Component: "dora/dashboard/index", Path: "dashboard"},
 				{Name: "DeployStat", Title: "部署统计", Icon: "ant-design:dot-chart-outlined", Type: "1", Show: "1", OrderNo: 82, Component: "dora/deployStat/index", Path: "deployStat"},
 			},
 		},
 		// 系统管理
 		{
-			Parent: &Menu{Name: "System", Title: "系统管理", Icon: "ant-design:setting-outlined", Type: "0", Show: "1", OrderNo: 90, Component: "LAYOUT", Path: "/system", Redirect: "/system/changePassword"},
-			Children: []*Menu{
+			Parent: &SystemMenu{Name: "System", Title: "系统管理", Icon: "ant-design:setting-outlined", Type: "0", Show: "1", OrderNo: 90, Component: "LAYOUT", Path: "/system", Redirect: "/system/changePassword"},
+			Children: []*SystemMenu{
 				{Name: "MenuManagement", Title: "菜单管理", Icon: "ant-design:menu-outlined", Type: "1", Show: "1", OrderNo: 91, Component: "system/menu/index", Path: "menu"},
 				{Name: "AccountManagement", Title: "用户管理", Icon: "ant-design:user-outlined", Type: "1", Show: "1", OrderNo: 92, Component: "system/account/index", Path: "account"},
 				{Name: "RoleManagement", Title: "角色管理", Icon: "ant-design:solution-outlined", Type: "1", Show: "1", OrderNo: 93, Component: "system/role/index", Path: "role"},
@@ -132,7 +132,7 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		},
 	}
 
-	var menus []*Menu
+	var menus []*SystemMenu
 	for _, mod := range modules {
 		if err := Db.Create(mod.Parent).Error; err != nil {
 			fmt.Printf("创建父菜单错误:%v\n", err)
@@ -150,15 +150,15 @@ func mockSystemData(sc *config.ServerConfig) *User {
 	}
 
 	type ApiModule struct {
-		Parent   *Api
-		Children []*Api
+		Parent   *SystemApi
+		Children []*SystemApi
 	}
 
 	apiModules := []ApiModule{
 		// 系统管理
 		{
-			Parent: &Api{Path: "/api/system", Method: "GET", Title: "系统管理", Type: "0", Pid: 0},
-			Children: []*Api{
+			Parent: &SystemApi{Path: "/api/system", Method: "GET", Title: "系统管理", Type: "0", Pid: 0},
+			Children: []*SystemApi{
 				{Path: "/api/getUserInfo", Method: "GET", Title: "[用户模块]获取用户信息", Type: "1"},
 				{Path: "/api/getPermCode", Method: "GET", Title: "[用户模块]获取用户权限码", Type: "1"},
 				{Path: "/api/system/getAccountList", Method: "GET", Title: "[用户模块]获取账号列表", Type: "1"},
@@ -168,6 +168,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 				{Path: "/api/system/setAccountStatus", Method: "POST", Title: "[用户模块]设置账号状态", Type: "1"},
 				{Path: "/api/system/accountExist", Method: "POST", Title: "[用户模块]检查账号存在", Type: "1"},
 				{Path: "/api/system/changePassword", Method: "POST", Title: "[用户模块]修改密码", Type: "1"},
+				{Path: "/api/system/updateUserInfo", Method: "POST", Title: "[用户模块]修改个人设置", Type: "1"},
+				{Path: "/api/system/uploadAvatar", Method: "POST", Title: "[用户模块]上传个人头像", Type: "1"},
 				{Path: "/api/system/getAllUserAndRoles", Method: "GET", Title: "[用户模块]获取所有用户与角色", Type: "1"},
 				{Path: "/api/system/getMenuList", Method: "GET", Title: "[菜单模块]获取用户菜单", Type: "1"},
 				{Path: "/api/system/getMenuListAll", Method: "GET", Title: "[菜单模块]获取全量菜单", Type: "1"},
@@ -191,8 +193,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 
 		// 服务树
 		{
-			Parent: &Api{Path: "/api/stree", Method: "GET", Title: "CMDB资产管理模块", Type: "0"},
-			Children: []*Api{
+			Parent: &SystemApi{Path: "/api/stree", Method: "GET", Title: "CMDB资产管理模块", Type: "0"},
+			Children: []*SystemApi{
 				{Path: "/api/stree/getStreeNodeList", Method: "GET", Title: "[cmdb树节点]获取服务树节点列表", Type: "1"},
 				{Path: "/api/stree/getStreeNodeSelect", Method: "GET", Title: "[cmdb树节点]获取服务树下拉选择", Type: "1"},
 				{Path: "/api/stree/getTopStreeNodes", Method: "GET", Title: "[cmdb树节点]获取服务树顶层节点", Type: "1"},
@@ -218,8 +220,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 
 		// it工单
 		{
-			Parent: &Api{Path: "/api/workorder", Method: "GET", Title: "工单服务模块", Type: "0"},
-			Children: []*Api{
+			Parent: &SystemApi{Path: "/api/workorder", Method: "GET", Title: "工单服务模块", Type: "0"},
+			Children: []*SystemApi{
 				{Path: "/api/workorder/getProcessList", Method: "GET", Title: "[工单模块]获取流程列表", Type: "1"},
 				{Path: "/api/workorder/createProcess", Method: "POST", Title: "[工单模块]创建流程", Type: "1"},
 				{Path: "/api/workorder/updateProcess", Method: "POST", Title: "[工单模块]更新流程", Type: "1"},
@@ -246,8 +248,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 
 		// 任务执行
 		{
-			Parent: &Api{Path: "/api/jobexec", Method: "GET", Title: "任务执行中心模块", Type: "0"},
-			Children: []*Api{
+			Parent: &SystemApi{Path: "/api/jobexec", Method: "GET", Title: "任务执行中心模块", Type: "0"},
+			Children: []*SystemApi{
 				{Path: "/api/jobexec/getJobExecScriptList", Method: "GET", Title: "[任务执行中心]获取脚本列表", Type: "1"},
 				{Path: "/api/jobexec/createJobExecScript", Method: "POST", Title: "[任务执行中心]创建脚本", Type: "1"},
 				{Path: "/api/jobexec/updateJobExecScript", Method: "POST", Title: "[任务执行中心]更新脚本", Type: "1"},
@@ -267,8 +269,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 
 		// 监控中心
 		{
-			Parent: &Api{Path: "/api/monitor", Method: "GET", Title: "监控中心模块", Type: "0"},
-			Children: []*Api{
+			Parent: &SystemApi{Path: "/api/monitor", Method: "GET", Title: "监控中心模块", Type: "0"},
+			Children: []*SystemApi{
 				{Path: "/api/monitor/getMonitorPromScrapePoolList", Method: "GET", Title: "[prometheus]获取Prom集群列表", Type: "1"},
 				{Path: "/api/monitor/createMonitorPromScrapePool", Method: "POST", Title: "[prometheus]创建Prom集群", Type: "1"},
 				{Path: "/api/monitor/updateMonitorPromScrapePool", Method: "POST", Title: "[prometheus]更新Prom集群", Type: "1"},
@@ -327,8 +329,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 
 		// 代码管理
 		{
-			Parent: &Api{Path: "/api/code", Method: "GET", Title: "代码管理", Type: "0"},
-			Children: []*Api{
+			Parent: &SystemApi{Path: "/api/code", Method: "GET", Title: "代码管理", Type: "0"},
+			Children: []*SystemApi{
 				{Path: "/api/code/getCodeGitServerList", Method: "GET", Title: "[代码管理]获取Git服务器列表", Type: "1"},
 				{Path: "/api/code/createCodeGitServer", Method: "POST", Title: "[代码管理]创建Git服务器", Type: "1"},
 				{Path: "/api/code/updateCodeGitServer", Method: "POST", Title: "[代码管理]更新Git服务器", Type: "1"},
@@ -354,8 +356,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 			},
 		},
 		{
-			Parent: &Api{Path: "/api/k8s", Method: "GET", Title: "容器集群模块", Type: "0"},
-			Children: []*Api{
+			Parent: &SystemApi{Path: "/api/k8s", Method: "GET", Title: "容器集群模块", Type: "0"},
+			Children: []*SystemApi{
 				{Path: "/api/k8s/getK8sClusterList", Method: "GET", Title: "[k8s集群]获取集群列表", Type: "1"},
 				{Path: "/api/k8s/createK8sCluster", Method: "POST", Title: "[k8s集群]创建集群", Type: "1"},
 				{Path: "/api/k8s/updateK8sCluster", Method: "POST", Title: "[k8s集群]更新集群", Type: "1"},
@@ -463,8 +465,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		},
 
 		{
-			Parent: &Api{Path: "/api/cicd", Method: "GET", Title: "Jenkins服务模块", Type: "0"},
-			Children: []*Api{
+			Parent: &SystemApi{Path: "/api/cicd", Method: "GET", Title: "Jenkins服务模块", Type: "0"},
+			Children: []*SystemApi{
 				{Path: "/api/cicd/getJenkinsInstanceList", Method: "GET", Title: "[Jenkins]获取实例列表", Type: "1"},
 				{Path: "/api/cicd/createJenkinsInstance", Method: "POST", Title: "[Jenkins]创建实例", Type: "1"},
 				{Path: "/api/cicd/updateJenkinsInstance", Method: "POST", Title: "[Jenkins]更新实例", Type: "1"},
@@ -483,8 +485,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		},
 
 		{
-			Parent: &Api{Path: "/api", Method: "GET", Title: "所有api权限", Type: "0"},
-			Children: []*Api{
+			Parent: &SystemApi{Path: "/api", Method: "GET", Title: "所有api权限", Type: "0"},
+			Children: []*SystemApi{
 				{Path: "/api/*", Method: "ALL", Title: "所有api ALL权限", Type: "1"},
 				{Path: "/api/*", Method: "GET", Title: "所有api GET权限", Type: "1"},
 				{Path: "/api/*", Method: "POST", Title: "所有api POST权限", Type: "1"},
@@ -498,7 +500,7 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		},
 	}
 
-	var apis []*Api
+	var apis []*SystemApi
 	for _, mod := range apiModules {
 		if err := Db.Create(mod.Parent).Error; err != nil {
 			fmt.Printf("创建父API错误:%v\n", err)
@@ -516,9 +518,9 @@ func mockSystemData(sc *config.ServerConfig) *User {
 	}
 
 	// Define dynamic menu filters for different roles
-	var menusRoleOps []*Menu
-	var menusRoleRebot []*Menu = menus
-	var menusRoleK8sAdmin []*Menu
+	var menusRoleOps []*SystemMenu
+	var menusRoleRebot []*SystemMenu = menus
+	var menusRoleK8sAdmin []*SystemMenu
 
 	var systemParentID, k8sParentID uint
 	for _, mod := range modules {
@@ -541,8 +543,8 @@ func mockSystemData(sc *config.ServerConfig) *User {
 	}
 
 	// Define dynamic API filters for different roles
-	var opsApis []*Api
-	var k8sApis []*Api
+	var opsApis []*SystemApi
+	var k8sApis []*SystemApi
 
 	var systemApiParentID, streeApiParentID, monitorApiParentID, k8sApiParentID uint
 	for _, mod := range apiModules {
@@ -570,63 +572,63 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		}
 	}
 
-	roleSuper := &Role{
+	roleSuper := &SystemRole{
 		RoleName: "超级管理员", RoleValue: "super", Menus: menus,
 	}
-	roleOps := &Role{
+	roleOps := &SystemRole{
 		RoleName: "运维", RoleValue: "ops", Menus: menusRoleOps,
 	}
-	roleNoLogin := &Role{
+	roleNoLogin := &SystemRole{
 		RoleName: "自动机器人", RoleValue: "bot_super", Menus: menusRoleRebot,
 	}
-	roleK8sAdmin := &Role{
+	roleK8sAdmin := &SystemRole{
 		RoleName: "k8s集群管理员", RoleValue: "k8s_admin", Menus: menusRoleK8sAdmin,
 	}
 
-	adminUser := &User{
+	adminUser := &SystemUser{
 		Username:     "admin",
 		Password:     common.BcryptHash("tingbao89.."),
 		RealName:     "海绵宝宝",
 		FeiShuUserId: "b75ag4g4",
 		HomePath:     "/dashboard/analysis",
 		Enable:       1,
-		Roles: []*Role{
+		Roles: []*SystemRole{
 			roleSuper,
 		},
 	}
 
-	opsUser := &User{
+	opsUser := &SystemUser{
 		Username:     "test",
 		Password:     common.BcryptHash("123456"),
 		RealName:     "派大星",
 		FeiShuUserId: "b75ag4g4",
 		HomePath:     "/dashboard/analysis",
 		Enable:       1,
-		Roles: []*Role{
+		Roles: []*SystemRole{
 			roleOps,
 		},
 	}
 
-	botUser := &User{
+	botUser := &SystemUser{
 		Username:     sc.WorkOrderAutoActionC.ServiceAccount,
 		Password:     common.BcryptHash("123456"),
 		RealName:     "后台机器人",
 		FeiShuUserId: "b75ag4g4",
 		HomePath:     "/dashboard/analysis",
 		Enable:       1,
-		Roles: []*Role{
+		Roles: []*SystemRole{
 			roleNoLogin,
 		},
 	}
 
-	k8sUser := &User{
+	k8sUser := &SystemUser{
 		Username:     "k8s-admin-01",
 		Password:     common.BcryptHash("123456"),
 		RealName:     "k8s管理员01",
 		FeiShuUserId: "b75ag4g4",
 		HomePath:     "/k8s/node",
 		Enable:       1,
-		Roles: []*Role{
+		Roles: []*SystemRole{
 			roleK8sAdmin,
 		},
 	}
@@ -642,7 +644,7 @@ func mockSystemData(sc *config.ServerConfig) *User {
 	users := []string{"蟹老板", "珊迪", "章鱼哥", "皮老板", "小蜗"}
 	num := 5
 	for i := 0; i < num; i++ {
-		mockUser := &User{
+		mockUser := &SystemUser{
 			Username:     fmt.Sprintf("mock%d", i),
 			Password:     common.BcryptHash("123456"),
 			RealName:     users[i],
@@ -671,19 +673,22 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		_, _ = CasbinEnforcer.AddPolicy("k8s_admin", api.Path, api.Method)
 	}
 
-	var userMenus []*Menu
+	var userMenus []*SystemMenu
 	for _, m := range menus {
 		if m.Name == "Dashboard" || m.Name == "Analysis" || m.Name == "System" || m.Name == "ChangePassword" {
 			userMenus = append(userMenus, m)
 		}
 	}
 	// 2. 筛选普通用户（user）所需的 API 接口
-	var userApis []*Api
+	var userApis []*SystemApi
 	userApiPathMap := map[string]bool{
-		"/api/getUserInfo":        true,
-		"/api/getPermCode":        true,
-		"/api/system/getMenuList": true,
-		"/api/system/setting/get": true,
+		"/api/getUserInfo":           true,
+		"/api/getPermCode":           true,
+		"/api/system/getMenuList":    true,
+		"/api/system/setting/get":    true,
+		"/api/system/changePassword": true,
+		"/api/system/updateUserInfo": true,
+		"/api/system/uploadAvatar":   true,
 	}
 	for _, api := range apis {
 		if userApiPathMap[api.Path] {
@@ -691,7 +696,7 @@ func mockSystemData(sc *config.ServerConfig) *User {
 		}
 	}
 	// 3. 定义并创建“普通用户”角色对象
-	roleUser := &Role{
+	roleUser := &SystemRole{
 		RoleName:  "普通用户",
 		RoleValue: "user",
 		Menus:     userMenus,
@@ -980,13 +985,13 @@ func mockSystemData(sc *config.ServerConfig) *User {
 */
 
 func EnsureJenkinsPipelineMenu(sc *config.ServerConfig) {
-	var parent Menu
+	var parent SystemMenu
 	err := Db.Where("name = ?", "JenkinsManagement").First(&parent).Error
 	if err != nil || parent.ID == 0 {
 		return
 	}
 
-	var menu Menu
+	var menu SystemMenu
 	err = Db.Where("name = ?", "JenkinsPipelineManagement").First(&menu).Error
 	if err == nil && menu.ID > 0 {
 		if menu.Title != "流水线配置" {
@@ -995,7 +1000,7 @@ func EnsureJenkinsPipelineMenu(sc *config.ServerConfig) {
 		return
 	}
 
-	newMenu := &Menu{
+	newMenu := &SystemMenu{
 		Name:      "JenkinsPipelineManagement",
 		Title:     "流水线配置",
 		Icon:      "ant-design:branches-outlined",
@@ -1008,7 +1013,7 @@ func EnsureJenkinsPipelineMenu(sc *config.ServerConfig) {
 	}
 	if err := Db.Create(newMenu).Error; err == nil {
 		sc.Logger.Info("自动插入菜单：[Jenkins] 流水线配置 成功 🚀")
-		var superAdminRole Role
+		var superAdminRole SystemRole
 		if Db.Where("role_name = ?", "超级管理员").First(&superAdminRole).Error == nil {
 			_ = Db.Model(&superAdminRole).Association("Menus").Append(newMenu)
 		}
@@ -1114,5 +1119,47 @@ return repoNameList`, Description: "动态 Git 远程分支与 Tag 列表"},
 			_ = Db.Create(p).Error
 		}
 		sc.Logger.Info("预置数据插入：[JenkinsBuildParam] 构建参数注入成功 🚀")
+	}
+}
+
+func EnsureAccountSettingMenu(sc *config.ServerConfig) {
+	var parent SystemMenu
+	err := Db.Where("name = ?", "System").First(&parent).Error
+	if err != nil || parent.ID == 0 {
+		return
+	}
+
+	var menu SystemMenu
+	err = Db.Where("name = ?", "AccountSetting").First(&menu).Error
+	if err != nil || menu.ID == 0 {
+		menu = SystemMenu{
+			Name:      "AccountSetting",
+			Title:     "个人设置",
+			Icon:      "ant-design:user-outlined",
+			Type:      "1",
+			Show:      "1",
+			OrderNo:   97,
+			Component: "system/account/setting/index",
+			Path:      "accountSetting",
+			Pid:       int(parent.ID),
+		}
+		if createErr := Db.Create(&menu).Error; createErr != nil {
+			return
+		}
+		sc.Logger.Info("自动插入菜单：[系统管理] 个人设置 成功 🚀")
+	} else if menu.Title != "个人设置" || menu.Component != "system/account/setting/index" {
+		_ = Db.Model(&menu).Updates(map[string]interface{}{
+			"title":     "个人设置",
+			"component": "system/account/setting/index",
+			"path":      "accountSetting",
+		})
+	}
+
+	// 确保所有角色均已关联个人设置菜单
+	var roles []SystemRole
+	if Db.Find(&roles).Error == nil {
+		for _, r := range roles {
+			_ = Db.Model(&r).Association("Menus").Append(&menu)
+		}
 	}
 }

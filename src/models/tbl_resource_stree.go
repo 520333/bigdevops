@@ -18,10 +18,10 @@ type StreeNode struct {
 	IsLeaf bool   `json:"isLeaf" gorm:";comment:类型 0=否 1=是"`
 	Desc   string `json:"desc" gorm:"comment:描述"`
 
-	OpsAdmins                []*User           `json:"ops_admins" gorm:"many2many:ops_admins;comment:运维负责人列表"`
-	BindEcss                 []*ResourceEcs    `json:"bind_ecss,omitempty" gorm:"many2many:bind_ecss;"`
-	BindElbs                 []*ResourceElb    `json:"bind_elbs,omitempty" gorm:"many2many:bind_elbs;comment:绑定的服务树节点"`
-	BindRds                  []*ResourceRds    `json:"bind_rdss,omitempty" gorm:"many2many:bind_rdss;comment:绑定的服务树节点"`
+	OpsAdmins                []*SystemUser     `json:"ops_admins" gorm:"many2many:resource_stree_ops_admins;comment:运维负责人列表"`
+	BindEcss                 []*ResourceEcs    `json:"bind_ecss,omitempty" gorm:"many2many:resource_stree_bind_ecss;"`
+	BindElbs                 []*ResourceElb    `json:"bind_elbs,omitempty" gorm:"many2many:resource_stree_bind_elbs;comment:绑定的服务树节点"`
+	BindRds                  []*ResourceRds    `json:"bind_rdss,omitempty" gorm:"many2many:resource_stree_bind_rdss;comment:绑定的服务树节点"`
 	EcsNum                   int               `json:"ecsNum" gorm:"-"`
 	NodeNum                  int               `json:"nodeNum" gorm:"-"`     // 子节点数量
 	LeafNodeNum              int               `json:"leafNodeNum" gorm:"-"` // 叶子节点数量

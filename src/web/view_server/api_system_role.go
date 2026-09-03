@@ -53,7 +53,7 @@ func getRoleListAll(c *gin.Context) {
 func createRole(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	var reqRole models.Role
+	var reqRole models.SystemRole
 	err := c.ShouldBindJSON(&reqRole)
 	if err != nil {
 		sc.Logger.Error("解析新增角色请求失败", zap.Any("角色", reqRole), zap.Error(err))
@@ -69,7 +69,7 @@ func createRole(c *gin.Context) {
 		}
 	}
 
-	menus := make([]*models.Menu, 0)
+	menus := make([]*models.SystemMenu, 0)
 	for _, menuId := range reqRole.MenuIds {
 		dbMenu, err := models.GetMenuById(menuId)
 		if err != nil {
@@ -82,7 +82,7 @@ func createRole(c *gin.Context) {
 	reqRole.Menus = menus
 
 	// ================= 2. 处理 API 关联 (新增缺失的逻辑) =================
-	apis := make([]*models.Api, 0)
+	apis := make([]*models.SystemApi, 0)
 	for _, apiId := range reqRole.ApiIds {
 		dbApi, err := models.GetApiById(apiId)
 		if err != nil {
@@ -115,7 +115,7 @@ func createRole(c *gin.Context) {
 func updateRole(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	var reqRole models.Role
+	var reqRole models.SystemRole
 	err := c.ShouldBindJSON(&reqRole)
 	if err != nil {
 		sc.Logger.Error("解析更新角色请求失败", zap.Any("角色", reqRole), zap.Error(err))
@@ -137,7 +137,7 @@ func updateRole(c *gin.Context) {
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
-	menus := make([]*models.Menu, 0)
+	menus := make([]*models.SystemMenu, 0)
 	menuIdMap := make(map[int]bool)
 	for _, menuId := range reqRole.MenuIds {
 		dbMenu, err := models.GetMenuById(menuId)
@@ -151,7 +151,7 @@ func updateRole(c *gin.Context) {
 		menuIdMap[int(dbMenu.ID)] = true
 	}
 
-	apis := make([]*models.Api, 0)
+	apis := make([]*models.SystemApi, 0)
 	apisIdMap := make(map[int]bool)
 	for _, ApiId := range reqRole.ApiIds {
 		dbApi, err := models.GetApiById(ApiId)
@@ -165,7 +165,7 @@ func updateRole(c *gin.Context) {
 		apisIdMap[int(dbApi.ID)] = true
 	}
 
-	extraMenus := make([]*models.Menu, 0)
+	extraMenus := make([]*models.SystemMenu, 0)
 	for _, m := range menus {
 		if m.Pid != 0 && !menuIdMap[m.Pid] {
 			parent, err := models.GetMenuById(m.Pid)

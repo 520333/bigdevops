@@ -102,7 +102,7 @@ func OidcCallback(c *gin.Context) {
 	dbUser, err := models.GetUserByUsername(username)
 	if err != nil {
 		// 用户不存在，自动创建本地账号
-		newUser := &models.User{
+		newUser := &models.SystemUser{
 			Username: username,
 			RealName: claims.Name,
 			Email:    claims.Email,
@@ -119,7 +119,7 @@ func OidcCallback(c *gin.Context) {
 	}
 
 	// 5. 解析 Keycloak 组与角色并映射同步至数据库 user_roles 中间表
-	var rolesToAssign []*models.Role
+	var rolesToAssign []*models.SystemRole
 
 	// 5.1 优先使用 Keycloak claims.Groups 匹配本地 Role
 	for _, groupName := range claims.Groups {
@@ -140,12 +140,12 @@ func OidcCallback(c *gin.Context) {
 		}
 	}
 
-	// 5.3 若均未匹配到或本地尚无关联角色，自动赋予默认“普通用户”组 (role_value: "user")
-	if len(rolesToAssign) == 0 || len(dbUser.Roles) == 0 {
+	// 5.3 若 Keycloak 未匹配到任何角色，且本地用户尚未分配任何角色（新用户），自动赋予默认“普通用户”组 (role_value: "user")
+	if len(rolesToAssign) == 0 && len(dbUser.Roles) == 0 {
 		defaultRoleValue := "user" // 默认给 role_value: "user" (普通用户)
 		if defaultRole, err := models.GetRoleByRoleValue(defaultRoleValue); err == nil {
 			rolesToAssign = append(rolesToAssign, defaultRole)
-		} else if len(rolesToAssign) == 0 {
+		} else {
 			// 若找不到 "user" 角色，兜底使用系统第一条角色
 			if allRoles, err := models.GetRoleAll(); err == nil && len(allRoles) > 0 {
 				rolesToAssign = append(rolesToAssign, allRoles[0])
@@ -153,7 +153,7 @@ func OidcCallback(c *gin.Context) {
 		}
 	}
 
-	// 每次 Keycloak 登录时自动同步更新用户角色映射
+	// 只有当成功从 Keycloak 匹配到新角色或为新用户初始化默认角色时，才同步更新数据库中的角色映射
 	if len(rolesToAssign) > 0 {
 		_ = dbUser.UpdateOne(rolesToAssign)
 		// 重新拉取最新的 dbUser (包含关联的 Roles 数据)

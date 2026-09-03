@@ -23,7 +23,7 @@ func (ac *AlertCache) RenewMapUser(ctx context.Context) {
 		return
 	}
 
-	tmpM := map[uint]*models.User{}
+	tmpM := map[uint]*models.SystemUser{}
 	for _, user := range users {
 		user := user
 		tmpM[user.ID] = user
@@ -41,7 +41,7 @@ func (ac *AlertCache) RenewMapUser(ctx context.Context) {
 	)
 }
 
-func (ac *AlertCache) GetUserById(id uint) *models.User {
+func (ac *AlertCache) GetUserById(id uint) *models.SystemUser {
 	ac.UserLock.RLock()
 	defer ac.UserLock.RUnlock()
 	return ac.UserMap[id]

@@ -34,7 +34,7 @@ type ResourceRds struct {
 	Port int    `json:"port,omitempty" gorm:"comment:连接端口"`
 
 	// 💡 如果你的 LB 也需要挂载到服务树上（像 ECS 一样），可以加上多对多关联
-	BindNodes []*StreeNode `json:"bind_nodes,omitempty" gorm:"many2many:bind_rdss;comment:绑定的服务树节点"`
+	BindNodes []*StreeNode `json:"bind_nodes,omitempty" gorm:"many2many:resource_stree_bind_rdss;comment:绑定的服务树节点"`
 }
 
 func (obj *ResourceRds) GenHash() string {

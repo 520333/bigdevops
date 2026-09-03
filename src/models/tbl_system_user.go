@@ -8,8 +8,8 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// User 基于前端依赖的user 字段
-type User struct {
+// SystemUser 基于前端依赖的user 字段
+type SystemUser struct {
 	Model
 	UserId      int    `json:"userId,omitempty" gorm:"comment:用户id"`
 	Username    string `json:"userName" gorm:"type:varchar(100);uniqueIndex;comment:用户登录名"`
@@ -18,21 +18,20 @@ type User struct {
 
 	Email string `json:"email" gorm:"comment:用户邮箱"`
 
-	RealName string `json:"realName" gorm:"comment:用户昵称"`
-	//Avatar   string  `json:"avatar" gorm:"comment:头像"`
-	Desc         string `json:"desc,omitempty" gorm:"comment:用户描述"`
-	FeiShuUserId string `json:"feiShuUserId,omitempty" gorm:"comment:飞书userid"`
-	HomePath     string `json:"homePath" gorm:"comment:登录后跳转地址"`
-	Enable       int    `json:"enable" gorm:"default:1;comment:用户是否被冻结 1正常 2冻结"`
-	//Roles    []*Role `json:"roles" gorm:"many2many:user_roles"`
-	Roles              []*Role                         `json:"roles,omitempty" gorm:"many2many:user_roles"`
-	OpsNodes           []*StreeNode                    `json:"ops_nodes,omitempty" gorm:"many2many:ops_admins;comment:人员服务树节点"`
-	StaticReceiveUsers []*MonitorAlertManagerSendGroup `json:"staticReceiveUsers,omitempty" gorm:"many2many:static_receive_user;comment:人员告警组节点"`
-	FirstUpgradeUsers  []*MonitorAlertManagerSendGroup `json:"firstUpgradeUsers,omitempty" gorm:"many2many:first_upgrade_users;comment:人员第一告警组节点"`
+	RealName           string                          `json:"realName" gorm:"comment:用户昵称"`
+	Avatar             string                          `json:"avatar,omitempty" gorm:"type:varchar(500);comment:用户头像URL"`
+	Desc               string                          `json:"desc,omitempty" gorm:"comment:用户描述"`
+	FeiShuUserId       string                          `json:"feiShuUserId,omitempty" gorm:"comment:飞书userid"`
+	HomePath           string                          `json:"homePath" gorm:"comment:登录后跳转地址"`
+	Enable             int                             `json:"enable" gorm:"default:1;comment:用户是否被冻结 1正常 2冻结"`
+	Roles              []*SystemRole                   `json:"roles,omitempty" gorm:"many2many:system_user_roles"`
+	OpsNodes           []*StreeNode                    `json:"ops_nodes,omitempty" gorm:"many2many:resource_stree_ops_admins;comment:人员服务树节点"`
+	StaticReceiveUsers []*MonitorAlertManagerSendGroup `json:"staticReceiveUsers,omitempty" gorm:"many2many:monitor_alert_static_receive_users;comment:人员告警组节点"`
+	FirstUpgradeUsers  []*MonitorAlertManagerSendGroup `json:"firstUpgradeUsers,omitempty" gorm:"many2many:monitor_alert_first_upgrade_users;comment:人员第一告警组节点"`
 	MonitorOnDutyGroup []*MonitorOndutyGroup           `json:"monitorOnDutyGroup,omitempty" gorm:"many2many:monitor_onduty_users;comment:值班人列表"`
 
-	Processes   []WorkOrderProcess    `json:"-"`
-	FormDesigns []WorkOrderFormDesign `json:"-"`
+	Processes   []WorkOrderProcess    `json:"-" gorm:"foreignKey:UserID"`
+	FormDesigns []WorkOrderFormDesign `json:"-" gorm:"foreignKey:UserID"`
 
 	RolesFront []string `json:"rolesFront,omitempty" gorm:"-"`
 }
@@ -46,8 +45,8 @@ type UserCreateRequest struct {
 	RolesFront []string `json:"rolesFront"`
 }
 
-func CheckUserPassword(ru *UserLoginRequest) (*User, error) {
-	var dbUser User
+func CheckUserPassword(ru *UserLoginRequest) (*SystemUser, error) {
+	var dbUser SystemUser
 	err := Db.Where("username = ? ", ru.Username).Preload("Roles").First(&dbUser).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -62,8 +61,8 @@ func CheckUserPassword(ru *UserLoginRequest) (*User, error) {
 	return nil, fmt.Errorf("密码错误")
 }
 
-func GetUserByUsername(userName string) (*User, error) {
-	var dbUser User
+func GetUserByUsername(userName string) (*SystemUser, error) {
+	var dbUser SystemUser
 	err := Db.Where("username = ? ", userName).Preload("Roles").Preload("Roles.Menus").First(&dbUser).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -74,11 +73,11 @@ func GetUserByUsername(userName string) (*User, error) {
 	return &dbUser, nil
 }
 
-func (obj *User) CreateOne() error {
+func (obj *SystemUser) CreateOne() error {
 	return Db.Create(obj).Error
 }
 
-func (obj *User) UpdateOne(roles []*Role) error {
+func (obj *SystemUser) UpdateOne(roles []*SystemRole) error {
 	// 使用事务确保两步操作“同生共死”
 	return Db.Transaction(func(tx *gorm.DB) error {
 		// 1. 更新用户表基本字段
@@ -93,7 +92,7 @@ func (obj *User) UpdateOne(roles []*Role) error {
 		}
 
 		// 2. 更新多对多关联 (中间表)
-		// Replace 会自动计算差异并同步 user_roles 表
+		// Replace 会自动计算差异并同步 system_user_roles 表
 		if err := tx.Model(obj).Association("Roles").Replace(roles); err != nil {
 			return err
 		}
@@ -102,13 +101,13 @@ func (obj *User) UpdateOne(roles []*Role) error {
 	})
 }
 
-func GetUserAll() (users []*User, err error) {
+func GetUserAll() (users []*SystemUser, err error) {
 	err = Db.Preload("Roles").Find(&users).Error
 	return
 }
 
-func GetUserById(id int) (*User, error) {
-	var dbUser User
+func GetUserById(id int) (*SystemUser, error) {
+	var dbUser SystemUser
 	err := Db.Where("id = ? ", id).Preload("Roles").First(&dbUser).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -119,8 +118,8 @@ func GetUserById(id int) (*User, error) {
 	return &dbUser, nil
 }
 
-func GetUserByName(name string) (*User, error) {
-	var dbUser User
+func GetUserByName(name string) (*SystemUser, error) {
+	var dbUser SystemUser
 	err := Db.Where("username = ? ", name).Preload("Roles").First(&dbUser).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -131,10 +130,10 @@ func GetUserByName(name string) (*User, error) {
 	return &dbUser, nil
 }
 
-func (obj *User) DeleteOne() error {
+func (obj *SystemUser) DeleteOne() error {
 	return Db.Select(clause.Associations).Unscoped().Delete(obj).Error
 }
 
-func (obj *User) UpdateEnable() error {
+func (obj *SystemUser) UpdateEnable() error {
 	return Db.Model(obj).Select("Enable").Updates(obj).Error
 }

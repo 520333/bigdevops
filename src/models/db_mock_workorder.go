@@ -6,7 +6,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func mockWorkOrderData(sc *config.ServerConfig, adminUser *User) {
+func mockWorkOrderData(sc *config.ServerConfig, adminUser *SystemUser) {
 	// 1. Mock 动态表单表
 	forms := []*WorkOrderFormDesign{
 		{

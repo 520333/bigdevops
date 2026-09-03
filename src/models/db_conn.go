@@ -85,10 +85,10 @@ func InitCasBin(sc *config.ServerConfig) error {
 
 func MigrateTable() error {
 	return Db.AutoMigrate(
-		&User{},
-		&Role{},
-		&Menu{},
-		&Api{},
+		&SystemUser{},
+		&SystemRole{},
+		&SystemMenu{},
+		&SystemApi{},
 		&SystemSetting{},
 
 		&StreeNode{},
@@ -148,8 +148,9 @@ func MigrateTable() error {
 
 func MockUserRegister(sc *config.ServerConfig) {
 	EnsureJenkinsPipelineMenu(sc)
+	EnsureAccountSettingMenu(sc)
 	var count int64
-	err := Db.Model(&User{}).Where("username = ?", "admin").Count(&count).Error
+	err := Db.Model(&SystemUser{}).Where("username = ?", "admin").Count(&count).Error
 	if err == nil && count > 0 {
 		sc.Logger.Info("检测到数据库已完成初始化，跳过 Mock 数据注入 🛡️")
 		return

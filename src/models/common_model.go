@@ -15,7 +15,7 @@ type EchartsOneItem struct {
 	Value int    `json:"value" gorm:"-"`
 }
 
-func commonGetUserNamesByUsers(users []*User) []string {
+func commonGetUserNamesByUsers(users []*SystemUser) []string {
 	var userNames []string
 	for _, user := range users {
 		user := user

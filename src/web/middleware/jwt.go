@@ -50,7 +50,7 @@ func JWTAuthMiddleWare() func(c *gin.Context) {
 			//	zap.Any("老token过期时间", userClaims.RegisteredClaims.ExpiresAt),
 			//	zap.Any("临期窗口", sc.JWTC.BufferDuration),
 			//)
-			newToken, err := models.GenJWTToken(userClaims.User, sc)
+			newToken, err := models.GenJWTToken(userClaims.SystemUser, sc)
 			if err != nil {
 				common.Result5xx(0, gin.H{}, fmt.Sprintf("ParseToken 解析token包含的信息错误：%v", err.Error()), c)
 				c.Abort()

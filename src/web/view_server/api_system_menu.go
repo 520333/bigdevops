@@ -32,8 +32,8 @@ func getMenuList(c *gin.Context) {
 		return
 	}
 
-	fatherMenuMap := make(map[uint]*models.Menu)
-	uniqueChildMap := make(map[uint]*models.Menu)
+	fatherMenuMap := make(map[uint]*models.SystemMenu)
+	uniqueChildMap := make(map[uint]*models.SystemMenu)
 	roles := dbUser.Roles
 	for _, role := range roles {
 		role := role
@@ -58,7 +58,7 @@ func getMenuList(c *gin.Context) {
 			}
 
 			// 拼接前端依赖的字段
-			menu.Meta = &models.MenuMeta{}
+			menu.Meta = &models.SystemMenuMeta{}
 			menu.Meta.Icon = menu.Icon
 			menu.Meta.Title = menu.Title
 			//menu.Meta.ShowMenu = common.COMMON_SHOW_MAP[menu.Show]
@@ -85,7 +85,7 @@ func getMenuList(c *gin.Context) {
 			}
 			uniqueChildMap[menu.ID] = menu
 
-			//fatherMenu.Meta = &models.MenuMeta{}
+			//fatherMenu.Meta = &models.SystemMenuMeta{}
 			//fatherMenu.Meta.Icon = menu.Icon
 			//fatherMenu.Meta.Title = menu.Title
 			//fatherMenuShowBool := common.COMMON_SHOW_MAP[menu.Show]
@@ -94,7 +94,7 @@ func getMenuList(c *gin.Context) {
 
 			load, ok := fatherMenuMap[fatherMenu.ID]
 			if !ok {
-				fatherMenu.Children = make([]*models.Menu, 0)
+				fatherMenu.Children = make([]*models.SystemMenu, 0)
 				fatherMenu.Children = append(fatherMenu.Children, menu)
 				fatherMenuMap[fatherMenu.ID] = fatherMenu
 			} else {
@@ -104,7 +104,7 @@ func getMenuList(c *gin.Context) {
 
 	}
 
-	finalMenus := make([]*models.Menu, 0)
+	finalMenus := make([]*models.SystemMenu, 0)
 	// 最终遍历fatherMenuMap
 	for _, m := range fatherMenuMap {
 		m := m
@@ -156,7 +156,7 @@ func getMenuListAll(c *gin.Context) {
 	for _, menu := range menus {
 		menu := menu
 		// 拼接前端依赖的字段
-		menu.Meta = &models.MenuMeta{}
+		menu.Meta = &models.SystemMenuMeta{}
 		menu.Meta.Icon = menu.Icon
 		menu.Meta.Title = menu.Title
 		//menu.Meta.ShowMenu = common.COMMON_SHOW_MAP[menu.Show]
@@ -182,7 +182,7 @@ func getMenuListAll(c *gin.Context) {
 func updateMenu(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	var reqMenu models.Menu
+	var reqMenu models.SystemMenu
 	err := c.ShouldBindJSON(&reqMenu)
 	if err != nil {
 		sc.Logger.Error("解析更新菜单请求失败", zap.Any("菜单", reqMenu), zap.Error(err))
@@ -224,7 +224,7 @@ func updateMenu(c *gin.Context) {
 func createMenu(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	var reqMenu models.Menu
+	var reqMenu models.SystemMenu
 	err := c.ShouldBindJSON(&reqMenu)
 	if err != nil {
 		sc.Logger.Error("解析新增菜单请求失败", zap.Any("菜单", reqMenu), zap.Error(err))

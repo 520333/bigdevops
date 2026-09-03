@@ -34,7 +34,7 @@ spec:
               #number: 80`
 )
 
-func mockK8sData(sc *config.ServerConfig, adminUser *User) {
+func mockK8sData(sc *config.ServerConfig, adminUser *SystemUser) {
 	var kubeConfigContents []string
 	var kubeConfigNames []string
 

@@ -5,7 +5,10 @@ import (
 	"bigdevops/src/config"
 	"bigdevops/src/models"
 	"fmt"
+	"path"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -184,7 +187,7 @@ func getPermCode(c *gin.Context) {
 func createAccount(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	var reqUser models.User
+	var reqUser models.SystemUser
 	err := c.ShouldBindJSON(&reqUser)
 	if err != nil {
 		sc.Logger.Error("解析新增用户请求失败", zap.Any("用户", reqUser), zap.Error(err))
@@ -200,7 +203,7 @@ func createAccount(c *gin.Context) {
 		}
 	}
 
-	reqUser.Roles = make([]*models.Role, 0)
+	reqUser.Roles = make([]*models.SystemRole, 0)
 
 	for _, roleValue := range reqUser.RolesFront {
 		dbRole, err := models.GetRoleByRoleValue(roleValue)
@@ -273,7 +276,7 @@ func accountExist(c *gin.Context) {
 func updateAccount(c *gin.Context) {
 	// 校验menu字段
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	var reqUser models.User
+	var reqUser models.SystemUser
 	err := c.ShouldBindJSON(&reqUser)
 	if err != nil {
 		sc.Logger.Error("解析编辑用户请求失败", zap.Any("用户", reqUser), zap.Error(err))
@@ -296,7 +299,7 @@ func updateAccount(c *gin.Context) {
 		return
 	}
 
-	reqUser.Roles = make([]*models.Role, 0)
+	reqUser.Roles = make([]*models.SystemRole, 0)
 
 	for _, roleValue := range reqUser.RolesFront {
 		dbRole, err := models.GetRoleByRoleValue(roleValue)
@@ -522,4 +525,123 @@ func setAccountStatus(c *gin.Context) {
 	}
 
 	common.OkWithMessage("状态修改成功", c)
+}
+
+// @Summary      修改当前登录用户个人设置
+// @Description  修改当前登录用户个人设置/个人资料 接口
+// @Tags         system-account
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "修改当前登录用户个人设置 响应结果"
+// @Router       /system/updateUserInfo [post]
+// @Security     Bearer
+func updateUserInfo(c *gin.Context) {
+	userName := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+
+	dbUser, err := models.GetUserByUsername(userName)
+	if err != nil {
+		common.ReqBadFailWithMessage(fmt.Sprintf("用户不存在: %v", err), c)
+		return
+	}
+
+	var reqObj models.UpdateUserInfoRequest
+	err = c.ShouldBindJSON(&reqObj)
+	if err != nil {
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	err = validate.Struct(&reqObj)
+	if err != nil {
+		if errors, ok := err.(validator.ValidationErrors); ok {
+			common.ReqBadFailWithDetailed(errors.Translate(trans), "请求出错", c)
+			return
+		}
+	}
+
+	dbUser.RealName = reqObj.RealName
+	if reqObj.Avatar != "" {
+		dbUser.Avatar = reqObj.Avatar
+	}
+	dbUser.Email = reqObj.Email
+	dbUser.Desc = reqObj.Desc
+	dbUser.FeiShuUserId = reqObj.FeiShuUserId
+	if reqObj.HomePath != "" {
+		dbUser.HomePath = reqObj.HomePath
+	}
+
+	err = dbUser.UpdateOne(dbUser.Roles)
+	if err != nil {
+		sc.Logger.Error("更新个人信息失败", zap.Error(err))
+		common.FailWithMessage("更新个人信息失败: "+err.Error(), c)
+		return
+	}
+
+	common.OkWithDetailed(dbUser, "个人设置更新成功", c)
+}
+
+// @Summary      上传用户头像到 MinIO OSS
+// @Description  上传用户头像文件到 MinIO 对象存储 接口
+// @Tags         system-account
+// @Accept       multipart/form-data
+// @Produce      json
+// @Success      200 {object} common.BaseResp "上传用户头像 响应结果"
+// @Router       /system/uploadAvatar [post]
+// @Security     Bearer
+func uploadAvatar(c *gin.Context) {
+	userName := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+
+	dbUser, err := models.GetUserByUsername(userName)
+	if err != nil {
+		common.ReqBadFailWithMessage(fmt.Sprintf("用户不存在: %v", err), c)
+		return
+	}
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		common.ReqBadFailWithMessage("未获取到上传的文件: "+err.Error(), c)
+		return
+	}
+	defer file.Close()
+
+	// 限制文件大小不能超过 5MB
+	if header.Size > 5*1024*1024 {
+		common.ReqBadFailWithMessage("文件大小不能超过 5MB", c)
+		return
+	}
+
+	// 校验图片扩展名
+	filename := header.Filename
+	ext := strings.ToLower(path.Ext(filename))
+	validExts := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true}
+	if !validExts[ext] {
+		common.ReqBadFailWithMessage("仅支持上传 jpg, jpeg, png, gif, webp 格式图片", c)
+		return
+	}
+
+	contentType := header.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "image/png"
+	}
+
+	// 唯一对象文件名格式: avatars/user_<ID>_<Timestamp><Ext>
+	objectName := fmt.Sprintf("avatars/user_%d_%d%s", dbUser.ID, time.Now().UnixNano(), ext)
+
+	fileURL, err := common.UploadAvatarToMinio(sc, objectName, file, header.Size, contentType)
+	if err != nil {
+		sc.Logger.Error("上传头像到 MinIO 失败", zap.Error(err))
+		common.ReqBadFailWithMessage("上传头像失败: "+err.Error(), c)
+		return
+	}
+
+	// 自动同步数据库中该用户的 Avatar 字段
+	dbUser.Avatar = fileURL
+	_ = dbUser.UpdateOne(dbUser.Roles)
+
+	common.OkWithDetailed(gin.H{
+		"url":    fileURL,
+		"avatar": fileURL,
+	}, "头像上传成功", c)
 }

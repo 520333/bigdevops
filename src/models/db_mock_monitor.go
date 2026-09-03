@@ -46,7 +46,7 @@ PeO73tYJhHTq
 `
 )
 
-func mockMonitorData(sc *config.ServerConfig, adminUser *User) {
+func mockMonitorData(sc *config.ServerConfig, adminUser *SystemUser) {
 	ips := []string{"192.168.50.200"}
 	// prometheus 实例池
 	randTagKeys := []string{"dev", "test", "pre", "prod"}

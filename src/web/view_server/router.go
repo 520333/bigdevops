@@ -49,6 +49,8 @@ func ConfigRouter(r *gin.Engine) {
 		systemApiGroup.POST("/setAccountStatus", setAccountStatus)
 		systemApiGroup.GET("/getAccountList", getAccountList)
 		systemApiGroup.POST("/changePassword", changePassword)
+		systemApiGroup.POST("/updateUserInfo", updateUserInfo)
+		systemApiGroup.POST("/uploadAvatar", uploadAvatar)
 		systemApiGroup.GET("/getAllUserAndRoles", getAllUserAndRoles)
 
 		// 菜单路由

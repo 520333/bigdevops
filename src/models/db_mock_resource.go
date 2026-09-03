@@ -6,7 +6,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func mockResourceData(sc *config.ServerConfig, adminUser *User) {
+func mockResourceData(sc *config.ServerConfig, adminUser *SystemUser) {
 	ecss := []*ResourceEcs{
 		{InstanceId: "7aed4d56-71d7-3307-7cee-919822564f6b", InstanceName: "k8s-master", VmType: 2, Cpu: 8, Memory: 15954, OSName: "ubuntu 22.04", HostName: "k8s-master", PrivateIpAddress: []string{"192.168.50.200"}, DiskIds: []string{"98"}},
 		{InstanceId: "ea8b4d56-a119-f7ff-81e9-f3ea18c9df36", InstanceName: "k8s-node01", VmType: 2, Cpu: 8, Memory: 7902, OSName: "ubuntu 22.04", HostName: "k8s-node01", PrivateIpAddress: []string{"192.168.50.201"}, DiskIds: []string{"98"}},
@@ -18,7 +18,7 @@ func mockResourceData(sc *config.ServerConfig, adminUser *User) {
 	}
 
 	streeNodes := []*StreeNode{
-		{Title: "TORKEY", Desc: "拓基时代-国际事业", Pid: 0, Level: 1, OpsAdmins: []*User{adminUser}},
+		{Title: "TORKEY", Desc: "拓基时代-国际事业", Pid: 0, Level: 1, OpsAdmins: []*SystemUser{adminUser}},
 		{Title: "研发一组", Pid: 1, Level: 2, Desc: "umipay、binance、upipay项目"},
 		{Title: "umipay项目", Pid: 2, Level: 2, IsLeaf: true, Desc: "umipay项目"},
 		{Title: "binance项目", Pid: 2, Level: 2, IsLeaf: true, Desc: "binance项目"},

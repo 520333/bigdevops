@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func TokenNext(dbUser *User, c *gin.Context) {
+func TokenNext(dbUser *SystemUser, c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	token, err := GenJWTToken(dbUser, sc)
 	if err != nil {
@@ -19,15 +19,15 @@ func TokenNext(dbUser *User, c *gin.Context) {
 		return
 	}
 	userRsp := UserLoginResponse{
-		User:  dbUser,
-		Token: token,
+		SystemUser: dbUser,
+		Token:      token,
 	}
 	common.OkWithDetailed(userRsp, "登录成功", c)
 }
 
-func GenJWTToken(dbUser *User, sc *config.ServerConfig) (string, error) {
+func GenJWTToken(dbUser *SystemUser, sc *config.ServerConfig) (string, error) {
 	c := UserCustomClaims{
-		User: dbUser,
+		SystemUser: dbUser,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    sc.JWTC.Issuer,
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(sc.JWTC.ExpiresDuration)),

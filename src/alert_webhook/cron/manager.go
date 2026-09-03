@@ -15,7 +15,7 @@ type AlertCache struct {
 	AlertReceiveQ            chan template.Alert
 	Sc                       *config.AlertWebhookConfig
 	SendGroupMap             map[string]*models.MonitorAlertManagerSendGroup
-	UserMap                  map[uint]*models.User
+	UserMap                  map[uint]*models.SystemUser
 	MonitorOnDutyGroupMap    map[uint]*models.MonitorOndutyGroup
 	MonitorPromAlertRuleMap  map[string]*models.MonitorPromAlertRule
 	cacheHasSynced           chan struct{}
@@ -35,7 +35,7 @@ func NewAlertCache(sc *config.AlertWebhookConfig, alertReceiveQ chan template.Al
 		Sc:                      sc,
 		cacheHasSynced:          cacheHasSynced,
 		SendGroupMap:            make(map[string]*models.MonitorAlertManagerSendGroup),
-		UserMap:                 make(map[uint]*models.User),
+		UserMap:                 make(map[uint]*models.SystemUser),
 		MonitorOnDutyGroupMap:   make(map[uint]*models.MonitorOndutyGroup),
 		MonitorPromAlertRuleMap: make(map[string]*models.MonitorPromAlertRule),
 	}

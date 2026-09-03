@@ -19,7 +19,7 @@ type setRecordRuleEnableBatchReq struct {
 	Enable int   `json:"enable" validate:"required,oneof=1 2"` // 1=启用 2=禁用}
 }
 
-func commonGetUsersByNames(userNames []string, logger *zap.Logger, c *gin.Context) (res []*models.User) {
+func commonGetUsersByNames(userNames []string, logger *zap.Logger, c *gin.Context) (res []*models.SystemUser) {
 	for _, userName := range userNames {
 		userName := userName
 		dbUser, err := models.GetUserByName(userName)

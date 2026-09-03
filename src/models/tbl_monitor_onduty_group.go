@@ -19,12 +19,13 @@ type MonitorOndutyGroup struct {
 
 	Enable int `json:"enable" gorm:"comment:是否被开启 1正常 2禁用"`
 	// 发送逻辑
-	Members   []*User `json:"members" gorm:"many2many:monitor_onduty_users;comment:值班人列表"`
-	ShiftDays int     `json:"shiftDays" gorm:"comment:轮班周期：天、周"`
+	Members   []*SystemUser `json:"members" gorm:"many2many:monitor_onduty_users;comment:值班人列表"`
+	MemberIds []int         `json:"memberIds" gorm:"-"`
+	ShiftDays int           `json:"shiftDays" gorm:"comment:轮班周期：天、周"`
 	//ImRobotToken              string   `json:"imRobotToken" gorm:"comment:im机器人token 对应哪个群组"`
-	YesterdayNormalDutyUserId uint     `json:"yesterdayNormalDutyUserId" gorm:"comment:不考虑换班的 正常排班的 昨日值班人 由cron设置"`
-	UserNames                 []string `json:"userNames" gorm:"-"`       // 前端使用
-	ToDayOnDutyUser           *User    `json:"toDayOnDutyUser" gorm:"-"` // 当天值班人
+	YesterdayNormalDutyUserId uint        `json:"yesterdayNormalDutyUserId" gorm:"comment:不考虑换班的 正常排班的 昨日值班人 由cron设置"`
+	UserNames                 []string    `json:"userNames" gorm:"-"`       // 前端使用
+	ToDayOnDutyUser           *SystemUser `json:"toDayOnDutyUser" gorm:"-"` // 当天值班人
 
 	Key            string `json:"key,omitempty" gorm:"-"` // 前端表格使用
 	CreateUserName string `json:"createUserName,omitempty" gorm:"-"`

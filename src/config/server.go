@@ -29,6 +29,17 @@ type ServerConfig struct {
 	ImC                             *IMConfig            `yaml:"im"`
 	AlertManagerApi                 string               `yaml:"alert_manager_api"`
 	OIDC                            *KeycloakOIDC        `yaml:"oidc"`
+	OSSC                            *OSSConfig           `yaml:"oss"`
+}
+
+type OSSConfig struct {
+	Enable     bool   `yaml:"enable"`
+	Endpoint   string `yaml:"endpoint"`
+	AccessKey  string `yaml:"access_key"`
+	SecretKey  string `yaml:"secret_key"`
+	UseSSL     bool   `yaml:"use_ssl"`
+	BucketName string `yaml:"bucket_name"`
+	UrlPrefix  string `yaml:"url_prefix"`
 }
 
 type KeycloakOIDC struct {

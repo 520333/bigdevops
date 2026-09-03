@@ -22,10 +22,10 @@ type OnDutyPlanResponse struct {
 }
 
 type OnDutyOne struct {
-	Date       string       `json:"date,omitempty"`
-	User       *models.User `json:"user,omitempty"`
-	OriginUser string       `json:"originUser,omitempty"`
-	Remark     string       `json:"remark,omitempty"`
+	Date       string             `json:"date,omitempty"`
+	User       *models.SystemUser `json:"user,omitempty"`
+	OriginUser string             `json:"originUser,omitempty"`
+	Remark     string             `json:"remark,omitempty"`
 }
 
 // @Summary      获取值班组列表

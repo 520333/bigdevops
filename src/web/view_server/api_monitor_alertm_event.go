@@ -169,7 +169,7 @@ func alertManagerEventReLing(c *gin.Context) {
 	common.OkWithMessage("静默成功", c)
 }
 
-func doUnSilence(sc *config.ServerConfig, eventID int, user *models.User) error {
+func doUnSilence(sc *config.ServerConfig, eventID int, user *models.SystemUser) error {
 	event, err := models.GetMonitorAlertManagerEventById(eventID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch event (ID: %d): %v", eventID, err)
@@ -209,7 +209,7 @@ func doUnSilence(sc *config.ServerConfig, eventID int, user *models.User) error 
 }
 
 // --- Helper for Silence ---
-func doSilence(sc *config.ServerConfig, eventID int, timeString string, sdr time.Duration, byNameBool bool, user *models.User) error {
+func doSilence(sc *config.ServerConfig, eventID int, timeString string, sdr time.Duration, byNameBool bool, user *models.SystemUser) error {
 	event, err := models.GetMonitorAlertManagerEventById(eventID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch event (ID: %d): %v", eventID, err)

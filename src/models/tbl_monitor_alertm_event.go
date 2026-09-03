@@ -32,7 +32,7 @@ type MonitorAlertManagerEvent struct {
 	AlertRuleName string                        `json:"alertRuleName" gorm:"-"`
 	SendGroupName string                        `json:"sendGroupName" gorm:"-"`
 	Alert         template.Alert                `json:"alert,omitempty" gorm:"-"`
-	ReLingUser    *User                         `json:"reLingUser,omitempty" gorm:"-"`
+	ReLingUser    *SystemUser                   `json:"reLingUser,omitempty" gorm:"-"`
 	SendGroup     *MonitorAlertManagerSendGroup `json:"sendGroup,omitempty" gorm:"-"`
 	Rule          *MonitorPromAlertRule         `json:"rule,omitempty" gorm:"-"`
 
