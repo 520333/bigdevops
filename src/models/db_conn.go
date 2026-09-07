@@ -84,7 +84,7 @@ func InitCasBin(sc *config.ServerConfig) error {
 }
 
 func MigrateTable() error {
-	return Db.AutoMigrate(
+	err := Db.AutoMigrate(
 		&SystemUser{},
 		&SystemRole{},
 		&SystemMenu{},
@@ -102,6 +102,7 @@ func MigrateTable() error {
 		&WorkOrderFormDesign{},
 		&WorkOrderTemplate{},
 		&WorkOrderInstance{},
+		&WorkOrderNotifyStatus{},
 
 		&JobScript{},
 		&JobTask{},
@@ -144,6 +145,11 @@ func MigrateTable() error {
 		// git
 		&CodeGitServer{},
 	)
+	if err != nil {
+		return err
+	}
+	CleanDuplicateNotifyStatus()
+	return nil
 }
 
 func MockUserRegister(sc *config.ServerConfig) {

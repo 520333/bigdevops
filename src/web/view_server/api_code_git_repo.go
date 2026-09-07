@@ -124,109 +124,53 @@ func updateCodeGitRepo(c *gin.Context) {
 }
 
 // @Summary      获取Git代码仓库列表
-// @Description  获取Git代码仓库列表 接口
-// @Tags         code-git
-// @Accept       json
-// @Produce      json
-// @Success      200 {object} common.BaseResp "获取Git代码仓库列表 响应结果"
-// @Router       /code/getCodeGitRepoList [get]
-// @Security     Bearer
-func getCodeGitRepoList(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-	repoName := c.DefaultQuery("name", "")
-	serverId, _ := strconv.Atoi(c.DefaultQuery("serverId", ""))
-	visibility := c.DefaultQuery("visibility", "")
-	namespace := c.DefaultQuery("namespace", "")
-
-	if serverId == 0 {
-		common.OkWithDetailed(gin.H{"items": []models.CodeGitRepo{}, "total": 0}, "请先选择所属Git实例", c)
-		return
-	}
-
-	server, err := models.GetCodeGitServerById(serverId)
-	if err != nil {
-		common.FailWithMessage("Git 实例不存在", c)
-		return
-	}
-
+func fetchReposFromSingleServer(server *models.CodeGitServer, page, pageSize int, repoName, visibility, namespace string) ([]models.CodeGitRepo, int64, error) {
 	objs := make([]models.CodeGitRepo, 0)
 	var total int64 = 0
 
 	if server.Platform == "gitlab" {
 		client, err := getGitLabClient(server)
 		if err != nil {
-			common.FailWithMessage("初始化 GitLab 客户端失败", c)
-			return
+			return nil, 0, fmt.Errorf("初始化 GitLab 客户端失败: %v", err)
 		}
 
-		var projects []*gitlab.Project
-		if repoName != "" || namespace != "" {
-			opt := &gitlab.ListProjectsOptions{
-				ListOptions: gitlab.ListOptions{PerPage: 100, Page: 1},
-			}
-			if visibility != "" {
-				opt.Visibility = gitlab.Ptr(gitlab.VisibilityValue(visibility))
-			}
-			var allProjects []*gitlab.Project
-			for {
-				ps, resp, err := client.Projects.ListProjects(opt)
-				if err != nil {
-					break
-				}
-				for _, p := range ps {
-					matchName := true
-					if repoName != "" {
-						if !strings.Contains(strings.ToLower(p.Name), strings.ToLower(repoName)) &&
-							!strings.Contains(strings.ToLower(p.PathWithNamespace), strings.ToLower(repoName)) {
-							matchName = false
-						}
-					}
-					matchNs := true
-					if namespace != "" {
-						if p.Namespace == nil || !strings.Contains(strings.ToLower(p.Namespace.FullPath), strings.ToLower(namespace)) {
-							matchNs = false
-						}
-					}
-					if matchName && matchNs {
-						allProjects = append(allProjects, p)
-					}
-				}
-				if resp == nil || resp.NextPage == 0 {
-					break
-				}
-				opt.Page = resp.NextPage
-			}
-			total = int64(len(allProjects))
-			start := (page - 1) * pageSize
-			end := start + pageSize
-			if start > len(allProjects) {
-				start = len(allProjects)
-			}
-			if end > len(allProjects) {
-				end = len(allProjects)
-			}
-			projects = allProjects[start:end]
-		} else {
-			opt := &gitlab.ListProjectsOptions{
-				ListOptions: gitlab.ListOptions{
-					Page:    page,
-					PerPage: pageSize,
-				},
-			}
-			if visibility != "" {
-				opt.Visibility = gitlab.Ptr(gitlab.VisibilityValue(visibility))
-			}
+		opt := &gitlab.ListProjectsOptions{
+			ListOptions: gitlab.ListOptions{PerPage: 100, Page: 1},
+		}
+		if visibility != "" {
+			opt.Visibility = gitlab.Ptr(gitlab.VisibilityValue(visibility))
+		}
+		var allProjects []*gitlab.Project
+		for {
 			ps, resp, err := client.Projects.ListProjects(opt)
 			if err != nil {
-				common.FailWithMessage(fmt.Sprintf("GitLab API 获取仓库失败: %v", err), c)
-				return
+				break
 			}
-			projects = ps
-			if resp != nil {
-				total = int64(resp.TotalItems)
+			for _, p := range ps {
+				matchName := true
+				if repoName != "" {
+					if !strings.Contains(strings.ToLower(p.Name), strings.ToLower(repoName)) &&
+						!strings.Contains(strings.ToLower(p.PathWithNamespace), strings.ToLower(repoName)) {
+						matchName = false
+					}
+				}
+				matchNs := true
+				if namespace != "" {
+					if p.Namespace == nil || !strings.Contains(strings.ToLower(p.Namespace.FullPath), strings.ToLower(namespace)) {
+						matchNs = false
+					}
+				}
+				if matchName && matchNs {
+					allProjects = append(allProjects, p)
+				}
 			}
+			if resp == nil || resp.NextPage == 0 || len(allProjects) >= pageSize {
+				break
+			}
+			opt.Page = resp.NextPage
 		}
+		total = int64(len(allProjects))
+		projects := allProjects
 
 		creatorCache := make(map[int]string)
 
@@ -236,7 +180,7 @@ func getCodeGitRepoList(c *gin.Context) {
 				nsPath = p.Namespace.FullPath
 			}
 			obj := models.CodeGitRepo{
-				ServerID:      uint(serverId),
+				ServerID:      server.ID,
 				ProjectID:     p.ID,
 				Name:          p.Name,
 				FullName:      p.PathWithNamespace,
@@ -282,91 +226,49 @@ func getCodeGitRepoList(c *gin.Context) {
 	} else if server.Platform == "gitea" {
 		client, err := getGiteaClient(server)
 		if err != nil {
-			common.FailWithMessage("初始化 Gitea 客户端失败", c)
-			return
+			return nil, 0, fmt.Errorf("初始化 Gitea 客户端失败: %v", err)
 		}
 
-		var repos []*gitea.Repository
-		if namespace != "" {
-			searchOpt := gitea.SearchRepoOptions{
-				Keyword: repoName,
-				ListOptions: gitea.ListOptions{
-					Page:     1,
-					PageSize: 100,
-				},
-			}
-			if visibility == "private" {
-				b := true
-				searchOpt.IsPrivate = &b
-			} else if visibility == "public" {
-				b := false
-				searchOpt.IsPrivate = &b
-			}
-			var allRepos []*gitea.Repository
-			for {
-				rs, _, err := client.SearchRepos(searchOpt)
-				if err != nil {
-					break
-				}
-				for _, r := range rs {
-					matchNs := true
-					if namespace != "" {
-						if r.Owner == nil || !strings.Contains(strings.ToLower(r.Owner.UserName), strings.ToLower(namespace)) {
-							matchNs = false
-						}
-					}
-					if matchNs {
-						allRepos = append(allRepos, r)
-					}
-				}
-				if len(rs) < 100 {
-					break
-				}
-				searchOpt.Page++
-			}
-			total = int64(len(allRepos))
-			start := (page - 1) * pageSize
-			end := start + pageSize
-			if start > len(allRepos) {
-				start = len(allRepos)
-			}
-			if end > len(allRepos) {
-				end = len(allRepos)
-			}
-			repos = allRepos[start:end]
-		} else {
-			searchOpt := gitea.SearchRepoOptions{
-				Keyword: repoName,
-				ListOptions: gitea.ListOptions{
-					Page:     page,
-					PageSize: pageSize,
-				},
-			}
-			if visibility == "private" {
-				b := true
-				searchOpt.IsPrivate = &b
-			} else if visibility == "public" {
-				b := false
-				searchOpt.IsPrivate = &b
-			}
-
-			rs, resp, err := client.SearchRepos(searchOpt)
-			if err != nil {
-				common.FailWithMessage(fmt.Sprintf("Gitea API 获取仓库失败: %v", err), c)
-				return
-			}
-			repos = rs
-
-			if resp != nil && resp.Header.Get("X-Total-Count") != "" {
-				t, _ := strconv.ParseInt(resp.Header.Get("X-Total-Count"), 10, 64)
-				total = t
-			} else {
-				total = int64(len(repos))
-			}
+		searchOpt := gitea.SearchRepoOptions{
+			Keyword: repoName,
+			ListOptions: gitea.ListOptions{
+				Page:     1,
+				PageSize: 100,
+			},
 		}
+		if visibility == "private" {
+			b := true
+			searchOpt.IsPrivate = &b
+		} else if visibility == "public" {
+			b := false
+			searchOpt.IsPrivate = &b
+		}
+		var allRepos []*gitea.Repository
+		for {
+			rs, _, err := client.SearchRepos(searchOpt)
+			if err != nil || len(rs) == 0 {
+				break
+			}
+			for _, r := range rs {
+				matchNs := true
+				if namespace != "" {
+					if r.Owner == nil || !strings.Contains(strings.ToLower(r.Owner.UserName), strings.ToLower(namespace)) {
+						matchNs = false
+					}
+				}
+				if matchNs {
+					allRepos = append(allRepos, r)
+				}
+			}
+			if len(rs) < 100 || len(allRepos) >= pageSize {
+				break
+			}
+			searchOpt.Page++
+		}
+		total = int64(len(allRepos))
+		repos := allRepos
 
 		for _, r := range repos {
-
 			vis := "public"
 			if r.Private {
 				vis = "private"
@@ -376,7 +278,7 @@ func getCodeGitRepoList(c *gin.Context) {
 				ns = r.Owner.UserName
 			}
 			obj := models.CodeGitRepo{
-				ServerID:      uint(serverId),
+				ServerID:      server.ID,
 				ProjectID:     int(r.ID),
 				Name:          r.Name,
 				FullName:      r.FullName,
@@ -413,9 +315,48 @@ func getCodeGitRepoList(c *gin.Context) {
 		}
 	}
 
+	return objs, total, nil
+}
+
+func getCodeGitRepoList(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "1000"))
+	repoName := c.DefaultQuery("name", "")
+	serverId, _ := strconv.Atoi(c.DefaultQuery("serverId", ""))
+	visibility := c.DefaultQuery("visibility", "")
+	namespace := c.DefaultQuery("namespace", "")
+
+	var targetServers []*models.CodeGitServer
+	if serverId > 0 {
+		server, err := models.GetCodeGitServerById(serverId)
+		if err != nil {
+			common.FailWithMessage("Git 实例不存在", c)
+			return
+		}
+		targetServers = append(targetServers, server)
+	} else {
+		servers, totalServers, err := models.GetCodeGitServerList(100, 0, "", "", "")
+		if err != nil || totalServers == 0 || len(servers) == 0 {
+			common.OkWithDetailed(gin.H{"items": []models.CodeGitRepo{}, "total": 0}, "请先配置所属Git实例", c)
+			return
+		}
+		targetServers = servers
+	}
+
+	allObjs := make([]models.CodeGitRepo, 0)
+	var grandTotal int64 = 0
+
+	for _, server := range targetServers {
+		items, total, err := fetchReposFromSingleServer(server, page, pageSize, repoName, visibility, namespace)
+		if err == nil {
+			allObjs = append(allObjs, items...)
+			grandTotal += total
+		}
+	}
+
 	common.OkWithDetailed(gin.H{
-		"items": objs,
-		"total": total,
+		"items": allObjs,
+		"total": grandTotal,
 	}, "获取成功", c)
 }
 
@@ -808,31 +749,66 @@ func fetchBranchesForServer(server models.CodeGitServer, repoId int, fullName st
 	return nil, fmt.Errorf("unsupported platform")
 }
 
+func parseGitUrlToPath(raw string) string {
+	clean := strings.TrimSpace(raw)
+	clean = strings.TrimSuffix(clean, ".git")
+	if idx := strings.Index(clean, "://"); idx != -1 {
+		clean = clean[idx+3:]
+	}
+	if idx := strings.Index(clean, "@"); idx != -1 {
+		clean = clean[idx+1:]
+	}
+	if strings.Contains(clean, "/") {
+		parts := strings.Split(clean, "/")
+		if len(parts) > 1 {
+			return strings.Join(parts[1:], "/")
+		}
+	}
+	return clean
+}
+
 func getRepoBranches(c *gin.Context) {
 	serverId, _ := strconv.Atoi(c.Query("serverId"))
 	repoId, _ := strconv.Atoi(c.Query("repoId"))
-	fullName := c.Query("fullName")
+	fullName := strings.TrimSpace(c.Query("fullName"))
 
 	if repoId == 0 && fullName == "" {
 		common.OkWithData([]GitBranch{}, c)
 		return
 	}
 
-	if serverId > 0 {
-		server, err := models.GetCodeGitServerById(serverId)
-		if err == nil {
-			if branches, err := fetchBranchesForServer(*server, repoId, fullName); err == nil && len(branches) > 0 {
+	cleanPath := fullName
+	if strings.Contains(fullName, "/") || strings.Contains(fullName, "git@") || strings.Contains(fullName, "://") {
+		cleanPath = parseGitUrlToPath(fullName)
+	}
+
+	// 1. 尝试直接查数据库的代码仓库记录匹配精确 Server与ProjectID
+	var dbRepo models.CodeGitRepo
+	if err := models.Db.Where("full_name = ? OR clone_url_ssh LIKE ? OR clone_url_http LIKE ?", cleanPath, "%"+cleanPath+"%", "%"+cleanPath+"%").First(&dbRepo).Error; err == nil {
+		if server, err := models.GetCodeGitServerById(int(dbRepo.ServerID)); err == nil {
+			if branches, err := fetchBranchesForServer(*server, dbRepo.ProjectID, dbRepo.FullName); err == nil && len(branches) > 0 {
 				common.OkWithData(branches, c)
 				return
 			}
 		}
 	}
 
-	// 如果未指定 serverId 或特定 server 获取失败，遍历系统包含的所有 Git 实例匹配
+	// 2. 如果已知 serverId 尝试直查
+	if serverId > 0 {
+		server, err := models.GetCodeGitServerById(serverId)
+		if err == nil {
+			if branches, err := fetchBranchesForServer(*server, repoId, cleanPath); err == nil && len(branches) > 0 {
+				common.OkWithData(branches, c)
+				return
+			}
+		}
+	}
+
+	// 3. 遍历系统包含的所有 Git 实例匹配
 	var servers []models.CodeGitServer
 	_ = models.Db.Find(&servers).Error
 	for _, s := range servers {
-		if branches, err := fetchBranchesForServer(s, repoId, fullName); err == nil && len(branches) > 0 {
+		if branches, err := fetchBranchesForServer(s, repoId, cleanPath); err == nil && len(branches) > 0 {
 			common.OkWithData(branches, c)
 			return
 		}

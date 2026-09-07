@@ -35,6 +35,8 @@ type K8sCluster struct {
 	AnnotationsFront string            `json:"annotationsFront" gorm:"-"`
 	LabelsM          map[string]string `json:"labelsM" gorm:"-"`
 	AnnotationsM     map[string]string `json:"annotationsM" gorm:"-"`
+	Label            string            `json:"label" gorm:"-"`
+	Value            string            `json:"value" gorm:"-"`
 }
 
 func (obj *K8sCluster) Create() error {
@@ -143,6 +145,14 @@ func (obj *K8sCluster) FillFrontAllData() {
 		obj.CreateUserName = fmt.Sprintf("%s(%s)", dbUser.Username, dbUser.RealName)
 	}
 
+	label := obj.NameZh
+	if label == "" {
+		label = obj.Name
+	} else if obj.Name != "" {
+		label = fmt.Sprintf("%s (%s)", obj.NameZh, obj.Name)
+	}
+	obj.Label = label
+	obj.Value = obj.Name
 }
 
 func GetK8sClusterByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*K8sCluster, err error) {

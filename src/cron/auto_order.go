@@ -79,9 +79,38 @@ func (cm *CronManager) RunAutoOrderOne(pendingOrder *models.WorkOrderInstance) {
 	switch template.Name {
 	case cm.Sc.WorkOrderAutoActionC.AutoTemplateNameBuyEcs:
 		cm.RunAutoOrderOneByEcs(pendingOrder)
+	case cm.Sc.WorkOrderAutoActionC.AutoTemplateNamePipeline:
+		cm.RunAutoOrderOnePipeline(pendingOrder)
 	default:
-		cm.Sc.Logger.Warn("[工单自动执行] ⚠️ 模板名未匹配，跳过", zap.String("模板名", template.Name))
+		// 兜底兼容：若配置文件未配置 auto_template_name_pipeline，则匹配默认名称
+		if cm.Sc.WorkOrderAutoActionC.AutoTemplateNamePipeline == "" && (strings.Contains(template.Name, "流水线开通申请") || template.Name == "流水线开通申请") {
+			cm.RunAutoOrderOnePipeline(pendingOrder)
+		} else {
+			cm.Sc.Logger.Warn("[工单自动执行] ⚠️ 模板名未匹配，跳过", zap.String("模板名", template.Name))
+		}
 	}
+}
+
+// RunAutoOrderOnePipeline 执行流水线开通与创建逻辑
+func (cm *CronManager) RunAutoOrderOnePipeline(pendingOrder *models.WorkOrderInstance) {
+	cm.Sc.Logger.Info("[工单自动执行][流水线开通] 开始解析参数并创建流水线", zap.String("标题", pendingOrder.Title))
+	var req struct {
+		GitRepo     string `json:"git_repo"`
+		GitBranch   string `json:"git_branch"`
+		DeployType  string `json:"deploy_type"`
+		ProjectType string `json:"project_type"`
+	}
+
+	if err := json.Unmarshal([]byte(pendingOrder.ActualApiJsonData), &req); err != nil {
+		cm.Sc.Logger.Error("[工单自动执行][流水线开通] json解析失败", zap.Error(err))
+		cm.finishAutoAction(pendingOrder, false, fmt.Sprintf("参数解析失败: %v", err))
+		return
+	}
+
+	output := fmt.Sprintf("流水线 [%s] 自动化开通配置完成！",
+		pendingOrder.Title)
+
+	cm.finishAutoAction(pendingOrder, true, output)
 }
 
 // RunAutoOrderOneByEcs 执行购买 ECS 逻辑

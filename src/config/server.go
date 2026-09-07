@@ -86,12 +86,13 @@ type GrpcServerConfig struct {
 }
 
 type WorkOrderAutoAction struct {
-	ServiceAccount         string `yaml:"service_account"` // 服务账号名称
-	Enable                 bool   `yaml:"enable"`
-	RunIntervalSeconds     int    `yaml:"run_interval_seconds"`
-	BatchNum               int    `yaml:"batch_num"`
-	AutoTemplateNameBuyEcs string `yaml:"auto_template_name_buy_ecs"`
-	AutoTemplateNameRmEcs  string `yaml:"auto_template_name_rm_ecs"`
+	ServiceAccount           string `yaml:"service_account"` // 服务账号名称
+	Enable                   bool   `yaml:"enable"`
+	RunIntervalSeconds       int    `yaml:"run_interval_seconds"`
+	BatchNum                 int    `yaml:"batch_num"`
+	AutoTemplateNameBuyEcs   string `yaml:"auto_template_name_buy_ecs"`
+	AutoTemplateNameRmEcs    string `yaml:"auto_template_name_rm_ecs"`
+	AutoTemplateNamePipeline string `yaml:"auto_template_name_pipeline"`
 }
 
 type PublicCloudSync struct {

@@ -37,6 +37,8 @@ type ResourceEcs struct {
 	ImageId     string `json:"ImageId,omitempty" gorm:"comment:镜像模板"`
 	HostName    string `json:"HostName,omitempty" gorm:"type:varchar(100);comment:主机名"`
 	Key         string `json:"key" gorm:"-"`
+	Label       string `json:"label" gorm:"-"`
+	Value       string `json:"value" gorm:"-"`
 
 	// 字符串数组类型
 	SecurityGroupIds  StringArray `json:"SecurityGroupIds,omitempty" gorm:"comment:安全组id"`
@@ -188,4 +190,28 @@ func GetResourceEcsBySnOrIP(sn string, ip string) (*ResourceEcs, error) {
 func (obj *ResourceEcs) FillFrontAllData() {
 	obj.Key = fmt.Sprintf("%d", obj.ID)
 
+	ip := ""
+	if len(obj.PrivateIpAddress) > 0 {
+		ip = obj.PrivateIpAddress[0]
+	} else if len(obj.PublicIpAddresses) > 0 {
+		ip = obj.PublicIpAddresses[0]
+	}
+
+	hostName := obj.HostName
+	if hostName == "" {
+		hostName = obj.InstanceName
+	}
+
+	if hostName != "" && ip != "" {
+		obj.Label = fmt.Sprintf("%s(%s)", hostName, ip)
+	} else if hostName != "" {
+		obj.Label = hostName
+	} else {
+		obj.Label = ip
+	}
+
+	obj.Value = ip
+	if obj.Value == "" {
+		obj.Value = hostName
+	}
 }

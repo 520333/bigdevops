@@ -668,3 +668,270 @@ func deleteWorkOrderInstance(c *gin.Context) {
 	}
 	common.OkWithMessage("删除成功", c)
 }
+
+// @Summary      获取顶部通知/待办/消息列表
+// @Description  获取当前登录用户的工单待办、通知与消息接口
+// @Tags         workorder-instance
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "通知/待办 响应结果"
+// @Router       /workorder/getNotificationList [get]
+// @Security     Bearer
+func getWorkOrderNotificationList(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+	userName := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)
+	dbUser, err := models.GetUserByUsername(userName)
+	if err != nil {
+		sc.Logger.Error("查询用户失败", zap.Error(err))
+		common.FailWithMessage("用户校验失败", c)
+		return
+	}
+
+	isAdminUser := (userName == "admin")
+	for _, r := range dbUser.Roles {
+		if r.RoleName == "admin" {
+			isAdminUser = true
+			break
+		}
+	}
+
+	type ListItem struct {
+		ID          string `json:"id"`
+		Avatar      string `json:"avatar"`
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Datetime    string `json:"datetime"`
+		Type        string `json:"type"`
+		Extra       string `json:"extra,omitempty"`
+		Color       string `json:"color,omitempty"`
+		TicketID    uint   `json:"ticketId,omitempty"`
+		Read        bool   `json:"read"`
+		TitleDelete bool   `json:"titleDelete"`
+	}
+
+	type TabItem struct {
+		Key  string     `json:"key"`
+		Name string     `json:"name"`
+		List []ListItem `json:"list"`
+	}
+
+	var todoList []ListItem
+	var noticeList []ListItem
+	var msgList []ListItem
+
+	// 1. 查询【待办】：状态为 pendingApproval 或 pendingAction 的工单
+	var pendingOrders []*models.WorkOrderInstance
+	err = models.Db.Where("status IN ?", []string{common.WORKORDER_INSTANCE_PENDINGAPPROVAL, common.WORKORDER_INSTANCE_PENDING_ACTION}).
+		Order("created_at desc").Limit(20).Find(&pendingOrders).Error
+	if err == nil {
+		for _, order := range pendingOrders {
+			order.FillFrontAllData()
+
+			// 严谨判断：只有当前流转节点匹配当前用户或当前用户所在角色时，才是当前用户的待办
+			isMyTodo := false
+			if order.CurrentFlowNode == userName || strings.Contains(order.CurrentFlowNode, userName) {
+				isMyTodo = true
+			} else {
+				for _, role := range dbUser.Roles {
+					if order.CurrentFlowNode == role.RoleName || strings.Contains(order.CurrentFlowNode, role.RoleName) {
+						isMyTodo = true
+						break
+					}
+				}
+			}
+			if order.CurrentFlowNode == "admin" && isAdminUser {
+				isMyTodo = true
+			}
+
+			if isMyTodo {
+				statusText := "待审批"
+				color := "orange"
+				if order.Status == common.WORKORDER_INSTANCE_PENDING_ACTION {
+					statusText = "待执行"
+					color = "blue"
+				}
+				timeStr := order.CreatedAt.Format("2006-01-02 15:04")
+				todoList = append(todoList, ListItem{
+					ID:          fmt.Sprintf("todo-%d", order.ID),
+					Avatar:      "",
+					Title:       fmt.Sprintf("工单待办：%s", order.Title),
+					Description: fmt.Sprintf("申请人：%s | 当前节点：%s", order.CreateUserName, order.CurrentFlowNode),
+					Datetime:    timeStr,
+					Type:        "3",
+					Extra:       statusText,
+					Color:       color,
+					TicketID:    order.ID,
+				})
+			}
+		}
+	}
+
+	// 2. 查询【通知】：当前用户发起的近期已完成或终止的工单
+	var myOrders []*models.WorkOrderInstance
+	err = models.Db.Where("user_id = ?", dbUser.ID).Order("updated_at desc").Limit(10).Find(&myOrders).Error
+	if err == nil {
+		for _, order := range myOrders {
+			if order.Status == common.WORKORDER_INSTANCE_FINISHED || order.Status == common.WORKORDER_INSTANCE_APPROVAL_REJECT {
+				timeStr := order.UpdatedAt.Format("2006-01-02 15:04")
+				statusMsg := "已完成"
+				color := "green"
+				if order.Status == common.WORKORDER_INSTANCE_APPROVAL_REJECT {
+					statusMsg = "已被驳回"
+					color = "red"
+				}
+				desireTime := "无"
+				if order.DesireFinishTime != nil {
+					desireTime = order.DesireFinishTime.Format("2006-01-02 15:04")
+				}
+				noticeList = append(noticeList, ListItem{
+					ID:          fmt.Sprintf("notice-%d", order.ID),
+					Avatar:      "",
+					Title:       fmt.Sprintf("工单：%s", order.Title),
+					Description: fmt.Sprintf("期望完成时间：%s", desireTime),
+					Datetime:    timeStr,
+					Type:        "1",
+					Extra:       statusMsg,
+					Color:       color,
+					TicketID:    order.ID,
+				})
+			}
+		}
+	}
+
+	// 3. 查询【消息】：他人对工单发起的评论互动 (排除用户自己评论自己的通知)
+	var commentedOrders []*models.WorkOrderInstance
+	if isAdminUser {
+		err = models.Db.Where("comments IS NOT NULL AND comments != '' AND comments != '[]'").
+			Order("updated_at desc").Limit(30).Find(&commentedOrders).Error
+	} else {
+		userPattern := "%" + userName + "%"
+		err = models.Db.Where("(user_id = ? OR actual_flow_data LIKE ? OR comments LIKE ?) AND comments IS NOT NULL AND comments != '' AND comments != '[]'",
+			dbUser.ID, userPattern, userPattern).
+			Order("updated_at desc").Limit(20).Find(&commentedOrders).Error
+	}
+
+	if err == nil {
+		for _, order := range commentedOrders {
+			var comments []map[string]interface{}
+			if err := json.Unmarshal([]byte(order.Comments), &comments); err == nil && len(comments) > 0 {
+				// 从最新评论倒序查找第一条【他人】发的评论
+				for i := len(comments) - 1; i >= 0; i-- {
+					c := comments[i]
+					userNameTime := fmt.Sprintf("%v", c["userNameTime"])
+					parts := strings.SplitN(userNameTime, " ", 2)
+					author := parts[0]
+					commentTime := ""
+					if len(parts) > 1 {
+						commentTime = parts[1]
+					}
+
+					// 屏蔽当前用户自己评论自己的消息通知
+					if author == userName {
+						continue
+					}
+
+					commentContent := fmt.Sprintf("%v", c["comment"])
+					msgList = append(msgList, ListItem{
+						ID:          fmt.Sprintf("msg-%d-%d", order.ID, i),
+						Avatar:      "",
+						Title:       fmt.Sprintf("%s 评论了工单【%s】", author, order.Title),
+						Description: commentContent,
+						Datetime:    commentTime,
+						Type:        "2",
+						TicketID:    order.ID,
+					})
+					break
+				}
+			}
+		}
+	}
+
+	// 4. 🚨 从数据库查询当前用户的已读和已清空持久化状态进行过滤与标记
+	notifyStatusMap, _ := models.GetUserNotifyStatusMap(userName)
+	filterAndMarkList := func(list []ListItem) []ListItem {
+		var result []ListItem
+		for _, item := range list {
+			statusVal, exists := notifyStatusMap[item.ID]
+			if exists && statusVal == models.NOTIFY_STATUS_CLEARED {
+				// 已清空 -> 直接在后端过滤，不返回前端
+				continue
+			}
+			if exists && statusVal == models.NOTIFY_STATUS_READ {
+				// 已读 -> 标记 read 和 titleDelete
+				item.Read = true
+				item.TitleDelete = true
+			}
+			result = append(result, item)
+		}
+		if result == nil {
+			result = []ListItem{}
+		}
+		return result
+	}
+
+	todoList = filterAndMarkList(todoList)
+	noticeList = filterAndMarkList(noticeList)
+	msgList = filterAndMarkList(msgList)
+
+	resData := []TabItem{
+		{Key: "1", Name: "通知", List: noticeList},
+		{Key: "2", Name: "消息", List: msgList},
+		{Key: "3", Name: "待办", List: todoList},
+	}
+
+	common.OkWithData(resData, c)
+}
+
+type markNotifyReadReq struct {
+	NoticeID string `json:"noticeId"`
+}
+
+// @Summary      标记单个通知为已读
+// @Description  标记单个通知为已读 接口
+// @Tags         workorder-instance
+// @Accept       json
+// @Produce      json
+// @Router       /workorder/markNotifyRead [post]
+// @Security     Bearer
+func markWorkOrderNotifyRead(c *gin.Context) {
+	userName := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)
+	var req markNotifyReadReq
+	if err := c.ShouldBindJSON(&req); err != nil || req.NoticeID == "" {
+		common.FailWithMessage("参数解析失败", c)
+		return
+	}
+
+	err := models.MarkNotifyStatus(userName, req.NoticeID, models.NOTIFY_STATUS_READ)
+	if err != nil {
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+	common.OkWithMessage("已标记已读", c)
+}
+
+type clearNotifyTabReq struct {
+	NoticeIDs []string `json:"noticeIds"`
+}
+
+// @Summary      批量清空通知/消息/待办
+// @Description  批量清空通知/消息/待办 接口
+// @Tags         workorder-instance
+// @Accept       json
+// @Produce      json
+// @Router       /workorder/clearNotifyTab [post]
+// @Security     Bearer
+func clearWorkOrderNotifyTab(c *gin.Context) {
+	userName := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)
+	var req clearNotifyTabReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.FailWithMessage("参数解析失败", c)
+		return
+	}
+
+	err := models.BatchMarkNotifyStatus(userName, req.NoticeIDs, models.NOTIFY_STATUS_CLEARED)
+	if err != nil {
+		common.FailWithMessage(err.Error(), c)
+		return
+	}
+	common.OkWithMessage("已清空", c)
+}

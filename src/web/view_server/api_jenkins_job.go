@@ -32,8 +32,19 @@ var (
 func getJenkinsJobHelper(ctx context.Context, client *gojenkins.Jenkins, jobName string, folder ...string) (*gojenkins.Job, error) {
 	jobName = strings.Trim(strings.TrimSpace(jobName), "/")
 	parent := ""
-	if len(folder) > 0 && strings.TrimSpace(folder[0]) != "" {
-		parent = strings.Trim(strings.TrimSpace(folder[0]), "/")
+	for _, f := range folder {
+		if strings.TrimSpace(f) != "" {
+			parent = strings.Trim(strings.TrimSpace(f), "/")
+			break
+		}
+	}
+
+	// 如果 parent 为空且 jobName 不含斜杠，尝试查库补充获取其 ProjectName / Folder
+	if parent == "" && !strings.Contains(jobName, "/") {
+		var dbJob models.JenkinsJob
+		if err := models.Db.Where("name = ?", jobName).First(&dbJob).Error; err == nil && dbJob.ProjectName != "" {
+			parent = dbJob.ProjectName
+		}
 	}
 
 	fullPath := jobName
@@ -41,13 +52,32 @@ func getJenkinsJobHelper(ctx context.Context, client *gojenkins.Jenkins, jobName
 		fullPath = parent + "/" + jobName
 	}
 
+	var job *gojenkins.Job
+	var err error
 	if !strings.Contains(fullPath, "/") {
-		return client.GetJob(ctx, fullPath)
+		job, err = client.GetJob(ctx, fullPath)
+	} else {
+		parts := strings.Split(fullPath, "/")
+		realName := parts[len(parts)-1]
+		parentIDs := parts[:len(parts)-1]
+		job, err = client.GetJob(ctx, realName, parentIDs...)
 	}
-	parts := strings.Split(fullPath, "/")
-	realName := parts[len(parts)-1]
-	parentIDs := parts[:len(parts)-1]
-	return client.GetJob(ctx, realName, parentIDs...)
+
+	if (err != nil || job == nil) && !strings.Contains(jobName, "/") {
+		topJobs, tErr := client.GetAllJobs(ctx)
+		if tErr == nil {
+			allJobs := getAllJobsRecursive(ctx, topJobs, "")
+			for _, j := range allJobs {
+				parts := strings.Split(j.Raw.Name, "/")
+				shortName := parts[len(parts)-1]
+				if shortName == jobName || j.Raw.Name == jobName {
+					return j, nil
+				}
+			}
+		}
+	}
+
+	return job, err
 }
 
 // deleteJenkinsJobHelper 自动理顺含文件夹路径的 Job，完美向Jenkins云间同步发起移除，不再踩坑 404 HTML 返回
@@ -196,14 +226,14 @@ func SyncJenkinsJobsToDB(ctx context.Context, instanceId uint, client *gojenkins
 				count = lb.GetBuildNumber()
 			}
 		}
-		folder, _, fullJobName := parseFolderAndJobName("", j.Raw.Name)
+		folder, shortJobName, fullJobName := parseFolderAndJobName("", j.Raw.Name)
 
 		var existing models.JenkinsJob
-		_ = models.Db.Where("instance_id = ? AND name = ?", instanceId, fullJobName).First(&existing).Error
+		_ = models.Db.Where("instance_id = ? AND (name = ? OR name = ?)", instanceId, shortJobName, fullJobName).First(&existing).Error
 
 		jobObj := &models.JenkinsJob{
 			InstanceID:     instanceId,
-			Name:           fullJobName,
+			Name:           shortJobName,
 			ProjectName:    folder, // Group名称 / 项目名称与文件夹呼应
 			Count:          count,
 			Status:         mapJenkinsColorToStatus(j.Raw.Color),
@@ -383,7 +413,48 @@ func createJenkinsJob(c *gin.Context) {
 <flow-definition plugin="workflow-job">
   <description>Created via BigDevOps Baseline Architecture</description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.StringParameterDefinition>
+          <name>BUILD_USER</name>
+          <description>BigDevOps 触发人账号</description>
+          <defaultValue>系统/未知</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>OPERATOR</name>
+          <description>操作人账号</description>
+          <defaultValue>系统/未知</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>branch</name>
+          <description>Git 分支</description>
+          <defaultValue>main</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>deployEnv</name>
+          <description>部署环境</description>
+          <defaultValue>dev</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>deployType</name>
+          <description>部署目标类型</description>
+          <defaultValue>host</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>gitRepo</name>
+          <description>Git 仓库地址</description>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
   <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
     <script>%s</script>
     <sandbox>true</sandbox>
@@ -434,7 +505,7 @@ func createJenkinsJob(c *gin.Context) {
 		InstanceID:     req.InstanceID,
 		DeployType:     req.DeployType,
 		DeployEnv:      req.DeployEnv,
-		Name:           fullJobName,
+		Name:           realJobName,
 		ProjectName:    folder, // 与 GitLab 分组群相呼应
 		GitRepo:        req.GitRepo,
 		GitBranch:      branch,
@@ -499,7 +570,48 @@ func updateJenkinsJob(c *gin.Context) {
 <flow-definition plugin="workflow-job">
   <description>Updated via BigDevOps Baseline Architecture</description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.StringParameterDefinition>
+          <name>BUILD_USER</name>
+          <description>BigDevOps 触发人账号</description>
+          <defaultValue>系统/未知</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>OPERATOR</name>
+          <description>操作人账号</description>
+          <defaultValue>系统/未知</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>branch</name>
+          <description>Git 分支</description>
+          <defaultValue>main</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>deployEnv</name>
+          <description>部署环境</description>
+          <defaultValue>dev</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>deployType</name>
+          <description>部署目标类型</description>
+          <defaultValue>host</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>gitRepo</name>
+          <description>Git 仓库地址</description>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
   <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
     <script>%s</script>
     <sandbox>true</sandbox>
@@ -532,7 +644,7 @@ func updateJenkinsJob(c *gin.Context) {
 	}
 
 	var dbJob models.JenkinsJob
-	err := models.Db.Where("instance_id = ? AND name = ?", req.InstanceID, fullJobName).First(&dbJob).Error
+	err := models.Db.Where("instance_id = ? AND (name = ? OR name = ?)", req.InstanceID, realJobName, fullJobName).First(&dbJob).Error
 	if err != nil && req.ID > 0 {
 		_ = models.Db.Where("id = ?", req.ID).First(&dbJob).Error
 	}
@@ -540,7 +652,7 @@ func updateJenkinsJob(c *gin.Context) {
 	dbJob.InstanceID = req.InstanceID
 	dbJob.DeployType = req.DeployType
 	dbJob.DeployEnv = req.DeployEnv
-	dbJob.Name = fullJobName
+	dbJob.Name = realJobName
 	dbJob.ProjectName = folder
 	dbJob.GitRepo = req.GitRepo
 	if req.GitBranch != "" {
@@ -696,14 +808,24 @@ func deleteJenkinsJob(c *gin.Context) {
 }
 
 type triggerBuildReq struct {
-	InstanceID  uint   `json:"instanceId"`
-	JobName     string `json:"jobName"`
-	Branch      string `json:"branch"`
-	DeployType  string `json:"deployType"` // 允许触发时动态改变或更新发布选点与策略
-	GitRepo     string `json:"gitRepo"`
-	DeployEnv   string `json:"deployEnv"`
-	Folder      string `json:"folder"`
-	ProjectName string `json:"projectName"`
+	InstanceID     uint                   `json:"instanceId"`
+	JobName        string                 `json:"jobName"`
+	Branch         string                 `json:"branch"`
+	DeployType     string                 `json:"deployType"` // 允许触发时动态改变或更新发布选点与策略
+	GitRepo        string                 `json:"gitRepo"`
+	DeployEnv      string                 `json:"deployEnv"`
+	Folder         string                 `json:"folder"`
+	ProjectName    string                 `json:"projectName"`
+	CreateUserName string                 `json:"createUserName"`
+	ScanCode       bool                   `json:"scanCode"`
+	BuildNode      string                 `json:"buildNode"`
+	JdkVersion     string                 `json:"jdkVersion"`
+	BuildCommand   string                 `json:"buildCommand"`
+	Module         string                 `json:"module"`
+	ConfigFile     string                 `json:"configFile"`
+	Port           string                 `json:"port"`
+	TargetHost     string                 `json:"targetHost"`
+	CustomParams   map[string]interface{} `json:"customParams"`
 }
 
 // triggerJenkinsBuild 触发构建部署 (构建时可带入并承载分级环境变更命令与快调)
@@ -732,9 +854,42 @@ func triggerJenkinsBuild(c *gin.Context) {
 		return
 	}
 
-	params := map[string]string{"delay": "0sec"}
+	params := make(map[string]string)
 	updates := map[string]interface{}{
 		"status": "BUILDING",
+	}
+
+	operator := req.CreateUserName
+	if operator == "" {
+		if userNameVal, ok := c.Get(common.GIN_CTX_JWT_USER_NAME); ok {
+			operator = fmt.Sprintf("%v", userNameVal)
+		}
+	}
+	if operator == "" {
+		authHeaderString := c.Request.Header.Get("Authorization")
+		if authHeaderString != "" {
+			parts := strings.SplitN(authHeaderString, " ", 2)
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+				if claims, err := models.ParseToken(parts[1], sc); err == nil && claims != nil {
+					if claims.SystemUser != nil {
+						if claims.SystemUser.Username != "" {
+							operator = claims.SystemUser.Username
+						} else if claims.SystemUser.RealName != "" {
+							operator = claims.SystemUser.RealName
+						}
+					}
+				}
+			}
+		}
+	}
+	if operator != "" {
+		params["BUILD_USER"] = operator
+		params["buildUser"] = operator
+		params["BUILD_USER_ID"] = operator
+		params["OPERATOR"] = operator
+		params["operator"] = operator
+		updates["create_user_name"] = operator
 	}
 
 	if req.Branch != "" {
@@ -756,6 +911,53 @@ func triggerJenkinsBuild(c *gin.Context) {
 		params["deployEnv"] = req.DeployEnv
 		params["DEPLOY_ENV"] = req.DeployEnv
 		updates["deploy_env"] = req.DeployEnv
+	}
+
+	// 生产环境适配参数全量映射
+	if req.ScanCode {
+		params["scanCode"] = "true"
+		params["SCAN_CODE"] = "true"
+	} else {
+		params["scanCode"] = "false"
+		params["SCAN_CODE"] = "false"
+	}
+	if req.BuildNode != "" {
+		params["node"] = req.BuildNode
+		params["NODE"] = req.BuildNode
+		params["buildNode"] = req.BuildNode
+	}
+	if req.JdkVersion != "" {
+		params["jdkVersion"] = req.JdkVersion
+		params["JDK_VERSION"] = req.JdkVersion
+	}
+	if req.BuildCommand != "" {
+		params["buildCommand"] = req.BuildCommand
+		params["BUILD_COMMAND"] = req.BuildCommand
+	}
+	if req.Module != "" {
+		params["module"] = req.Module
+		params["MODULE"] = req.Module
+	}
+	if req.ConfigFile != "" {
+		params["configFile"] = req.ConfigFile
+		params["CONFIG_FILE"] = req.ConfigFile
+	}
+	if req.Port != "" {
+		params["port"] = req.Port
+		params["PORT"] = req.Port
+	}
+	if req.TargetHost != "" {
+		params["targetHost"] = req.TargetHost
+		params["TARGET_HOST"] = req.TargetHost
+	}
+
+	// 自由新增参数 CustomParams 无缝注入
+	for k, v := range req.CustomParams {
+		if strings.TrimSpace(k) != "" && v != nil {
+			strVal := fmt.Sprintf("%v", v)
+			params[k] = strVal
+			params[strings.ToUpper(k)] = strVal
+		}
 	}
 
 	queueID, err := job.InvokeSimple(ctx, params)

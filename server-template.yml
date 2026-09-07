@@ -54,6 +54,7 @@ work_order_auto_action:
   batch_num: 5
   auto_template_name_buy_ecs: "虚拟机购买"
   auto_template_name_rm_ecs: "虚拟机下线"
+  auto_template_name_pipeline: "流水线开通申请"
   enable: false
 
 job_exec:

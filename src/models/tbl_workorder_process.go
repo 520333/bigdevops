@@ -127,14 +127,13 @@ func GetProcessListByNameAndCreator(name, creator string, limit, offset int) (ob
 
 	// 1. 按名称模糊查询
 	if name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
+		query = query.Where("work_order_processes.name LIKE ?", "%"+name+"%")
 	}
 
-	// 2. 按创建人模糊查询 (关联 User 表)
+	// 2. 按创建人模糊查询 (关联 system_users 表)
 	if creator != "" {
-		// 使用 LEFT JOIN 关联 users 表进行模糊搜索
-		query = query.Joins("left join users on users.id = work_order_processes.user_id").
-			Where("users.username LIKE ? OR users.real_name LIKE ?", "%"+creator+"%", "%"+creator+"%")
+		query = query.Joins("left join system_users on system_users.id = work_order_processes.user_id").
+			Where("system_users.username LIKE ? OR system_users.real_name LIKE ?", "%"+creator+"%", "%"+creator+"%")
 	}
 
 	err = query.Limit(limit).Offset(offset).Find(&obj).Error
@@ -144,13 +143,14 @@ func GetProcessListByNameAndCreator(name, creator string, limit, offset int) (ob
 // GetProcessCountByNameAndCreator 对应统计总数
 func GetProcessCountByNameAndCreator(name, creator string) (int64, error) {
 	var count int64
-	query := Db.Model(&WorkOrderProcess{}).Joins("left join users on users.id = work_order_processes.user_id")
+	query := Db.Model(&WorkOrderProcess{})
 
 	if name != "" {
 		query = query.Where("work_order_processes.name LIKE ?", "%"+name+"%")
 	}
 	if creator != "" {
-		query = query.Where("users.username LIKE ? OR users.real_name LIKE ?", "%"+creator+"%", "%"+creator+"%")
+		query = query.Joins("left join system_users on system_users.id = work_order_processes.user_id").
+			Where("system_users.username LIKE ? OR system_users.real_name LIKE ?", "%"+creator+"%", "%"+creator+"%")
 	}
 
 	err := query.Count(&count).Error

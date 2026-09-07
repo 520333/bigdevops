@@ -28,12 +28,16 @@ type JenkinsJob struct {
 }
 
 func (obj *JenkinsJob) AfterFind(tx *gorm.DB) (err error) {
-	// Folder 不落库：优先通过 ProjectName (即 git group 名 / Jenkins目录名) 解析赋给 Folder
+	// 如果 Name 包含文件夹路径 (如 web/test1)，自动剥离出项目名与纯服务名
+	if strings.Contains(obj.Name, "/") {
+		parts := strings.Split(obj.Name, "/")
+		if obj.ProjectName == "" {
+			obj.ProjectName = strings.Join(parts[:len(parts)-1], "/")
+		}
+		obj.Name = parts[len(parts)-1]
+	}
 	if obj.ProjectName != "" {
 		obj.Folder = obj.ProjectName
-	} else if strings.Contains(obj.Name, "/") {
-		parts := strings.Split(obj.Name, "/")
-		obj.Folder = strings.Join(parts[:len(parts)-1], "/")
 	}
 	return nil
 }

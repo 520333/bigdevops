@@ -25,7 +25,7 @@ func mockCodeGitData(sc *config.ServerConfig, adminUser *SystemUser) {
 		Platform:   "gitlab",
 		Endpoint:   "http://192.168.1.160", // 替换为安全的占位 IP
 		UserID:     1,
-		Token:      "glpat-CarVjttGuUGq1snbk5-5", // 替换为安全的占位 Token
+		Token:      "glpat-rrsKMShuqvAsnkRaFj9J", // 替换为安全的占位 Token
 		SkipVerify: true,
 	}
 	_ = s2.CreateOne()

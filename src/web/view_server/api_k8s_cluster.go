@@ -276,8 +276,14 @@ func getClusterForSelect(c *gin.Context) {
 	var res []common.CommonSelectOneItem
 	for _, obj := range objs {
 		obj := obj
+		label := obj.NameZh
+		if label == "" {
+			label = obj.Name
+		} else if obj.Name != "" {
+			label = fmt.Sprintf("%s (%s)", obj.NameZh, obj.Name)
+		}
 		res = append(res, common.CommonSelectOneItem{
-			Label: obj.NameZh,
+			Label: label,
 			Value: obj.Name,
 		})
 	}

@@ -146,7 +146,9 @@ func ConfigRouter(r *gin.Engine) {
 		workOrDerApiGroup.POST("/actionWorkOrderInstance/:id", actionWorkOrderInstance)
 		workOrDerApiGroup.GET("/getWorkOrderInstanceDetail/:id", getWorkOrderInstanceDetail)
 		workOrDerApiGroup.POST("/commentWorkOrderInstance/:id", commentWorkOrderInstance)
-
+		workOrDerApiGroup.GET("/getNotificationList", getWorkOrderNotificationList)
+		workOrDerApiGroup.POST("/markNotifyRead", markWorkOrderNotifyRead)
+		workOrDerApiGroup.POST("/clearNotifyTab", clearWorkOrderNotifyTab)
 	}
 
 	jobExecApiGroup := afterLoginApiGroup.Group("/jobexec")
