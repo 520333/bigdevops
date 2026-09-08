@@ -727,13 +727,16 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 	// 2. 筛选普通用户（user）所需的 API 接口
 	var userApis []*SystemApi
 	userApiPathMap := map[string]bool{
-		"/api/getUserInfo":           true,
-		"/api/getPermCode":           true,
-		"/api/system/getMenuList":    true,
-		"/api/system/setting/get":    true,
-		"/api/system/changePassword": true,
-		"/api/system/updateUserInfo": true,
-		"/api/system/uploadAvatar":   true,
+		"/api/getUserInfo":                   true,
+		"/api/getPermCode":                   true,
+		"/api/system/getMenuList":            true,
+		"/api/system/setting/get":            true,
+		"/api/system/changePassword":         true,
+		"/api/system/updateUserInfo":         true,
+		"/api/system/uploadAvatar":           true,
+		"/api/workorder/getNotificationList": true, // 获取通知待办
+		"/api/workorder/markNotifyRead":      true, // 标记已读
+		"/api/workorder/clearNotifyTab":      true, // 清空通知列表
 	}
 	for _, api := range apis {
 		if userApiPathMap[api.Path] {
