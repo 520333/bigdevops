@@ -283,14 +283,16 @@ func (mc *MonitorCache) GeneratePrometheusMainConfigYamlOnePool(pool *models.Mon
 	if len(externalLabels) > 0 && len(externalLabels)%2 == 0 {
 		gc.ExternalLabels = labels.FromStrings(externalLabels...)
 	}
-	// 拼接remote_write
-	remoteWriteC := &ppc.RemoteWriteConfig{
-		URL:           mustParseURL(pool.RemoteWriteUrl),
-		RemoteTimeout: GenPromModeDuration(pool.ScrapeTimeout),
-	}
 	all := ppc.Config{}
 	all.GlobalConfig = gc
-	all.RemoteWriteConfigs = []*ppc.RemoteWriteConfig{remoteWriteC}
+
+	// 拼接remote_write：只有填了才生成，没填时不会出现 remote_write 段
+	if strings.TrimSpace(pool.RemoteWriteUrl) != "" {
+		all.RemoteWriteConfigs = []*ppc.RemoteWriteConfig{{
+			URL:           mustParseURL(pool.RemoteWriteUrl),
+			RemoteTimeout: GenPromModeDuration(pool.ScrapeTimeout),
+		}}
+	}
 
 	// 拼接rule_files
 	all.RuleFiles = []string{pool.RuleFilePath}
@@ -298,11 +300,13 @@ func (mc *MonitorCache) GeneratePrometheusMainConfigYamlOnePool(pool *models.Mon
 	// 判断 如果是支持alert池子 需要添加alert段
 	switch pool.SupperAlert {
 	case common.GORM_ENABLE_RES_YES:
-		remoteReadC := &ppc.RemoteReadConfig{
-			URL:           mustParseURL(pool.RemoteReadUrl),
-			RemoteTimeout: GenPromModeDuration(pool.RemoteTimeoutSeconds),
+		// 拼接remote_read：只有填了才生成，没填时不会出现 remote_read 段
+		if strings.TrimSpace(pool.RemoteReadUrl) != "" {
+			all.RemoteReadConfigs = []*ppc.RemoteReadConfig{{
+				URL:           mustParseURL(pool.RemoteReadUrl),
+				RemoteTimeout: GenPromModeDuration(pool.RemoteTimeoutSeconds),
+			}}
 		}
-		all.RemoteReadConfigs = []*ppc.RemoteReadConfig{remoteReadC}
 
 		// 拼接alert告警段
 		alt := &ppc.AlertmanagerConfig{}
@@ -323,7 +327,6 @@ func (mc *MonitorCache) GeneratePrometheusMainConfigYamlOnePool(pool *models.Mon
 			},
 		}
 		//all.RuleFiles = append(all.RuleFiles, pool.RuleFilePath)
-
 	}
 	switch pool.SupperRecord {
 	case common.GORM_ENABLE_RES_YES:
