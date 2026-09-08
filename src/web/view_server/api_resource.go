@@ -281,36 +281,45 @@ func fetchResourceByNode(c *gin.Context) {
 		}
 		resp.Items = objs
 	case common.RESOURCE_TYPE_DNS:
-		var ecsInstanceIds []string
-		var elbInstanceIds []string
-
-		// 1. 遍历当前节点及所有子节点，提取所有的 ECS InstanceId 和 ELB LoadBalancerId
+		// 1. 优先提取当前节点及所有子节点中显式绑定的 DNS ID
+		var boundDnsIds []uint
 		for _, node := range allNodes {
-			for _, ecs := range node.BindEcss {
-				if ecs.InstanceId != "" {
-					ecsInstanceIds = append(ecsInstanceIds, ecs.InstanceId)
-				}
-			}
-			for _, elb := range node.BindElbs {
-				if elb.LoadBalancerId != "" {
-					elbInstanceIds = append(elbInstanceIds, elb.LoadBalancerId)
+			for _, dns := range node.BindDnss {
+				if dns.ID > 0 {
+					boundDnsIds = append(boundDnsIds, dns.ID)
 				}
 			}
 		}
 
-		// 2. 如果节点下没有任何机器和 ELB，直接返回空
-		if len(ecsInstanceIds) == 0 && len(elbInstanceIds) == 0 {
-			resp.Total = 0
-			resp.Items = []interface{}{}
-			common.OkWithDetailed(resp, "ok", c)
-			return
-		}
-
-		// 3. 构建 GORM 查询
 		query := models.Db.Model(&models.ResourceDns{})
 
-		// 查找绑定的记录：ECS 或 ELB 任意匹配一个即可
-		query = query.Where("ecs_instance_id IN ? OR associated_instance_id IN ?", ecsInstanceIds, elbInstanceIds)
+		if len(boundDnsIds) > 0 {
+			// 如果有显式绑定，严格按已绑定的 ID 列表查询（解决共享 ALB 混杂问题）
+			query = query.Where("id IN ?", boundDnsIds)
+		} else {
+			// 未显式绑定时，平滑兜底：通过关联的 ECS/ELB 反查
+			var ecsInstanceIds []string
+			var elbInstanceIds []string
+			for _, node := range allNodes {
+				for _, ecs := range node.BindEcss {
+					if ecs.InstanceId != "" {
+						ecsInstanceIds = append(ecsInstanceIds, ecs.InstanceId)
+					}
+				}
+				for _, elb := range node.BindElbs {
+					if elb.LoadBalancerId != "" {
+						elbInstanceIds = append(elbInstanceIds, elb.LoadBalancerId)
+					}
+				}
+			}
+			if len(ecsInstanceIds) == 0 && len(elbInstanceIds) == 0 {
+				resp.Total = 0
+				resp.Items = []interface{}{}
+				common.OkWithDetailed(resp, "ok", c)
+				return
+			}
+			query = query.Where("ecs_instance_id IN ? OR associated_instance_id IN ?", ecsInstanceIds, elbInstanceIds)
+		}
 
 		// 4. 处理前端表单过滤
 		if searchVendor != "" {

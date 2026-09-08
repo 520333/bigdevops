@@ -51,7 +51,7 @@ func (obj *MonitorPromScrapePool) CreateOne() error {
 }
 
 func (obj *MonitorPromScrapePool) UpdateOne() error {
-	return Db.Where("id = ? ", obj.ID).Updates(obj).Error
+	return Db.Model(obj).Select("*").Omit("id", "created_at").Updates(obj).Error
 }
 
 func GetMonitorPromScrapePoolById(id int) (*MonitorPromScrapePool, error) {

@@ -582,3 +582,160 @@ func getLeafStreeNodeBindIps(c *gin.Context) {
 	}
 	c.JSON(200, fRes)
 }
+
+// getDnsBlackboxTargets 面向 Prometheus Blackbox 的服务树节点域名服务发现接口
+// 核心原则：严格基于服务树节点绑定的 ECS / ELB 资源反查并输出对应的 DNS 域名
+func getDnsBlackboxTargets(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+	leafNodeIds := c.DefaultQuery("leafNodeIds", "")
+	if leafNodeIds == "" {
+		sc.Logger.Warn("Blackbox 域名服务发现未传参 leafNodeIds")
+		c.JSON(200, []*targetgroup.Group{})
+		return
+	}
+	scheme := c.DefaultQuery("scheme", "https")
+	module := c.DefaultQuery("module", "http_2xx")
+	port := c.DefaultQuery("port", "")
+	// 1. 解析叶子节点 ID
+	leafNodeIdsArr := strings.Split(leafNodeIds, ",")
+	var leafNodeIdsInt []int
+	for _, idStr := range leafNodeIdsArr {
+		if id, err := strconv.Atoi(strings.TrimSpace(idStr)); err == nil && id > 0 {
+			leafNodeIdsInt = append(leafNodeIdsInt, id)
+		}
+	}
+	if len(leafNodeIdsInt) == 0 {
+		c.JSON(200, []*targetgroup.Group{})
+		return
+	}
+	// 2. 查询指定的叶子节点及其绑定的资源 (Preload 机器、负载均衡及显式绑定的 DNS)
+	var leafNodes []*models.StreeNode
+	err := models.Db.Where("id IN ?", leafNodeIdsInt).
+		Preload("BindEcss").
+		Preload("BindElbs").
+		Preload("BindDnss").
+		Find(&leafNodes).Error
+	if err != nil {
+		sc.Logger.Error("getDnsBlackboxTargets 获取服务树节点失败", zap.Error(err), zap.String("leafNodeIds", leafNodeIds))
+		c.JSON(200, []*targetgroup.Group{})
+		return
+	}
+
+	// 3. 优先收集各节点显式绑定的 DNS 记录
+	type DnsWithNode struct {
+		Dns       models.ResourceDns
+		NodeTitle string
+	}
+	var dnsItems []DnsWithNode
+	hasDirectBinding := false
+
+	for _, node := range leafNodes {
+		if len(node.BindDnss) > 0 {
+			hasDirectBinding = true
+			for _, d := range node.BindDnss {
+				if d.Type == "A" || d.Type == "CNAME" {
+					dnsItems = append(dnsItems, DnsWithNode{
+						Dns:       *d,
+						NodeTitle: node.Title,
+					})
+				}
+			}
+		}
+	}
+
+	// 4. 若节点没有显式绑定任何域名，平滑兜底：基于绑定的 ECS / ELB 资产反查
+	if !hasDirectBinding {
+		var ecsInstanceIds []string
+		var elbInstanceIds []string
+		nodeIdToTitleMap := make(map[string]string)
+		for _, node := range leafNodes {
+			nodeTitle := node.Title
+			for _, ecs := range node.BindEcss {
+				if ecs.InstanceId != "" {
+					ecsInstanceIds = append(ecsInstanceIds, ecs.InstanceId)
+					nodeIdToTitleMap[ecs.InstanceId] = nodeTitle
+				}
+			}
+			for _, elb := range node.BindElbs {
+				if elb.LoadBalancerId != "" {
+					elbInstanceIds = append(elbInstanceIds, elb.LoadBalancerId)
+					nodeIdToTitleMap[elb.LoadBalancerId] = nodeTitle
+				}
+			}
+		}
+		if len(ecsInstanceIds) == 0 && len(elbInstanceIds) == 0 {
+			c.JSON(200, []*targetgroup.Group{})
+			return
+		}
+		var fallbackDnsList []models.ResourceDns
+		err = models.Db.Model(&models.ResourceDns{}).
+			Where("type IN ?", []string{"A", "CNAME"}).
+			Where("ecs_instance_id IN ? OR associated_instance_id IN ?", ecsInstanceIds, elbInstanceIds).
+			Find(&fallbackDnsList).Error
+		if err != nil {
+			sc.Logger.Error("getDnsBlackboxTargets 查询节点关联 DNS 出错", zap.Error(err))
+			c.JSON(200, []*targetgroup.Group{})
+			return
+		}
+		for _, d := range fallbackDnsList {
+			streeTitle := ""
+			if t, ok := nodeIdToTitleMap[d.EcsInstanceId]; ok {
+				streeTitle = t
+			} else if t, ok := nodeIdToTitleMap[d.AssociatedInstanceId]; ok {
+				streeTitle = t
+			}
+			dnsItems = append(dnsItems, DnsWithNode{
+				Dns:       d,
+				NodeTitle: streeTitle,
+			})
+		}
+	}
+
+	// 5. 拼装完整域名并去重（避免多 A 记录导致 Prometheus 重复拨测）
+	seenTargets := make(map[string]bool)
+	groups := make([]*targetgroup.Group, 0)
+	for _, item := range dnsItems {
+		dns := item.Dns
+		// 跳过泛域名 *.domain.com
+		if strings.HasPrefix(dns.Name, "*") {
+			continue
+		}
+		// 规范拼装域名
+		var fullDomain string
+		if dns.Name == "@" || dns.Name == "" {
+			fullDomain = dns.Domain
+		} else {
+			fullDomain = fmt.Sprintf("%s.%s", dns.Name, dns.Domain)
+		}
+		// 拼装目标协议 URL
+		var targetURL string
+		if port != "" {
+			targetURL = fmt.Sprintf("%s:%s", fullDomain, port)
+		} else if scheme == "none" || scheme == "" {
+			targetURL = fullDomain
+		} else {
+			targetURL = fmt.Sprintf("%s://%s", scheme, fullDomain)
+		}
+		if seenTargets[targetURL] {
+			continue
+		}
+		seenTargets[targetURL] = true
+
+		labels := model.LabelSet{
+			model.LabelName("domain"):         model.LabelValue(dns.Domain),
+			model.LabelName("name"):           model.LabelValue(dns.Name),
+			model.LabelName("record_type"):    model.LabelValue(dns.Type),
+			model.LabelName("vendor"):         model.LabelValue(dns.Vendor),
+			model.LabelName("stree_node"):     model.LabelValue(item.NodeTitle),
+			model.LabelName("__param_module"): model.LabelValue(module),
+		}
+		group := &targetgroup.Group{
+			Targets: []model.LabelSet{
+				{model.AddressLabel: model.LabelValue(targetURL)},
+			},
+			Labels: labels,
+		}
+		groups = append(groups, group)
+	}
+	c.JSON(200, groups)
+}

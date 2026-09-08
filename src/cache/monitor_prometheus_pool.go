@@ -176,6 +176,16 @@ func (mc *MonitorCache) GeneratePrometheusMainConfigYaml(ctx context.Context) {
 								}
 							}
 						}
+						// 2. 清理 relabel_configs 中未赋值的 regex: null
+						if relabels, ok := scMap["relabel_configs"].([]any); ok {
+							for _, rl := range relabels {
+								if rlMap, ok := rl.(map[string]any); ok {
+									if rlMap["regex"] == nil {
+										delete(rlMap, "regex")
+									}
+								}
+							}
+						}
 						delete(scMap, "enable_compression")
 						delete(scMap, "enable_http2")
 						delete(scMap, "follow_redirects")
@@ -378,6 +388,79 @@ func (mc *MonitorCache) GeneratePrometheusScrapeConfigYamlOnePool(pool *models.M
 				HTTPClientConfig: pcc.DefaultHTTPClientConfig,
 			}
 			oneJob.ServiceDiscoveryConfigs = discovery.Configs{httpSdConfig}
+			scrapeConfigs = append(scrapeConfigs, oneJob)
+
+		case common.MONITOR_SCRAPE_JOB_SD_TYPE_BLACKBOX_DNS:
+			oneJob.JobName = scrapeJob.Name
+			oneJob.ScrapeInterval = GenPromModeDuration(scrapeJob.ScrapeInterval)
+			oneJob.ScrapeTimeout = GenPromModeDuration(scrapeJob.ScrapeTimeout)
+			oneJob.Scheme = "http"
+			oneJob.MetricsPath = "/probe"
+
+			probeModule := scrapeJob.ProbeModule
+			if probeModule == "" {
+				probeModule = "http_2xx"
+			}
+			actualModule := probeModule
+			if actualModule == "icmp" {
+				actualModule = "icmp_ping" // 自动兼容 Blackbox 配置中命名的 icmp_ping
+			}
+
+			scheme := scrapeJob.Scheme
+			if scheme == "" {
+				scheme = "https"
+			}
+			// 若为 tcp_connect 或 icmp，但协议没有设置为 none，强制智能纠正为 none，避免带上 https://
+			if (probeModule == "tcp_connect" || probeModule == "icmp" || probeModule == "icmp_ping") && scheme != "none" {
+				scheme = "none"
+			}
+
+			// 替换为 getDnsBlackboxTargets 发现地址
+			sdBaseUrl := strings.Replace(mc.Sc.MonitorComputeC.HttpSdApi, "getLeafStreeNodeBindIps", "getDnsBlackboxTargets", 1)
+			sdUrl := fmt.Sprintf("%s?leafNodeIds=%v&scheme=%s&module=%s", sdBaseUrl, strings.Join(scrapeJob.TreeNodeIds, ","), scheme, actualModule)
+			if scrapeJob.Port > 0 {
+				sdUrl = fmt.Sprintf("%s&port=%d", sdUrl, scrapeJob.Port)
+			} else if probeModule == "tcp_connect" {
+				sdUrl = fmt.Sprintf("%s&port=443", sdUrl)
+			}
+
+			httpSdConfig := &http.SDConfig{
+				URL:              sdUrl,
+				RefreshInterval:  GenPromModeDuration(scrapeJob.RefreshInterval),
+				HTTPClientConfig: pcc.DefaultHTTPClientConfig,
+			}
+			oneJob.ServiceDiscoveryConfigs = discovery.Configs{httpSdConfig}
+
+			// 自动注入标准 Blackbox Relabel 规则
+			blackboxAddr := scrapeJob.BlackboxAddress
+			if blackboxAddr == "" {
+				blackboxAddr = "192.168.50.200:9115"
+			}
+
+			blackboxRelabels := []*relabel.Config{
+				{
+					SourceLabels: pmodel.LabelNames{pmodel.AddressLabel},
+					TargetLabel:  "__param_target",
+					Action:       relabel.Replace,
+				},
+				{
+					SourceLabels: pmodel.LabelNames{"__param_target"},
+					TargetLabel:  "instance",
+					Action:       relabel.Replace,
+				},
+				{
+					TargetLabel: pmodel.AddressLabel,
+					Replacement: blackboxAddr,
+					Action:      relabel.Replace,
+				},
+			}
+
+			if oneJob.RelabelConfigs != nil {
+				oneJob.RelabelConfigs = append(blackboxRelabels, oneJob.RelabelConfigs...)
+			} else {
+				oneJob.RelabelConfigs = blackboxRelabels
+			}
+
 			scrapeConfigs = append(scrapeConfigs, oneJob)
 
 		case common.MONITOR_SCRAPE_JOB_SD_TYPE_K8S:

@@ -2,6 +2,7 @@ package common
 
 import (
 	"os"
+	"strings"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -11,11 +12,21 @@ import (
 func NewLogger(logLevel string, logFilePath string) *zap.Logger {
 	// 日志级别
 	atomicLevel := zap.NewAtomicLevel()
-	switch logLevel {
+	switch strings.ToLower(strings.TrimSpace(logLevel)) {
 	case "debug":
 		atomicLevel.SetLevel(zap.DebugLevel)
 	case "info":
 		atomicLevel.SetLevel(zap.InfoLevel)
+	case "warn", "warning":
+		atomicLevel.SetLevel(zap.WarnLevel)
+	case "error":
+		atomicLevel.SetLevel(zap.ErrorLevel)
+	case "dpanic":
+		atomicLevel.SetLevel(zap.DPanicLevel)
+	case "panic":
+		atomicLevel.SetLevel(zap.PanicLevel)
+	case "fatal":
+		atomicLevel.SetLevel(zap.FatalLevel)
 	default:
 		atomicLevel.SetLevel(zap.InfoLevel)
 	}

@@ -55,7 +55,18 @@ func (cm *CronManager) RunSyncCloudResourceDns(ctx context.Context) {
 
 	// 2. 提交 GoDaddy 同步任务（按单个域名粒度投递）
 	if cm.Sc.PublicCloudSyncC.GodaddyDns != nil && cm.Sc.PublicCloudSyncC.GodaddyDns.Enable {
-		for _, domain := range cm.Sc.PublicCloudSyncC.GodaddyDns.Domains {
+		domains := cm.Sc.PublicCloudSyncC.GodaddyDns.Domains
+		if len(domains) == 0 {
+			allDomains, err := cm.GetAllGodaddyDomains()
+			if err != nil {
+				cm.Sc.Logger.Error("【GoDaddy】自动获取全量域名列表失败", zap.Error(err))
+			} else {
+				domains = allDomains
+				cm.Sc.Logger.Info("【GoDaddy】未指定域名列表，已自动从账号下拉取所有有效域名", zap.Int("域名数量", len(domains)), zap.Strings("域名列表", domains))
+			}
+		}
+
+		for _, domain := range domains {
 			domain := domain // 避免闭包变量捕获问题
 			wp.Submit(func() {
 				cm.RunSyncOneDomainGodaddy(domain, allDns)
@@ -78,6 +89,39 @@ func (cm *CronManager) RunSyncCloudResourceDns(ctx context.Context) {
 
 	// 4. 增量对比与入库逻辑
 	cm.RunSyncCloudResourceDnsToDb(allDns, dbUidHashM)
+}
+
+// GodaddyDomainItem 对应 GoDaddy 获取域名列表 API 的单个域名结构
+type GodaddyDomainItem struct {
+	Domain string `json:"domain"`
+	Status string `json:"status"`
+}
+
+// GetAllGodaddyDomains 从 GoDaddy API 获取当前账号下的所有有效域名
+func (cm *CronManager) GetAllGodaddyDomains() ([]string, error) {
+	config := cm.Sc.PublicCloudSyncC.GodaddyDns
+	client := resty.New()
+	var items []GodaddyDomainItem
+
+	resp, err := client.R().
+		SetHeader("Authorization", fmt.Sprintf("sso-key %s:%s", config.AccessKeyId, config.AccessKeySecret)).
+		SetResult(&items).
+		Get("https://api.godaddy.com/v1/domains?statuses=ACTIVE&limit=1000")
+
+	if err != nil {
+		return nil, fmt.Errorf("请求 GoDaddy API 失败: %w", err)
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("GoDaddy API 返回异常状态码 %d, 响应: %s", resp.StatusCode(), resp.String())
+	}
+
+	domains := make([]string, 0, len(items))
+	for _, item := range items {
+		if strings.TrimSpace(item.Domain) != "" {
+			domains = append(domains, item.Domain)
+		}
+	}
+	return domains, nil
 }
 
 // RunSyncOneDomainGodaddy 同步单个 GoDaddy 域名记录

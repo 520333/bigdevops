@@ -19,8 +19,9 @@ type ResourceDns struct {
 	Hash   string `json:"hash" gorm:"index"`   // 用于快速判断变更的 Hash
 
 	// 关联信息
-	AssociatedInstanceId string `json:"associated_instance_id" gorm:"index"` // 关联的 ECS/ELB ID
-	EcsInstanceId        string `json:"ecs_instance_id" gorm:"index"`        // 关联的 ECS 实例 ID (修改后) // 关联的 ECS/ELB ID
+	AssociatedInstanceId string       `json:"associated_instance_id" gorm:"index"` // 关联的 ECS/ELB ID
+	EcsInstanceId        string       `json:"ecs_instance_id" gorm:"index"`        // 关联的 ECS 实例 ID (修改后) // 关联的 ECS/ELB ID
+	BindNodes            []*StreeNode `json:"bind_nodes,omitempty" gorm:"many2many:resource_stree_bind_dnss;comment:绑定的服务树节点"`
 }
 
 func (r *ResourceDns) GenHash() string {
@@ -66,4 +67,20 @@ func GetResourceDnsByUid(domain, name, rtype string) (*ResourceDns, error) {
 	var res ResourceDns
 	err := Db.Where("domain = ? AND name = ? AND type = ?", domain, name, rtype).First(&res).Error
 	return &res, err
+}
+
+func (r *ResourceDns) UpdateBindNodes(nodes []*StreeNode) error {
+	return Db.Model(r).Association("BindNodes").Replace(nodes)
+}
+
+func GetResourceDnsById(id string) (*ResourceDns, error) {
+	var res ResourceDns
+	err := Db.Where("id = ?", id).Preload("BindNodes").First(&res).Error
+	return &res, err
+}
+
+func GetResourceDnsAll() ([]*ResourceDns, error) {
+	var list []*ResourceDns
+	err := Db.Preload("BindNodes").Find(&list).Error
+	return list, err
 }

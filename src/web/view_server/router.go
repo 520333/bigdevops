@@ -25,6 +25,7 @@ func ConfigRouter(r *gin.Engine) {
 		noAuth.GET("/downloadPrometheusRecordRuleMainConfigYaml", downloadPrometheusRecordRuleMainConfigYaml)
 		noAuth.GET("/downloadAlertManagerMainConfigYaml", downloadAlertManagerMainConfigYaml) //alertManager主配置文件
 		noAuth.GET("/getLeafStreeNodeBindIps", getLeafStreeNodeBindIps)
+		noAuth.GET("/getDnsBlackboxTargets", getDnsBlackboxTargets)
 		noAuth.GET("/getMonitorOndutyGroupFuturePlan/:id", getMonitorOndutyGroupFuturePlan)
 	}
 
@@ -117,6 +118,11 @@ func ConfigRouter(r *gin.Engine) {
 		sTreeApiGroup.GET("/getResourceRdsUnbindList", getResourceRdsUnbindList)
 		sTreeApiGroup.POST("/bindRdsToStreeNode", bindRdsToStreeNode)
 		sTreeApiGroup.POST("/unBindRdsToStreeNode", unBindRdsToStreeNode)
+
+		// DNS
+		sTreeApiGroup.GET("/getResourceDnsUnbindList", getResourceDnsUnbindList)
+		sTreeApiGroup.POST("/bindDnsToStreeNode", bindDnsToStreeNode)
+		sTreeApiGroup.POST("/unBindDnsToStreeNode", unBindDnsToStreeNode)
 
 	}
 

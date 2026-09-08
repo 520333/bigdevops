@@ -22,6 +22,7 @@ type StreeNode struct {
 	BindEcss                 []*ResourceEcs    `json:"bind_ecss,omitempty" gorm:"many2many:resource_stree_bind_ecss;"`
 	BindElbs                 []*ResourceElb    `json:"bind_elbs,omitempty" gorm:"many2many:resource_stree_bind_elbs;comment:绑定的服务树节点"`
 	BindRds                  []*ResourceRds    `json:"bind_rdss,omitempty" gorm:"many2many:resource_stree_bind_rdss;comment:绑定的服务树节点"`
+	BindDnss                 []*ResourceDns    `json:"bind_dnss,omitempty" gorm:"many2many:resource_stree_bind_dnss;comment:绑定的服务树节点"`
 	EcsNum                   int               `json:"ecsNum" gorm:"-"`
 	NodeNum                  int               `json:"nodeNum" gorm:"-"`     // 子节点数量
 	LeafNodeNum              int               `json:"leafNodeNum" gorm:"-"` // 叶子节点数量
@@ -449,39 +450,58 @@ func (obj *StreeNode) BindDnsData() {
 		allNodes = append(allNodes, childrens...)
 	}
 
-	// 1. 提取所有关联的 ECS 和 ELB 的真实 ID
-	var ecsInstanceIds []string
-	var elbInstanceIds []string
-
+	// 优先检查是否有显式绑定的 DNS 记录
+	var directDnsList []*ResourceDns
 	for _, node := range allNodes {
-		for _, ecs := range node.BindEcss {
-			if ecs.InstanceId != "" {
-				ecsInstanceIds = append(ecsInstanceIds, ecs.InstanceId)
-			}
-		}
-		for _, elb := range node.BindElbs {
-			if elb.LoadBalancerId != "" {
-				elbInstanceIds = append(elbInstanceIds, elb.LoadBalancerId)
-			}
+		if len(node.BindDnss) > 0 {
+			directDnsList = append(directDnsList, node.BindDnss...)
 		}
 	}
 
-	// 2. 如果没有任何底层资源，DNS 必然为 0
-	if len(ecsInstanceIds) == 0 && len(elbInstanceIds) == 0 {
-		obj.DnsNum = 0
-		return
-	}
-
-	// 3. 去数据库里一次性查出关联的 DNS
 	var dnsList []ResourceDns
-	Db.Where("ecs_instance_id IN ? OR associated_instance_id IN ?", ecsInstanceIds, elbInstanceIds).Find(&dnsList)
+	if len(directDnsList) > 0 {
+		// 如果有显式绑定，严格按已绑定的记录统计（去重）
+		seenMap := make(map[uint]bool)
+		for _, d := range directDnsList {
+			if !seenMap[d.ID] {
+				seenMap[d.ID] = true
+				dnsList = append(dnsList, *d)
+			}
+		}
+	} else {
+		// 未手动绑定时，平滑兜底：提取所有关联的 ECS 和 ELB 的真实 ID 反查
+		var ecsInstanceIds []string
+		var elbInstanceIds []string
+
+		for _, node := range allNodes {
+			for _, ecs := range node.BindEcss {
+				if ecs.InstanceId != "" {
+					ecsInstanceIds = append(ecsInstanceIds, ecs.InstanceId)
+				}
+			}
+			for _, elb := range node.BindElbs {
+				if elb.LoadBalancerId != "" {
+					elbInstanceIds = append(elbInstanceIds, elb.LoadBalancerId)
+				}
+			}
+		}
+
+		// 如果没有任何底层资源，DNS 必然为 0
+		if len(ecsInstanceIds) == 0 && len(elbInstanceIds) == 0 {
+			obj.DnsNum = 0
+			return
+		}
+
+		// 去数据库里一次性查出关联的 DNS
+		Db.Where("ecs_instance_id IN ? OR associated_instance_id IN ?", ecsInstanceIds, elbInstanceIds).Find(&dnsList)
+	}
 
 	obj.DnsNum = len(dnsList)
 	if obj.DnsNum == 0 {
 		return
 	}
 
-	// 4. 开始分类统计
+	// 开始分类统计
 	groupByVendor := make(map[string]int)
 	groupByType := make(map[string]int)
 
@@ -490,7 +510,7 @@ func (obj *StreeNode) BindDnsData() {
 		groupByType[dns.Type]++
 	}
 
-	// 5. 格式化为前端 Echarts 需要的数据结构
+	// 格式化为前端 Echarts 需要的数据结构
 	arrGroupByVendor := make([]*EchartsOneItem, 0)
 	for name, value := range groupByVendor {
 		arrGroupByVendor = append(arrGroupByVendor, &EchartsOneItem{
@@ -521,18 +541,18 @@ func GetStreeNodeAll() (sn []*StreeNode, err error) {
 }
 
 func GetStreeNodeByLevel(level int) (sn []*StreeNode, err error) {
-	err = Db.Where("level = ?", level).Preload("OpsAdmins").Preload("BindEcss").Preload("BindElbs").Preload("BindRds").Find(&sn).Error
+	err = Db.Where("level = ?", level).Preload("OpsAdmins").Preload("BindEcss").Preload("BindElbs").Preload("BindRds").Preload("BindDnss").Find(&sn).Error
 	return
 }
 
 func GetStreeNodeAllLeaf() (sn []*StreeNode, err error) {
-	err = Db.Where("is_leaf = 1").Preload("OpsAdmins").Preload("BindEcss").Preload("BindElbs").Preload("BindRds").Find(&sn).Error
+	err = Db.Where("is_leaf = 1").Preload("OpsAdmins").Preload("BindEcss").Preload("BindElbs").Preload("BindRds").Preload("BindDnss").Find(&sn).Error
 	return
 }
 
 func GetStreeNodeById(id int) (*StreeNode, error) {
 	var dbStreeNode StreeNode
-	err := Db.Where("id = ? ", id).Preload("OpsAdmins").Preload("BindEcss").Preload("BindElbs").Preload("BindRds").First(&dbStreeNode).Error
+	err := Db.Where("id = ? ", id).Preload("OpsAdmins").Preload("BindEcss").Preload("BindElbs").Preload("BindRds").Preload("BindDnss").First(&dbStreeNode).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, fmt.Errorf("StreeNode不存在")
@@ -543,7 +563,7 @@ func GetStreeNodeById(id int) (*StreeNode, error) {
 }
 
 func GetStreeNodesByPId(pid int) (dbObjs []*StreeNode, err error) {
-	err = Db.Where("pid = ? ", pid).Preload("OpsAdmins").Preload("BindEcss").Preload("BindElbs").Preload("BindRds").Find(&dbObjs).Error
+	err = Db.Where("pid = ? ", pid).Preload("OpsAdmins").Preload("BindEcss").Preload("BindElbs").Preload("BindRds").Preload("BindDnss").Find(&dbObjs).Error
 	return
 }
 
@@ -557,6 +577,6 @@ func (obj *StreeNode) UpdateStreeNode() error {
 }
 
 func GetStreeNodeByIds(ids []int) (sn []*StreeNode, err error) {
-	err = Db.Where("id IN ?", ids).Preload("OpsAdmins").Preload("BindEcss").Find(&sn).Error
+	err = Db.Where("id IN ?", ids).Preload("OpsAdmins").Preload("BindEcss").Preload("BindDnss").Find(&sn).Error
 	return
 }

@@ -223,6 +223,9 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Path: "/api/stree/getResourceRdsUnbindList", Method: "GET", Title: "[cmdb数据库]获取未绑定RDS", Type: "1"},
 				{Path: "/api/stree/bindRdsToStreeNode", Method: "POST", Title: "[cmdb数据库]节点绑定RDS", Type: "1"},
 				{Path: "/api/stree/unBindRdsToStreeNode", Method: "POST", Title: "[cmdb数据库]节点解绑RDS", Type: "1"},
+				{Path: "/api/stree/getResourceDnsUnbindList", Method: "GET", Title: "[cmdb域名]获取未绑定DNS", Type: "1"},
+				{Path: "/api/stree/bindDnsToStreeNode", Method: "POST", Title: "[cmdb域名]节点绑定DNS", Type: "1"},
+				{Path: "/api/stree/unBindDnsToStreeNode", Method: "POST", Title: "[cmdb域名]节点解绑DNS", Type: "1"},
 			},
 		},
 

@@ -32,6 +32,10 @@ type MonitorPromScrapeJob struct {
 	RefreshInterval int         `json:"refreshInterval,omitempty" gorm:"comment:sd发现刷新间隔"`
 	TreeNodeIds     StringArray `json:"treeNodeIds,omitempty" gorm:"comment:如果使用了服务树接口 通过树id获取ip列表"`
 
+	// 服务发现 blackbox
+	BlackboxAddress string `json:"blackboxAddress,omitempty" gorm:"type:varchar(200);comment:blackbox-exporter地址"`
+	ProbeModule     string `json:"probeModule,omitempty" gorm:"type:varchar(100);comment:blackbox探测模块"`
+
 	// 服务发现 k8s
 	APIServer          string `json:"apiServer,omitempty" gorm:"comment: apiServer地址"`
 	KubeConfigFilePath string `json:"kubeConfigFilePath,omitempty" gorm:"comment: kubeconfig文件路径"`
@@ -63,7 +67,7 @@ func (obj *MonitorPromScrapeJob) CreateOne() error {
 }
 
 func (obj *MonitorPromScrapeJob) UpdateOne() error {
-	return Db.Where("id = ?", obj.ID).Updates(obj).Error
+	return Db.Model(obj).Select("*").Omit("id", "created_at").Updates(obj).Error
 }
 
 func (obj *MonitorPromScrapeJob) IdsConvert() {
