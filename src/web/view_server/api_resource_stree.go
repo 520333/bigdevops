@@ -561,14 +561,25 @@ func getLeafStreeNodeBindIps(c *gin.Context) {
 				},
 				Labels: model.LabelSet{},
 			}
-			// 设置虚拟机的标签
+			// 1. 设置服务树节点（项目）标签，与 getDnsBlackboxTargets 风格保持一致
+			oneTarget.Labels[model.LabelName("project")] = model.LabelValue(leafNode.Title)
+
+			// 2. 设置虚拟机的标签，将云厂商默认大写 Name 转换为规范的小写 name
 			for _, tag := range ecs.Tags {
 				tags := strings.SplitN(tag, "=", 2) // 使用 SplitN 防止 tag 值里有 "=" 报错
 				if len(tags) == 2 {
 					tagK := tags[0]
 					tagV := tags[1]
-					oneTarget.Labels[model.LabelName(tagK)] = model.LabelValue(tagV)
+					if tagK == "Name" {
+						oneTarget.Labels[model.LabelName("name")] = model.LabelValue(tagV)
+					} else {
+						oneTarget.Labels[model.LabelName(tagK)] = model.LabelValue(tagV)
+					}
 				}
+			}
+			// 兜底：如果标签中没有设置 name，且 ecs.InstanceName 有值，则补充 name 标签
+			if _, ok := oneTarget.Labels[model.LabelName("name")]; !ok && ecs.InstanceName != "" {
+				oneTarget.Labels[model.LabelName("name")] = model.LabelValue(ecs.InstanceName)
 			}
 
 			// 解决报错1：将 oneTarget 的内存地址存入 map (因为 map value 期望的是指针 *)
@@ -726,7 +737,7 @@ func getDnsBlackboxTargets(c *gin.Context) {
 			model.LabelName("name"):           model.LabelValue(dns.Name),
 			model.LabelName("record_type"):    model.LabelValue(dns.Type),
 			model.LabelName("vendor"):         model.LabelValue(dns.Vendor),
-			model.LabelName("stree_node"):     model.LabelValue(item.NodeTitle),
+			model.LabelName("project"):        model.LabelValue(item.NodeTitle),
 			model.LabelName("__param_module"): model.LabelValue(module),
 		}
 		group := &targetgroup.Group{
