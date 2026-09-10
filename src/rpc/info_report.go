@@ -66,6 +66,7 @@ func (s *InfoReportServer) AgentInfoReport(ctx context.Context, in *pbms.AgentIn
 	dbEcs.OSName = in.GetOsName()
 	dbEcs.Env = in.GetEnv()
 	dbEcs.VmType = 2
+	dbEcs.Vendor = "self"
 	dbEcs.Cpu = int(in.GetCpu())
 	dbEcs.Memory = int(in.GetMem())
 
