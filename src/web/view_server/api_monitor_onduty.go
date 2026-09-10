@@ -206,10 +206,17 @@ func getMonitorOndutyGroupFuturePlan(c *gin.Context) {
 		return
 	}
 	dbObj.FillFrontAllData()
-	if dbObj.Members == nil {
+	dbObj.FillToDayOndutyUser()
+	if dbObj.Members == nil || len(dbObj.Members) == 0 {
 		sc.Logger.Error("根据id找值班组member为空", zap.Any("值班组", id), zap.Error(err))
-		common.FailWithMessage(err.Error(), c)
+		common.FailWithMessage("该值班组没有配置值班人员", c)
 		return
+	}
+
+	onDutyUsers := dbObj.Members
+	shiftDays := int(dbObj.ShiftDays)
+	if shiftDays <= 0 {
+		shiftDays = 1
 	}
 
 	tmpRes := []OnDutyOne{}
@@ -223,58 +230,111 @@ func getMonitorOndutyGroupFuturePlan(c *gin.Context) {
 	for _, history := range historys {
 		history := history
 		user, err := models.GetUserById(int(history.OndutyUserId))
-		if err != nil {
+		if err != nil || user == nil {
 			continue
 		}
 		tmpRes = append(tmpRes, OnDutyOne{
 			Date: history.DateString,
 			User: user,
 		})
-
 	}
 
 	toDayHistory, _ := models.GetMonitorOnDutyHistoryByOnDutyGroupIdAndDay(uint(intVar), todayDate)
-	onDutyUsers := dbObj.Members
 
-	//var yesterdayUserId uint
-	var toDayUserId uint
-	if toDayHistory != nil && toDayHistory.OndutyUserId > 0 {
-		toDayUserId = toDayHistory.OndutyUserId
-	} else if len(onDutyUsers) > 0 {
-		toDayUserId = onDutyUsers[0].ID
+	// 确定今天轮转的原定基准人员（若有临时换班，按原定人计算轮转，防止打乱规律）
+	var toDayBaseUserId uint
+	changeToday, _ := models.GetMonitorOndutyChangeByOnDutyGroupIdAndDay(dbObj.ID, todayDate)
+	if changeToday != nil && changeToday.OriginUserId > 0 {
+		toDayBaseUserId = changeToday.OriginUserId
+	} else if toDayHistory != nil && toDayHistory.OndutyUserId > 0 {
+		if toDayHistory.OriginUserId > 0 {
+			toDayBaseUserId = toDayHistory.OriginUserId
+		} else {
+			toDayBaseUserId = toDayHistory.OndutyUserId
+		}
+	} else if dbObj.ToDayOnDutyUser != nil && dbObj.ToDayOnDutyUser.ID > 0 {
+		toDayBaseUserId = dbObj.ToDayOnDutyUser.ID
+	} else {
+		toDayBaseUserId = onDutyUsers[0].ID
 	}
 
-	if len(onDutyUsers) == 0 {
-		common.FailWithMessage("该值班组没有配置值班人员", c)
-		return
+	// 检查 tmpRes 中是否包含今天的数据，若未包含（比如今天历史尚未生成），补充今天
+	hasToday := false
+	for _, item := range tmpRes {
+		if item.Date == todayDate {
+			hasToday = true
+			break
+		}
 	}
-
-	// 1. 计算需要预测的未来天数
-	toDay, _ := time.Parse("2006-01-02", time.Now().Format("2006-01-02")) //今天的日期
-
-	futureNum := int(endDayTime.Sub(toDay).Hours() / 24)
-	if futureNum < 0 {
-		futureNum = 0 // 🚀 修复负数导致越界崩溃的 Bug
-	}
-
-	// 2. 找到明天的起始轮转索引
-	firstLeftNum := 0
-	if toDayHistory != nil && toDayHistory.OndutyUserId > 0 {
-		for index, user := range onDutyUsers {
-			if user.ID == toDayUserId {
-				firstLeftNum = (index + 1) % len(onDutyUsers) // 🚀 自动轮转到下一个人
-				break
-			}
+	if !hasToday {
+		todayUser := dbObj.ToDayOnDutyUser
+		if todayUser == nil || todayUser.ID == 0 {
+			todayUser, _ = models.GetUserById(int(toDayBaseUserId))
+		}
+		if todayUser != nil && todayUser.ID > 0 {
+			tmpRes = append(tmpRes, OnDutyOne{
+				Date: todayDate,
+				User: todayUser,
+			})
 		}
 	}
 
-	// 3. 用一个极简的 for 循环推演未来，抛弃容易报错的切片截取和倍数余数计算
-	start := toDay.Add(24 * time.Hour) // 因为 history 已经查到了今天，预测从明天开始
-	currentIndex := firstLeftNum
+	// 1. 计算需要预测的未来天数
+	toDay, _ := time.Parse("2006-01-02", todayDate)
+	futureNum := int(endDayTime.Sub(toDay).Hours() / 24)
+	if futureNum < 0 {
+		futureNum = 0
+	}
 
+	// 2. 统计今天原定值班人员截止到今天（含今天）已经连续值班了多少天
+	consecutiveDays := 1
+	yesterdayTime := toDay.Add(-24 * time.Hour)
+	for i := 1; i < shiftDays; i++ {
+		dateStr := yesterdayTime.Format("2006-01-02")
+		h, _ := models.GetMonitorOnDutyHistoryByOnDutyGroupIdAndDay(uint(intVar), dateStr)
+		if h != nil && h.OndutyUserId > 0 {
+			realUser := h.OndutyUserId
+			if h.OriginUserId > 0 {
+				realUser = h.OriginUserId
+			}
+			if realUser == toDayBaseUserId {
+				consecutiveDays++
+				yesterdayTime = yesterdayTime.Add(-24 * time.Hour)
+				continue
+			}
+		}
+		break
+	}
+
+	// 今天这个人还能值几天
+	remainingDaysForCurrent := shiftDays - consecutiveDays
+	if remainingDaysForCurrent < 0 {
+		remainingDaysForCurrent = 0
+	}
+
+	// 找到今天基准值班人在 onDutyUsers 中的下标
+	currentUserIndex := 0
+	for index, user := range onDutyUsers {
+		if user.ID == toDayBaseUserId {
+			currentUserIndex = index
+			break
+		}
+	}
+
+	// 3. 按 shiftDays 周期推演未来
+	start := toDay.Add(24 * time.Hour)
 	for i := 0; i < futureNum; i++ {
 		day := start.Format("2006-01-02")
-		planUser := onDutyUsers[currentIndex]
+
+		var planUser *models.SystemUser
+		if remainingDaysForCurrent > 0 {
+			planUser = onDutyUsers[currentUserIndex]
+			remainingDaysForCurrent--
+		} else {
+			currentUserIndex = (currentUserIndex + 1) % len(onDutyUsers)
+			planUser = onDutyUsers[currentUserIndex]
+			remainingDaysForCurrent = shiftDays - 1
+		}
 
 		tmpRes = append(tmpRes, OnDutyOne{
 			Date: day,
@@ -282,7 +342,6 @@ func getMonitorOndutyGroupFuturePlan(c *gin.Context) {
 		})
 
 		start = start.Add(24 * time.Hour)
-		currentIndex = (currentIndex + 1) % len(onDutyUsers) // 索引步进并自动取模
 	}
 
 	// 4. 统一执行终极过滤（剔除 startDay 之前，以及 endDay 之后的脏数据）
@@ -295,12 +354,14 @@ func getMonitorOndutyGroupFuturePlan(c *gin.Context) {
 
 		// 先获取换班记录
 		dbChange, _ := models.GetMonitorOndutyChangeByOnDutyGroupIdAndDay(dbObj.ID, node.Date)
-		if dbChange.OndutyUserId > 0 {
+		if dbChange != nil && dbChange.OndutyUserId > 0 {
 			user, _ := models.GetUserById(int(dbChange.OndutyUserId))
 			oriUser, _ := models.GetUserById(int(dbChange.OriginUserId))
-			if user.RealName != "" {
+			if user != nil && user.RealName != "" {
 				node.User = user
-				node.OriginUser = oriUser.RealName
+				if oriUser != nil {
+					node.OriginUser = oriUser.RealName
+				}
 				node.Remark = dbChange.Remark
 			}
 		}
@@ -317,10 +378,11 @@ func getMonitorOndutyGroupFuturePlan(c *gin.Context) {
 		}
 
 		ffRes = append(ffRes, node)
-		tmp[node.Date] = node.User.RealName
-		originUserMap[node.Date] = node.OriginUser
-		userNameMap[node.Date] = node.User.Username
-
+		if node.User != nil {
+			tmp[node.Date] = node.User.RealName
+			originUserMap[node.Date] = node.OriginUser
+			userNameMap[node.Date] = node.User.Username
+		}
 	}
 
 	ondutyPlanResponse := OnDutyPlanResponse{}
