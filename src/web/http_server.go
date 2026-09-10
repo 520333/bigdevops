@@ -28,11 +28,14 @@ func ServerStartGin(sc *config.ServerConfig, mc *cache.MonitorCache, kc *cache.K
 	r.Use(gin.Recovery())
 
 	// 注册 Swagger UI 路由（增加 HTTP Basic Auth 账号密码认证）
-	swaggerGroup := r.Group("/swagger", gin.BasicAuth(gin.Accounts{
-		"admin":  "devops666", // 账号 : 密码 (可添加多组)
-		"devops": "devops666",
-	}))
-	swaggerGroup.GET("/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	if sc.EnableSwagger {
+		swaggerGroup := r.Group("/swagger", gin.BasicAuth(gin.Accounts{
+			"admin":  "devops666", // 账号 : 密码 (可添加多组)
+			"devops": "devops666",
+		}))
+		swaggerGroup.GET("/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 	varMap := map[string]interface{}{}
 	//varMap[common.GIN_CTX_CONFIG_LOGGER] = sc.Logger
 	varMap[common.GIN_CTX_CONFIG_CONFIG] = sc

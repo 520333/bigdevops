@@ -31,6 +31,7 @@ type ServerConfig struct {
 	OIDC                            *KeycloakOIDC        `yaml:"oidc"`
 	OSSC                            *OSSConfig           `yaml:"oss"`
 	ArtifactoryC                    *ArtifactoryConfig   `yaml:"artifactory"`
+	EnableSwagger                   bool                 `yaml:"enable_swagger"`
 }
 
 type ArtifactoryConfig struct {
