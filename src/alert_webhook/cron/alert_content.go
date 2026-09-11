@@ -911,9 +911,14 @@ func (ac *AlertCache) GenerateDingTalkMarkdownMsgOneAlert(alert template.Alert, 
 		job, alertName, severity, project,
 	)
 
-	// 如果关联了服务树，紧跟在所属项目之后
+	// 如果关联了服务树，精简展示最后两级（产品线.微服务），例如 binance.binance-web
 	if streeNode, ok := alert.Labels[common.MONITOR_ALERT_BIND_NODE_KEY]; ok && streeNode != "" {
-		messageText += fmt.Sprintf("##### <font color=#A9A9A9>服务树节点:</font><font color=#00CD00>%s</font>\n", streeNode)
+		displayNode := streeNode
+		parts := strings.Split(streeNode, ".")
+		if len(parts) >= 2 {
+			displayNode = strings.Join(parts[len(parts)-2:], ".")
+		}
+		messageText += fmt.Sprintf("##### <font color=#A9A9A9>服务树节点:</font><font color=#00CD00>%s</font>\n", displayNode)
 	}
 
 	// 拼接主题、告警详情
