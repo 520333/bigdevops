@@ -759,14 +759,21 @@ func (ac *AlertCache) GenerateFeiShuCardMsgOneAlert(alert template.Alert, event 
 	msgSilenceOneDayByNameUrl := fmt.Sprintf("%s/%s?fingerprint=%v&hour=24&by_name=1", ac.Sc.BackendDomain, "silence", alert.Fingerprint)    // 屏蔽 1 天
 	msgSilenceSevenDayByNameUrl := fmt.Sprintf("%s/%s?fingerprint=%v&hour=168&by_name=1", ac.Sc.BackendDomain, "silence", alert.Fingerprint) // 屏蔽 7 天
 
-	// 告警标签
-	labelsMap := alert.Labels
+	// 告警标签（深拷贝，防止 delete 污染原始 alert.Labels）
+	labelsMap := make(map[string]string, len(alert.Labels))
+	for k, v := range alert.Labels {
+		labelsMap[k] = v
+	}
 	delete(labelsMap, common.MONITOR_ALERT_NAME_KEY)
 	delete(labelsMap, common.MONITOR_ALERT_SEVERITY_KEY)
 	delete(labelsMap, common.MONITOR_ALERT_BIND_NODE_KEY)
 	delete(labelsMap, common.MONITOR_ALERT_MATCH_KEY)
 	delete(labelsMap, common.MONITOR_ALERT_RULE_KEY)
-	anno := alert.Annotations
+
+	anno := make(map[string]string, len(alert.Annotations))
+	for k, v := range alert.Annotations {
+		anno[k] = v
+	}
 	delete(anno, common.MONITOR_ALERT_RULE_ANNO_VALUE)
 	msgLabels := fmt.Sprintf("**标签信息:**\\n%s", common.GenKvStringByMap(labelsMap))
 	msgAnnotations := fmt.Sprintf("**注解信息:**\\n%s", common.GenKvStringByMap(anno))
@@ -872,9 +879,27 @@ func (ac *AlertCache) GenerateDingTalkMarkdownMsgOneAlert(alert template.Alert, 
 		project = sendGroup.NameZh
 	}
 
+	alertName := alert.Labels["alertname"]
+	if alertName == "" && event != nil {
+		alertName = event.AlertName
+	}
+	if alertName == "" && rule != nil {
+		alertName = rule.Name
+	}
+
+	severity := alert.Labels["severity"]
+	if severity == "" && rule != nil {
+		severity = rule.Severity
+	}
+
+	job := alert.Labels["job"]
+	if job == "" && rule != nil {
+		job = rule.Name
+	}
+
 	summary := alert.Annotations["summary"]
 	if summary == "" {
-		summary = alert.Labels["alertname"]
+		summary = alertName
 	}
 
 	// 格式与生产现有 webhook-dingtalk 完全一致
@@ -887,7 +912,7 @@ func (ac *AlertCache) GenerateDingTalkMarkdownMsgOneAlert(alert template.Alert, 
 			"##### <font color=#A9A9A9>告警详情:</font>\n"+
 			">##### <font color=#FF0000>**%v**</font>\n"+
 			"##### <font color=#A9A9A9>告警时间:</font><font color=#FFD700>**%s**</font>\n",
-		alert.Labels["job"], alert.Labels["alertname"], alert.Labels["severity"],
+		job, alertName, severity,
 		project, summary, description,
 		startLocal,
 	)
