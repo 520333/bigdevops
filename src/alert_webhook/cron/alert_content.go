@@ -907,22 +907,25 @@ func (ac *AlertCache) GenerateDingTalkMarkdownMsgOneAlert(alert template.Alert, 
 		"##### <font color=#A9A9A9>告警指标:</font>%v\n"+
 			"##### <font color=#A9A9A9>告警类型:</font>%v\n"+
 			"##### <font color=#A9A9A9>告警级别:</font>%v\n"+
-			"##### <font color=#A9A9A9>所属项目:</font>%s\n"+
-			"##### <font color=#A9A9A9>主题:</font>%v\n"+
-			"##### <font color=#A9A9A9>告警详情:</font>\n"+
-			">##### <font color=#FF0000>**%v**</font>\n"+
-			"##### <font color=#A9A9A9>告警时间:</font><font color=#FFD700>**%s**</font>\n",
-		job, alertName, severity,
-		project, summary, description,
-		startLocal,
+			"##### <font color=#A9A9A9>所属项目:</font>%s\n",
+		job, alertName, severity, project,
 	)
 
-	// 如果关联了服务树
+	// 如果关联了服务树，紧跟在所属项目之后
 	if streeNode, ok := alert.Labels[common.MONITOR_ALERT_BIND_NODE_KEY]; ok && streeNode != "" {
 		messageText += fmt.Sprintf("##### <font color=#A9A9A9>服务树节点:</font><font color=#00CD00>%s</font>\n", streeNode)
 	}
 
-	// 仅 resolved 告警才显示恢复时间
+	// 拼接主题、告警详情
+	messageText += fmt.Sprintf(
+		"##### <font color=#A9A9A9>主题:</font>%v\n"+
+			"##### <font color=#A9A9A9>告警详情:</font>\n"+
+			">##### <font color=#FF0000>**%v**</font>\n"+
+			"##### <font color=#A9A9A9>告警时间:</font><font color=#FFD700>**%s**</font>\n",
+		summary, description, startLocal,
+	)
+
+	// 仅 resolved 告警才显示恢复时间，紧接在告警时间之后
 	if status == "resolved" && endLocal != "" {
 		messageText += fmt.Sprintf("##### <font color=#A9A9A9>恢复时间:</font><font color=#00CD00>**%s**</font>\n", endLocal)
 	}
