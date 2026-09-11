@@ -71,6 +71,8 @@ go get golang.org/x/oauth2
 ```bash
 # 1. 使用通用 Dockerfile 构建 server 镜像
 docker build -t bigdevops-server:latest --build-arg APP_NAME=server .
+docker build -t bigdevops-agent:latest --build-arg APP_NAME=agent .
+docker build -t bigdevops-alert-webhook:latest --build-arg APP_NAME=alert_webhook .
 # 2. 使用专用 Dockerfile 构建指定服务
 docker build -t bigdevops-server:latest -f deploy/Dockerfile.server .
 docker build -t bigdevops-agent:latest -f deploy/Dockerfile.agent .

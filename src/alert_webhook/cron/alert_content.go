@@ -1,11 +1,20 @@
 package cron
 
 import (
-	"bigdevops/src/common"
-	"bigdevops/src/models"
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
 	"time"
+
+	"bigdevops/src/common"
+	"bigdevops/src/models"
 
 	"github.com/prometheus/alertmanager/template"
 	"go.uber.org/zap"
@@ -812,5 +821,140 @@ func (ac *AlertCache) SentFeiShuPrivate(cardContent string, siliaoUserId map[str
 			ac.Sc.Logger.Error("发送飞书私聊消息失败", zap.Error(err), zap.Any("结果", string(respBytes)), zap.Any("userId", userId))
 		}
 	}
+}
 
+// GenerateDingTalkMarkdownMsgOneAlert 生成钉钉告警并发送
+func (ac *AlertCache) GenerateDingTalkMarkdownMsgOneAlert(alert template.Alert, event *models.MonitorAlertManagerEvent, rule *models.MonitorPromAlertRule, sendGroup *models.MonitorAlertManagerSendGroup) {
+	if ac.Sc.ImC == nil || ac.Sc.ImC.DingDing == nil || !ac.Sc.ImC.DingDing.Enabled {
+		return
+	}
+	webhook := ac.Sc.ImC.DingDing.Webhook
+	secret := ac.Sc.ImC.DingDing.Secret
+	if webhook == "" {
+		return
+	}
+
+	// 时区设置
+	locName := ac.Sc.AlertTimezone
+	if locName == "" {
+		locName = "Asia/Shanghai"
+	}
+	loc, _ := time.LoadLocation(locName)
+
+	status := alert.Status
+	startLocal := alert.StartsAt.In(loc).Format("2006-01-02 15:04:05")
+	endLocal := ""
+	if !alert.EndsAt.IsZero() && alert.EndsAt.Year() > 1970 {
+		endLocal = alert.EndsAt.In(loc).Format("2006-01-02 15:04:05")
+	}
+
+	// 获取原始 description
+	description := ""
+	if desc, ok := alert.Annotations["description"]; ok {
+		description = desc
+	} else if desc, ok := alert.Annotations["summary"]; ok {
+		description = desc
+	}
+
+	var title string
+	switch status {
+	case "firing":
+		title = "异常消息"
+	case "resolved":
+		title = "恢复消息"
+		description = fmt.Sprintf("实例 **%s** 的 **%s** 告警已解除，相关指标已恢复至正常范围内。", alert.Labels["instance"], alert.Labels["alertname"])
+	default:
+		title = "未知状态"
+	}
+
+	project := "sg"
+	if sendGroup != nil && sendGroup.NameZh != "" {
+		project = sendGroup.NameZh
+	}
+
+	summary := alert.Annotations["summary"]
+	if summary == "" {
+		summary = alert.Labels["alertname"]
+	}
+
+	// 格式与生产现有 webhook-dingtalk 完全一致
+	messageText := fmt.Sprintf(
+		"##### <font color=#A9A9A9>告警指标:</font>%v\n"+
+			"##### <font color=#A9A9A9>告警类型:</font>%v\n"+
+			"##### <font color=#A9A9A9>告警级别:</font>%v\n"+
+			"##### <font color=#A9A9A9>所属项目:</font>%s\n"+
+			"##### <font color=#A9A9A9>主题:</font>%v\n"+
+			"##### <font color=#A9A9A9>告警详情:</font>\n"+
+			">##### <font color=#FF0000>**%v**</font>\n"+
+			"##### <font color=#A9A9A9>告警时间:</font><font color=#FFD700>**%s**</font>\n",
+		alert.Labels["job"], alert.Labels["alertname"], alert.Labels["severity"],
+		project, summary, description,
+		startLocal,
+	)
+
+	// 如果关联了服务树
+	if streeNode, ok := alert.Labels[common.MONITOR_ALERT_BIND_NODE_KEY]; ok && streeNode != "" {
+		messageText += fmt.Sprintf("##### <font color=#A9A9A9>服务树节点:</font><font color=#00CD00>%s</font>\n", streeNode)
+	}
+
+	// 仅 resolved 告警才显示恢复时间
+	if status == "resolved" && endLocal != "" {
+		messageText += fmt.Sprintf("##### <font color=#A9A9A9>恢复时间:</font><font color=#00CD00>**%s**</font>\n", endLocal)
+	}
+
+	ac.SentDingTalkMarkdown(webhook, secret, title, messageText)
+}
+
+// SentDingTalkMarkdown 发送钉钉 Markdown 消息 (支持 HMAC-SHA256 签名)
+func (ac *AlertCache) SentDingTalkMarkdown(webhook, secret, title, text string) {
+	webhookURL := webhook
+	if secret != "" {
+		timestamp := fmt.Sprintf("%d", time.Now().UnixNano()/1e6)
+		stringToSign := fmt.Sprintf("%s\n%s", timestamp, secret)
+		h := hmac.New(sha256.New, []byte(secret))
+		h.Write([]byte(stringToSign))
+		sign := base64.StdEncoding.EncodeToString(h.Sum(nil))
+		sign = url.QueryEscape(sign)
+		sep := "&"
+		if !strings.Contains(webhook, "?") {
+			sep = "?"
+		}
+		webhookURL = fmt.Sprintf("%s%stimestamp=%s&sign=%s", webhook, sep, timestamp, sign)
+	}
+
+	payloadMap := map[string]interface{}{
+		"msgtype": "markdown",
+		"markdown": map[string]string{
+			"title": title,
+			"text":  text,
+		},
+	}
+	payloadBytes, err := json.Marshal(payloadMap)
+	if err != nil {
+		ac.Sc.Logger.Error("钉钉消息 JSON 序列化失败", zap.Error(err))
+		return
+	}
+
+	timeout := 5
+	if ac.Sc.ImC != nil && ac.Sc.ImC.DingDing != nil && ac.Sc.ImC.DingDing.RequestTimeoutSeconds > 0 {
+		timeout = ac.Sc.ImC.DingDing.RequestTimeoutSeconds
+	}
+
+	client := &http.Client{Timeout: time.Duration(timeout) * time.Second}
+	req, err := http.NewRequest("POST", webhookURL, bytes.NewReader(payloadBytes))
+	if err != nil {
+		ac.Sc.Logger.Error("创建钉钉 HTTP 请求失败", zap.Error(err))
+		return
+	}
+	req.Header.Set("Content-Type", "application/json;charset=utf-8")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		ac.Sc.Logger.Error("发送钉钉告警失败", zap.Error(err), zap.String("url", webhookURL))
+		return
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	ac.Sc.Logger.Info("钉钉告警响应", zap.Int("statusCode", resp.StatusCode), zap.String("response", string(respBody)))
 }

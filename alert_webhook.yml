@@ -36,10 +36,10 @@ im:
     app_secret: 8CuHU2OlSlTx3tBOKwShbhCRMZJa1itD
 
     request_timeout_seconds: 5
-#  dingding:
-#    enabled: false
-#    webhook: "https://oapi.dingtalk.com/robot/send?access_token=..."
-#    secret: "SECxxxx"
+  dingding:
+    enabled: true
+    webhook: "https://oapi.dingtalk.com/robot/send?access_token=faa723b626d1fef980c0d5d394d86672f126966e4b9759fa1f82bb4d6aef3ff1"
+    secret: "SECaebf2910da4485c6be8879546dfa25409a1cfb3e1e008c8fb8d91d774f3668e6"
 #  qywx:
 #    enabled: false
 #    webhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."

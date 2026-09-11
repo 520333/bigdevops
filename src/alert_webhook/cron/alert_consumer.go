@@ -82,5 +82,6 @@ func (ac *AlertCache) DealWithOneAlertReceive(alert template.Alert) {
 	//event.FillFrontAllData()
 	// 处理告警信息
 	ac.GenerateFeiShuCardMsgOneAlert(alert, event, rule, sendGroup)
+	ac.GenerateDingTalkMarkdownMsgOneAlert(alert, event, rule, sendGroup)
 
 }

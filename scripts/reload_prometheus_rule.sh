@@ -8,7 +8,7 @@ cat <<"EOF" >/opt/app/prometheus/reload_prometheus_rule.sh
 SERVER=192.168.50.1:8080
 HOST=$(ip route get 8.8.8.8 | awk '{print $7}')
 
-RES=`curl http://${SERVER}/noAuth/downloadPrometheusRuleMainConfigYaml?ip=${HOST}`
+RES=`curl http://${SERVER}/noAuth/downloadPrometheusAlertRuleMainConfigYaml?ip=${HOST}`
 echo $RES
 
 if [ -z "$RES" ]; then
