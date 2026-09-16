@@ -21,11 +21,11 @@ func mockCodeGitData(sc *config.ServerConfig, adminUser *SystemUser) {
 	_ = s.CreateOne()
 
 	s2 := CodeGitServer{
-		Name:       "公司内网-生产gitlab",
+		Name:       "生产gitlab",
 		Platform:   "gitlab",
 		Endpoint:   "http://192.168.1.160", // 替换为安全的占位 IP
 		UserID:     1,
-		Token:      "glpat-rrsKMShuqvAsnkRaFj9J", // 替换为安全的占位 Token
+		Token:      "xxx", // 替换为安全的占位 Token
 		SkipVerify: true,
 	}
 	_ = s2.CreateOne()
