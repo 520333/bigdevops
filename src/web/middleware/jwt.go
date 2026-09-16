@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 func JWTAuthMiddleWare() func(c *gin.Context) {
@@ -45,11 +46,10 @@ func JWTAuthMiddleWare() func(c *gin.Context) {
 		// 05.续期 前端需要获取Header中的new-token
 		// 如果 (过期时间 - 当前时间) < 缓冲时间，说明快过期了
 		if userClaims.RegisteredClaims.ExpiresAt.Unix()-time.Now().Unix() < int64(sc.JWTC.BufferDuration/time.Second) {
-			//sc.Logger.Info("jwt临期，刷新jwt",
-			//	zap.String("user", userClaims.User.Username),
-			//	zap.Any("老token过期时间", userClaims.RegisteredClaims.ExpiresAt),
-			//	zap.Any("临期窗口", sc.JWTC.BufferDuration),
-			//)
+			sc.Logger.Info("jwt临期，自动刷新jwt续签",
+				zap.String("user", userClaims.Username),
+				zap.Int64("剩余秒数", userClaims.RegisteredClaims.ExpiresAt.Unix()-time.Now().Unix()),
+			)
 			newToken, err := models.GenJWTToken(userClaims.SystemUser, sc)
 			if err != nil {
 				common.Result5xx(0, gin.H{}, fmt.Sprintf("ParseToken 解析token包含的信息错误：%v", err.Error()), c)
@@ -59,11 +59,6 @@ func JWTAuthMiddleWare() func(c *gin.Context) {
 			// 前端拦截器检测到这个 Header 时，自动更新本地存储
 			c.Header("new-token", newToken)
 			c.Header("Access-Control-Expose-Headers", "new-token")
-		} else {
-			//sc.Logger.Info("jwt未过期 无需刷新token", zap.String("user", userClaims.Username),
-			//	zap.Any("老token过期时间", userClaims.RegisteredClaims.ExpiresAt),
-			//	zap.Any("临期窗口", sc.JWTC.BufferDuration),
-			//)
 		}
 		//c.Set(common.GIN_CTX_JWT_CLAIM, userClaims)
 		c.Set(common.GIN_CTX_JWT_USER_NAME, userClaims.Username)
