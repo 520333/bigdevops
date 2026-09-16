@@ -57,6 +57,7 @@ func UserLogin(c *gin.Context) {
 	models.TokenNext(dbUser, c)
 }
 
+// UserLogout 用户登出接口
 // @Summary      用户登出
 // @Description  用户登出 接口
 // @Tags         system-user
@@ -65,23 +66,21 @@ func UserLogin(c *gin.Context) {
 // @Success      200 {object} common.BaseResp "用户登出 响应结果"
 // @Router       /logout [get]
 func UserLogout(c *gin.Context) {
-	// 1. 获取 Token (假设中间件已经通过 Header 拿到了)
+	// 1. 获取 Token 并清理活跃会话映射
 	token := c.GetHeader("Authorization")
-	if token == "" {
-		c.JSON(200, gin.H{"code": 0, "message": "Already logged out"})
-		return
+	if token != "" {
+		parts := strings.SplitN(token, " ", 2)
+		tokenStr := token
+		if len(parts) == 2 && parts[0] == "Bearer" {
+			tokenStr = parts[1]
+		}
+		sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+		if claims, err := models.ParseToken(tokenStr, sc); err == nil && claims != nil {
+			models.ClearUserActiveToken(claims.Username)
+		}
 	}
 
-	// 2. 将 Token 加入 Redis 黑名单 (防止 Token 在有效期内被二次使用)
-	// 这里的过期时间应该设为 JWT 剩余的有效期
-	// 假设你已经定义了 global.Redis
-	/*
-	   claims := c.MustGet("claims").(*utils.CustomClaims)
-	   waitTime := time.Until(time.Unix(claims.ExpiresAt, 0))
-	   global.Redis.Set(context.Background(), "blacklist:"+token, "1", waitTime)
-	*/
-
-	// 3. 返回 Vben 期待的固定格式
+	// 2. 返回 Vben 期待的固定格式
 	c.JSON(200, gin.H{
 		"code":    0,
 		"result":  nil,
