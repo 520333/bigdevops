@@ -930,6 +930,34 @@ func (ac *AlertCache) GenerateDingTalkMarkdownMsgOneAlert(alert template.Alert, 
 		job, alertName, severity, project,
 	)
 
+	// 仅在异常告警 (firing) 时展示值班组与值班人，恢复告警不展示整行且不@人
+	var atMobiles []string
+	if status == "firing" && sendGroup != nil && sendGroup.OnDutyGroupId > 0 {
+		onDutyGroup := ac.GetOnDutyGroupById(sendGroup.OnDutyGroupId)
+		if onDutyGroup != nil {
+			onDutyGroup.FillToDayOndutyUser()
+			groupName := onDutyGroup.Name
+			if groupName == "" {
+				groupName = "默认值班组"
+			}
+			if onDutyGroup.ToDayOnDutyUser != nil {
+				user := onDutyGroup.ToDayOnDutyUser
+				dutyName := user.RealName
+				if dutyName == "" {
+					dutyName = user.Username
+				}
+				if user.Mobile != "" {
+					atMobiles = append(atMobiles, user.Mobile)
+					messageText += fmt.Sprintf("##### <font color=#A9A9A9>值班组:</font>%s <font color=#A9A9A9>值班人:</font>@%s\n", groupName, user.Mobile)
+				} else {
+					messageText += fmt.Sprintf("##### <font color=#A9A9A9>值班组:</font>%s <font color=#A9A9A9>值班人:</font>%s\n", groupName, dutyName)
+				}
+			} else {
+				messageText += fmt.Sprintf("##### <font color=#A9A9A9>值班组:</font>%s <font color=#A9A9A9>值班人:</font>暂无\n", groupName)
+			}
+		}
+	}
+
 	// 拼接主题、告警详情
 	messageText += fmt.Sprintf(
 		"##### <font color=#A9A9A9>主题:</font>%v\n"+
@@ -942,19 +970,6 @@ func (ac *AlertCache) GenerateDingTalkMarkdownMsgOneAlert(alert template.Alert, 
 	// 仅 resolved 告警才显示恢复时间，紧接在告警时间之后
 	if status == "resolved" && endLocal != "" {
 		messageText += fmt.Sprintf("##### <font color=#A9A9A9>恢复时间:</font><font color=#00CD00>**%s**</font>\n", endLocal)
-	}
-
-	// 动态获取当前值班人，提取其手机号用于钉钉@
-	var atMobiles []string
-	if sendGroup != nil && sendGroup.OnDutyGroupId > 0 {
-		onDutyGroup := ac.GetOnDutyGroupById(sendGroup.OnDutyGroupId)
-		if onDutyGroup != nil {
-			onDutyGroup.FillToDayOndutyUser()
-			if onDutyGroup.ToDayOnDutyUser != nil && onDutyGroup.ToDayOnDutyUser.Mobile != "" {
-				atMobiles = append(atMobiles, onDutyGroup.ToDayOnDutyUser.Mobile)
-				messageText += fmt.Sprintf("##### <font color=#A9A9A9>当前值班人:</font>@%s\n", onDutyGroup.ToDayOnDutyUser.Mobile)
-			}
-		}
 	}
 
 	ac.SentDingTalkMarkdown(webhook, secret, title, messageText, atMobiles)
