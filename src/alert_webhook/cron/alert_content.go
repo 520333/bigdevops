@@ -948,12 +948,12 @@ func (ac *AlertCache) GenerateDingTalkMarkdownMsgOneAlert(alert template.Alert, 
 				}
 				if user.Mobile != "" {
 					atMobiles = append(atMobiles, user.Mobile)
-					messageText += fmt.Sprintf("##### <font color=#A9A9A9>值班组:</font>%s <font color=#A9A9A9>值班人:</font>@%s\n", groupName, user.Mobile)
+					messageText += fmt.Sprintf("##### <font color=#A9A9A9>值班组:</font>%s <font color=#FF0000>值班人:</font>@%s\n", groupName, user.Mobile)
 				} else {
-					messageText += fmt.Sprintf("##### <font color=#A9A9A9>值班组:</font>%s <font color=#A9A9A9>值班人:</font>%s\n", groupName, dutyName)
+					messageText += fmt.Sprintf("##### <font color=#A9A9A9>值班组:</font>%s <font color=#FF0000>值班人:</font>%s\n", groupName, dutyName)
 				}
 			} else {
-				messageText += fmt.Sprintf("##### <font color=#A9A9A9>值班组:</font>%s <font color=#A9A9A9>值班人:</font>暂无\n", groupName)
+				messageText += fmt.Sprintf("##### <font color=#A9A9A9>值班组:</font>%s <font color=#FF0000>值班人:</font>暂无\n", groupName)
 			}
 		}
 	}
