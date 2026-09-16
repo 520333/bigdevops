@@ -7,6 +7,7 @@ import (
 	"bigdevops/src/pbms"
 	"context"
 	"fmt"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -69,6 +70,9 @@ func (s *InfoReportServer) AgentInfoReport(ctx context.Context, in *pbms.AgentIn
 	dbEcs.Vendor = "self"
 	dbEcs.Cpu = int(in.GetCpu())
 	dbEcs.Memory = int(in.GetMem())
+	now := time.Now()
+	dbEcs.LastHeartbeatTime = &now
+	dbEcs.Status = "Running"
 
 	// 正确转换 int32 为 string
 	diskStr := fmt.Sprintf("%d", in.GetDisk())

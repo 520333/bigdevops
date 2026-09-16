@@ -23,6 +23,9 @@ func (s *JobExecServer) TaskReport(ctx context.Context, in *pbms.TaskReportReque
 		zap.String("hostname", in.GetHostname()),
 	)
 
+	// 刷新 Agent 机器心跳保活
+	_ = models.UpdateEcsHeartbeatByIp(in.GetIp())
+
 	// 1.结果落库
 	// 2 是否有新任务需要下发
 	resp = &pbms.TaskReportResponse{}

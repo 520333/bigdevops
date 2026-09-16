@@ -84,6 +84,7 @@ func fetchResourceByNode(c *gin.Context) {
 			node := node
 			for _, obj := range node.BindEcss {
 				obj := obj
+				obj.FillFrontAllData()
 				// 1. 厂商过滤
 				if searchVendor != "" && obj.Vendor != searchVendor {
 					continue

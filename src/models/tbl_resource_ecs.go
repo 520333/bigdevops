@@ -52,7 +52,8 @@ type ResourceEcs struct {
 	CreationTime    *time.Time `json:"CreationTime,omitempty" gorm:"comment:实例创建时间。以 ISO 8601 为标准，并使用 UTC+0 时间，格式为 yyyy-MM-ddTHH:mmZ"`
 	ExpiredTime     *time.Time `json:"ExpiredTime,omitempty" gorm:"comment:过期时间。以 ISO 8601 为标准，并使用 UTC+0 时间，格式为 yyyy-MM-ddTHH:mmZ"`
 	AutoReleaseTime *time.Time `json:"AutoReleaseTime,omitempty"`
-	LastInvokedTime *time.Time `json:"LastInvokedTime,omitempty"`
+	//LastInvokedTime *time.Time `json:"LastInvokedTime,omitempty"`
+	LastHeartbeatTime *time.Time `json:"lastHeartbeatTime,omitempty" gorm:"comment:Agent最近一次心跳时间"`
 }
 type EcsBuyWorkOrder struct {
 	Vendor       string `json:"vendor"`
@@ -119,8 +120,25 @@ func GetResourceEcsAll() (re []*ResourceEcs, err error) {
 
 func GetResourceEcsByIdsWithLimitOffset(ids []int, limit, offset int) (objs []*ResourceEcs, err error) {
 	err = Db.Where("id in ?", ids).Limit(limit).Offset(offset).Find(&objs).Error
+	if err == nil {
+		for _, obj := range objs {
+			obj.FillFrontAllData()
+		}
+	}
 	return
+}
 
+func UpdateEcsHeartbeatByIp(ip string) error {
+	if ip == "" {
+		return nil
+	}
+	now := time.Now()
+	return Db.Model(&ResourceEcs{}).
+		Where("vendor = ? AND (private_ip_address LIKE ? OR private_ip_address LIKE ?)", "self", "%\""+ip+"\"%", "%"+ip+"%").
+		Updates(map[string]interface{}{
+			"last_heartbeat_time": &now,
+			"status":              "Running",
+		}).Error
 }
 
 func GetResourceEcsById(id int) (*ResourceEcs, error) {
@@ -188,6 +206,15 @@ func GetResourceEcsBySnOrIP(sn string, ip string) (*ResourceEcs, error) {
 }
 
 func (obj *ResourceEcs) FillFrontAllData() {
+	// 针对自建/Agent上报机器(vendor == "self")动态计算实时在线/离线状态
+	if obj.Vendor == "self" {
+		if obj.LastHeartbeatTime != nil && time.Since(*obj.LastHeartbeatTime) <= 90*time.Second {
+			obj.Status = "Running"
+		} else {
+			obj.Status = "Stopped"
+		}
+	}
+
 	obj.Key = fmt.Sprintf("%d", obj.ID)
 
 	ip := ""

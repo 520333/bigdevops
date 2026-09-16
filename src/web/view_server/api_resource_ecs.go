@@ -223,6 +223,7 @@ func getStreeNodeEcsList(c *gin.Context) {
 	// 4. 装载成切片返回
 	ecsList := []*models.ResourceEcs{}
 	for _, ecs := range allEcsMap {
+		ecs.FillFrontAllData()
 		ecsList = append(ecsList, ecs)
 	}
 
