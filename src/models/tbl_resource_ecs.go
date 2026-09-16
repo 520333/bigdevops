@@ -207,8 +207,9 @@ func GetResourceEcsBySnOrIP(sn string, ip string) (*ResourceEcs, error) {
 
 func (obj *ResourceEcs) FillFrontAllData() {
 	// 针对自建/Agent上报机器(vendor == "self")动态计算实时在线/离线状态
+	// Agent端上报频率为 300 秒(5分钟)，给予定时缓冲 60 秒(共360秒/6分钟)，超过 6 分钟未收到心跳则判定为已停止/离线
 	if obj.Vendor == "self" {
-		if obj.LastHeartbeatTime != nil && time.Since(*obj.LastHeartbeatTime) <= 90*time.Second {
+		if obj.LastHeartbeatTime != nil && time.Since(*obj.LastHeartbeatTime) <= 360*time.Second {
 			obj.Status = "Running"
 		} else {
 			obj.Status = "Stopped"
