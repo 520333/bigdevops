@@ -16,7 +16,8 @@ type SystemUser struct {
 	Password    string `json:"-" gorm:"comment:用户登录密码"`
 	ReqPassword string `json:"password,omitempty" gorm:"-"` //仅用于接收前端 JSON 中的 password 传参，不涉及数据库存取
 
-	Email string `json:"email" gorm:"comment:用户邮箱"`
+	Email  string `json:"email" gorm:"comment:用户邮箱"`
+	Mobile string `json:"mobile,omitempty" gorm:"type:varchar(20);comment:用户手机号"`
 
 	RealName           string                          `json:"realName" gorm:"comment:用户昵称"`
 	Avatar             string                          `json:"avatar,omitempty" gorm:"type:varchar(500);comment:用户头像URL"`

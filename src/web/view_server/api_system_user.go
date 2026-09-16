@@ -564,6 +564,7 @@ func updateUserInfo(c *gin.Context) {
 		dbUser.Avatar = reqObj.Avatar
 	}
 	dbUser.Email = reqObj.Email
+	dbUser.Mobile = reqObj.Mobile
 	dbUser.Desc = reqObj.Desc
 	dbUser.FeiShuUserId = reqObj.FeiShuUserId
 	if reqObj.HomePath != "" {

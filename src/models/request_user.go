@@ -31,6 +31,7 @@ type UpdateUserInfoRequest struct {
 	RealName     string `json:"realName" validate:"required,min=1,max=50"`
 	Avatar       string `json:"avatar"`
 	Email        string `json:"email" validate:"omitempty,email"`
+	Mobile       string `json:"mobile" validate:"omitempty,max=20"`
 	Desc         string `json:"desc" validate:"max=200"`
 	FeiShuUserId string `json:"feiShuUserId" validate:"max=50"`
 	HomePath     string `json:"homePath" validate:"max=100"`

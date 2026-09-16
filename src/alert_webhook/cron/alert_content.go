@@ -944,11 +944,24 @@ func (ac *AlertCache) GenerateDingTalkMarkdownMsgOneAlert(alert template.Alert, 
 		messageText += fmt.Sprintf("##### <font color=#A9A9A9>恢复时间:</font><font color=#00CD00>**%s**</font>\n", endLocal)
 	}
 
-	ac.SentDingTalkMarkdown(webhook, secret, title, messageText)
+	// 动态获取当前值班人，提取其手机号用于钉钉@
+	var atMobiles []string
+	if sendGroup != nil && sendGroup.OnDutyGroupId > 0 {
+		onDutyGroup := ac.GetOnDutyGroupById(sendGroup.OnDutyGroupId)
+		if onDutyGroup != nil {
+			onDutyGroup.FillToDayOndutyUser()
+			if onDutyGroup.ToDayOnDutyUser != nil && onDutyGroup.ToDayOnDutyUser.Mobile != "" {
+				atMobiles = append(atMobiles, onDutyGroup.ToDayOnDutyUser.Mobile)
+				messageText += fmt.Sprintf("##### <font color=#A9A9A9>当前值班人:</font>@%s\n", onDutyGroup.ToDayOnDutyUser.Mobile)
+			}
+		}
+	}
+
+	ac.SentDingTalkMarkdown(webhook, secret, title, messageText, atMobiles)
 }
 
-// SentDingTalkMarkdown 发送钉钉 Markdown 消息 (支持 HMAC-SHA256 签名)
-func (ac *AlertCache) SentDingTalkMarkdown(webhook, secret, title, text string) {
+// SentDingTalkMarkdown 发送钉钉 Markdown 消息 (支持 HMAC-SHA256 签名及 @值班人)
+func (ac *AlertCache) SentDingTalkMarkdown(webhook, secret, title, text string, atMobiles []string) {
 	webhookURL := webhook
 	if secret != "" {
 		timestamp := fmt.Sprintf("%d", time.Now().UnixNano()/1e6)
@@ -964,12 +977,20 @@ func (ac *AlertCache) SentDingTalkMarkdown(webhook, secret, title, text string) 
 		webhookURL = fmt.Sprintf("%s%stimestamp=%s&sign=%s", webhook, sep, timestamp, sign)
 	}
 
+	atMap := map[string]interface{}{
+		"isAtAll": false,
+	}
+	if len(atMobiles) > 0 {
+		atMap["atMobiles"] = atMobiles
+	}
+
 	payloadMap := map[string]interface{}{
 		"msgtype": "markdown",
 		"markdown": map[string]string{
 			"title": title,
 			"text":  text,
 		},
+		"at": atMap,
 	}
 	payloadBytes, err := json.Marshal(payloadMap)
 	if err != nil {
