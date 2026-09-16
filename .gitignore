@@ -1,30 +1,20 @@
-# Binaries for programs and plugins
+# 1. 编译出来的巨型二进制文件
 *.exe
-*.exe~
 *.dll
 *.so
 *.dylib
-bin/
-# IDE files
+server.exe
+alert_webhook
+agent_job_exec
+# 2. 运行日志（日志里包含 SQL 和 Token）
+*.log
+# 3. 🚨 极其关键：屏蔽 K8s 真实凭证目录
+kubeconfig/
+# 4. 🚨 极其关键：屏蔽所有真实 YAML 配置（仅允许提交 *-template.yml 模板）
+*.yml
+!*-template.yml
+# 5. 系统与 IDE 文件
 .idea/
 .vscode/
-*.swp
-*.swo
-
-# Logs
-*.log
-
-# Configurations (Exclude real config, include template)
-server.yml
-alert_webhook.yml
-
-# 如果有临时目录
-tmp/
-
-# OS files
 .DS_Store
 Thumbs.db
-./server.yml
-.gitignore
-agent_job_exec
-/docs/
