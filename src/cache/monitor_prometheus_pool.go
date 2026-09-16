@@ -196,6 +196,7 @@ func (mc *MonitorCache) GeneratePrometheusMainConfigYaml(ctx context.Context) {
 			}
 
 			out, _ = yaml.Marshal(m)
+			//out, _ = reorderPrometheusYaml(out)
 
 			// ======================
 
@@ -523,4 +524,86 @@ func mustParseURL(u string) *pcc.URL {
 		panic(err)
 	}
 	return &pcc.URL{URL: parsed}
+}
+
+func reorderPrometheusYaml(yamlBytes []byte) ([]byte, error) {
+	var node yaml.Node
+	if err := yaml.Unmarshal(yamlBytes, &node); err != nil {
+		return yamlBytes, err
+	}
+	if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
+		docMap := node.Content[0]
+		if docMap.Kind == yaml.MappingNode {
+			// 1. 调整顶层 key 顺序，遵循 Prometheus 官方格式
+			topOrder := []string{"global", "alerting", "rule_files", "remote_write", "remote_read", "scrape_configs"}
+			reorderMappingNodeKeys(docMap, topOrder)
+
+			// 2. 遍历 scrape_configs 中的每一个 job，让 job_name 处于最上方
+			for i := 0; i < len(docMap.Content); i += 2 {
+				if docMap.Content[i].Value == "scrape_configs" {
+					scrapeSeq := docMap.Content[i+1]
+					if scrapeSeq.Kind == yaml.SequenceNode {
+						jobOrder := []string{
+							"job_name",
+							"scrape_interval",
+							"scrape_timeout",
+							"metrics_path",
+							"scheme",
+							"http_sd_configs",
+							"kubernetes_sd_configs",
+							"static_configs",
+							"relabel_configs",
+							"metric_relabel_configs",
+						}
+						for _, jobNode := range scrapeSeq.Content {
+							if jobNode.Kind == yaml.MappingNode {
+								reorderMappingNodeKeys(jobNode, jobOrder)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return yaml.Marshal(&node)
+}
+
+func reorderMappingNodeKeys(node *yaml.Node, priority []string) {
+	if node.Kind != yaml.MappingNode {
+		return
+	}
+	type pair struct {
+		key   *yaml.Node
+		value *yaml.Node
+	}
+	pairMap := make(map[string]pair)
+	var keyOrder []string
+
+	for i := 0; i < len(node.Content); i += 2 {
+		k := node.Content[i]
+		v := node.Content[i+1]
+		pairMap[k.Value] = pair{key: k, value: v}
+		keyOrder = append(keyOrder, k.Value)
+	}
+
+	newContent := make([]*yaml.Node, 0, len(node.Content))
+	seen := make(map[string]bool)
+
+	// 优先放入指定顺序的 key
+	for _, pKey := range priority {
+		if p, ok := pairMap[pKey]; ok {
+			newContent = append(newContent, p.key, p.value)
+			seen[pKey] = true
+		}
+	}
+	// 放入剩余未在 priority 列表中的 key
+	for _, k := range keyOrder {
+		if !seen[k] {
+			if p, ok := pairMap[k]; ok {
+				newContent = append(newContent, p.key, p.value)
+				seen[k] = true
+			}
+		}
+	}
+	node.Content = newContent
 }

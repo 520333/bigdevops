@@ -635,6 +635,9 @@ var (
 )
 
 func (ac *AlertCache) GenerateFeiShuCardMsgOneAlert(alert template.Alert, event *models.MonitorAlertManagerEvent, rule *models.MonitorPromAlertRule, sendGroup *models.MonitorAlertManagerSendGroup) {
+	if ac.Sc.ImC == nil || ac.Sc.ImC.FeiShu == nil || !ac.Sc.ImC.FeiShu.Enabled {
+		return
+	}
 	// 时间格式化 utc+8
 	locName := ac.Sc.AlertTimezone
 	if locName == "" {
@@ -650,7 +653,13 @@ func (ac *AlertCache) GenerateFeiShuCardMsgOneAlert(alert template.Alert, event 
 	)
 	// 告警级别
 	severity := alert.Labels[common.MONITOR_ALERT_SEVERITY_KEY]
-	streeNode := alert.Labels[common.MONITOR_ALERT_BIND_NODE_KEY]
+	streeNode := alert.Labels["project"]
+	if streeNode == "" {
+		streeNode = alert.Labels[common.MONITOR_ALERT_BIND_NODE_KEY]
+	}
+	if streeNode == "" {
+		streeNode = "未关联服务树"
+	}
 
 	msgSeverity := fmt.Sprintf("**🚨告警级别:**\\n%s", severity)
 	msgStatus := fmt.Sprintf("**🚥当前状态：**\\n<font color='%s'>**%s**</font>",
@@ -658,12 +667,15 @@ func (ac *AlertCache) GenerateFeiShuCardMsgOneAlert(alert template.Alert, event 
 		common.MONITOR_ALERT_STATUS_CH_MAP[alert.Status])
 	msgStreeNode := fmt.Sprintf("**🌲绑定的服务树：**\\n<font color='green'>**%s**</font>", streeNode)
 	msgTime := fmt.Sprintf("**🕒触发时间：**\\n%s", alert.StartsAt.In(loc).Format("2006-01-02 15:04:05"))
+	alertHeader = strings.ReplaceAll(alertHeader, `"`, `\"`)
 	var msgGrafana, msgExpr string
 	if rule != nil {
 		msgGrafana = fmt.Sprintf("**📈grafana：**\\n[链接](%s)", rule.GrafanaLink)
+		cleanExpr := strings.ReplaceAll(rule.Expr, `"`, `\"`)
+		cleanExpr = strings.ReplaceAll(cleanExpr, "\n", " ")
 		msgExpr = fmt.Sprintf("<font color='green'>**🔀修改告警规则**</font>  [规则地址](%s)\\n<font color='red'>%s</font>",
 			fmt.Sprintf("%s/%s?ruleId=%v", ac.Sc.FrontDomain, "monitor/rule/detail", rule.ID),
-			rule.Expr)
+			cleanExpr)
 	}
 
 	// 私聊userIds列表
@@ -762,17 +774,18 @@ func (ac *AlertCache) GenerateFeiShuCardMsgOneAlert(alert template.Alert, event 
 	// 告警标签（深拷贝，防止 delete 污染原始 alert.Labels）
 	labelsMap := make(map[string]string, len(alert.Labels))
 	for k, v := range alert.Labels {
-		labelsMap[k] = v
+		labelsMap[k] = strings.ReplaceAll(v, `"`, `\"`)
 	}
 	delete(labelsMap, common.MONITOR_ALERT_NAME_KEY)
 	delete(labelsMap, common.MONITOR_ALERT_SEVERITY_KEY)
 	delete(labelsMap, common.MONITOR_ALERT_BIND_NODE_KEY)
 	delete(labelsMap, common.MONITOR_ALERT_MATCH_KEY)
 	delete(labelsMap, common.MONITOR_ALERT_RULE_KEY)
+	delete(labelsMap, "project")
 
 	anno := make(map[string]string, len(alert.Annotations))
 	for k, v := range alert.Annotations {
-		anno[k] = v
+		anno[k] = strings.ReplaceAll(v, `"`, `\"`)
 	}
 	delete(anno, common.MONITOR_ALERT_RULE_ANNO_VALUE)
 	msgLabels := fmt.Sprintf("**标签信息:**\\n%s", common.GenKvStringByMap(labelsMap))
@@ -874,9 +887,15 @@ func (ac *AlertCache) GenerateDingTalkMarkdownMsgOneAlert(alert template.Alert, 
 		title = "未知状态"
 	}
 
-	project := "sg"
-	if sendGroup != nil && sendGroup.NameZh != "" {
+	project := alert.Labels["project"]
+	if project == "" {
+		project = alert.Labels[common.MONITOR_ALERT_BIND_NODE_KEY]
+	}
+	if project == "" && sendGroup != nil && sendGroup.NameZh != "" {
 		project = sendGroup.NameZh
+	}
+	if project == "" {
+		project = "未归类项目"
 	}
 
 	alertName := alert.Labels["alertname"]
@@ -902,24 +921,14 @@ func (ac *AlertCache) GenerateDingTalkMarkdownMsgOneAlert(alert template.Alert, 
 		summary = alertName
 	}
 
-	// 格式与生产现有 webhook-dingtalk 完全一致
+	// 格式与生产现有 webhook-dingtalk 完全一致，所属项目展示真实 project
 	messageText := fmt.Sprintf(
 		"##### <font color=#A9A9A9>告警指标:</font>%v\n"+
 			"##### <font color=#A9A9A9>告警类型:</font>%v\n"+
 			"##### <font color=#A9A9A9>告警级别:</font>%v\n"+
-			"##### <font color=#A9A9A9>所属项目:</font>%s\n",
+			"##### <font color=#A9A9A9>所属项目:</font><font color=#00CD00>%s</font>\n",
 		job, alertName, severity, project,
 	)
-
-	// 如果关联了服务树，精简展示最后两级（产品线.微服务），例如 binance.binance-web
-	if streeNode, ok := alert.Labels[common.MONITOR_ALERT_BIND_NODE_KEY]; ok && streeNode != "" {
-		displayNode := streeNode
-		parts := strings.Split(streeNode, ".")
-		if len(parts) >= 2 {
-			displayNode = strings.Join(parts[len(parts)-2:], ".")
-		}
-		messageText += fmt.Sprintf("##### <font color=#A9A9A9>服务树节点:</font><font color=#00CD00>%s</font>\n", displayNode)
-	}
 
 	// 拼接主题、告警详情
 	messageText += fmt.Sprintf(

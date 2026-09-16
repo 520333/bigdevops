@@ -20,6 +20,9 @@ type RobotTenantAccessTokenResp struct {
 }
 
 func (ac *AlertCache) RefreshPrivateChatToken(ctx context.Context) {
+	if ac.Sc.ImC == nil || ac.Sc.ImC.FeiShu == nil || !ac.Sc.ImC.FeiShu.Enabled {
+		return
+	}
 	data := RobotTenantAccessTokenReq{
 		AppId:     ac.Sc.ImC.FeiShu.AppID,
 		AppSecret: ac.Sc.ImC.FeiShu.AppSecret,
