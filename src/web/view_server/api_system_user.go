@@ -76,6 +76,7 @@ func UserLogout(c *gin.Context) {
 		}
 		sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 		if claims, err := models.ParseToken(tokenStr, sc); err == nil && claims != nil {
+			c.Set(common.GIN_CTX_JWT_USER_NAME, claims.Username)
 			models.ClearUserActiveToken(claims.Username)
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"bigdevops/src/common"
 	"bigdevops/src/config"
 	"bigdevops/src/models"
+	"bigdevops/src/web/middleware"
 	"context"
 	"fmt"
 	"strings"
@@ -116,6 +117,21 @@ func OidcCallback(c *gin.Context) {
 			return
 		}
 		dbUser, _ = models.GetUserByUsername(username)
+
+		// 记录 SSO 首次自动开户审计日志
+		middleware.RecordAuditLogManual(
+			c,
+			dbUser.ID,
+			dbUser.Username,
+			dbUser.RealName,
+			"用户管理",
+			"SSO自动开户",
+			c.Request.Method,
+			c.Request.URL.Path,
+			200,
+			0,
+			fmt.Sprintf(`{"username":"%s","real_name":"%s","email":"%s","source":"oidc_sso"}`, dbUser.Username, dbUser.RealName, dbUser.Email),
+		)
 	}
 
 	// 5. 解析 Keycloak 组与角色并映射同步至数据库 user_roles 中间表
@@ -162,6 +178,21 @@ func OidcCallback(c *gin.Context) {
 		}
 	}
 
-	// 6. 调用平台已有的 TokenNext 生成平台原有 JWT 并返回前端
+	// 6. 记录 SSO 单点登录成功审计日志
+	middleware.RecordAuditLogManual(
+		c,
+		dbUser.ID,
+		dbUser.Username,
+		dbUser.RealName,
+		"用户认证",
+		"SSO登录成功",
+		c.Request.Method,
+		c.Request.URL.Path,
+		200,
+		0,
+		fmt.Sprintf(`{"auth_type":"oidc_sso","username":"%s","email":"%s"}`, dbUser.Username, dbUser.Email),
+	)
+
+	// 7. 调用平台已有的 TokenNext 生成平台原有 JWT 并返回前端
 	models.TokenNext(dbUser, c)
 }

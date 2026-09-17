@@ -57,7 +57,25 @@ func AuditLogMiddleWare() gin.HandlerFunc {
 		if val, exists := c.Get(common.GIN_CTX_JWT_USER_NAME); exists {
 			userName, _ = val.(string)
 		}
-		// 如果上下文未提取到用户名（如未登录或登录请求），尝试从请求报文中提取
+		// 如果上下文未提取到用户名（如退出登录 /logout 或未挂载 JWT 中间件接口），尝试从 Authorization Header 解析
+		if userName == "" {
+			token := c.GetHeader("Authorization")
+			if token != "" {
+				parts := strings.SplitN(token, " ", 2)
+				tokenStr := token
+				if len(parts) == 2 && parts[0] == "Bearer" {
+					tokenStr = parts[1]
+				}
+				if scInter, ok := c.Get(common.GIN_CTX_CONFIG_CONFIG); ok && scInter != nil {
+					if sc, ok2 := scInter.(*config.ServerConfig); ok2 {
+						if claims, err := models.ParseToken(tokenStr, sc); err == nil && claims != nil {
+							userName = claims.Username
+						}
+					}
+				}
+			}
+		}
+		// 如果依然未提取到用户名（如常规账号密码登录请求），尝试从请求报文中提取
 		if userName == "" && strings.Contains(strings.ToLower(path), "login") && reqBodyStr != "" {
 			var loginReq map[string]interface{}
 			if err := json.Unmarshal([]byte(reqBodyStr), &loginReq); err == nil {
@@ -72,18 +90,17 @@ func AuditLogMiddleWare() gin.HandlerFunc {
 		}
 
 		// 提取客户端真实 IP (智能穿透代理并自动将IPv6回环::1转换为127.0.0.1)
-		clientIP := getRealClientIP(c)
+		clientIP := GetRealClientIP(c)
+
+		var logger *zap.Logger
+		if scInter, ok := c.Get(common.GIN_CTX_CONFIG_CONFIG); ok && scInter != nil {
+			if sc, ok2 := scInter.(*config.ServerConfig); ok2 {
+				logger = sc.Logger
+			}
+		}
 
 		// 异步入库，保证零延迟
-		go func(uName, uMethod, uPath, uIp, reqStr string, status int, cost int64) {
-			scInter, ok := c.Get(common.GIN_CTX_CONFIG_CONFIG)
-			var logger *zap.Logger
-			if ok && scInter != nil {
-				if sc, ok2 := scInter.(*config.ServerConfig); ok2 {
-					logger = sc.Logger
-				}
-			}
-
+		go func(uName, uMethod, uPath, uIp, reqStr string, status int, cost int64, l *zap.Logger) {
 			// 查询当前用户信息
 			var userID uint
 			var realName string
@@ -113,11 +130,41 @@ func AuditLogMiddleWare() gin.HandlerFunc {
 				ReqBody:  reqStr,
 			}
 
-			if err := auditLog.Create(); err != nil && logger != nil {
-				logger.Error("保存操作审计日志失败", zap.Error(err), zap.String("path", uPath))
+			if err := auditLog.Create(); err != nil && l != nil {
+				l.Error("保存操作审计日志失败", zap.Error(err), zap.String("path", uPath))
 			}
-		}(userName, method, path, clientIP, reqBodyStr, statusCode, latency)
+		}(userName, method, path, clientIP, reqBodyStr, statusCode, latency, logger)
 	}
+}
+
+// RecordAuditLogManual 手动记录一条审计日志（用于单点登录、外部回调等特定流程）
+func RecordAuditLogManual(c *gin.Context, userID uint, username, realName, module, action, method, path string, status int, latency int64, reqBody string) {
+	clientIP := GetRealClientIP(c)
+	var logger *zap.Logger
+	if scInter, ok := c.Get(common.GIN_CTX_CONFIG_CONFIG); ok && scInter != nil {
+		if sc, ok2 := scInter.(*config.ServerConfig); ok2 {
+			logger = sc.Logger
+		}
+	}
+
+	go func(l *zap.Logger) {
+		auditLog := &models.SystemAuditLog{
+			UserID:   userID,
+			Username: username,
+			RealName: realName,
+			Module:   module,
+			Action:   action,
+			Method:   method,
+			Path:     path,
+			Ip:       clientIP,
+			Status:   status,
+			Latency:  latency,
+			ReqBody:  reqBody,
+		}
+		if err := auditLog.Create(); err != nil && l != nil {
+			l.Error("手动保存操作审计日志失败", zap.Error(err), zap.String("path", path))
+		}
+	}(logger)
 }
 
 // sanitizeRequestBody 对请求报文中的敏感字段（密码、秘钥等）进行脱敏处理
@@ -255,8 +302,8 @@ func deduceModuleAndAction(path, method string, status int) (string, string) {
 	return module, action
 }
 
-// getRealClientIP 获取真实的客户端IP地址
-func getRealClientIP(c *gin.Context) string {
+// GetRealClientIP 获取真实的客户端IP地址
+func GetRealClientIP(c *gin.Context) string {
 	// 1. 优先获取反向代理/网关头 X-Forwarded-For
 	xForwardedFor := c.Request.Header.Get("X-Forwarded-For")
 	if xForwardedFor != "" {

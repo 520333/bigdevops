@@ -944,3 +944,71 @@ func EnsureAccountSettingMenu(sc *config.ServerConfig) {
 		}
 	}
 }
+
+func EnsureAuditLogMenu(sc *config.ServerConfig) {
+	var parent SystemMenu
+	err := Db.Where("name = ?", "System").First(&parent).Error
+	if err != nil || parent.ID == 0 {
+		return
+	}
+
+	var menu SystemMenu
+	err = Db.Where("name = ?", "AuditManagement").First(&menu).Error
+	if err != nil || menu.ID == 0 {
+		menu = SystemMenu{
+			Name:      "AuditManagement",
+			Title:     "操作审计",
+			Icon:      "ant-design:security-scan-outlined",
+			Type:      "1",
+			Show:      "1",
+			OrderNo:   98,
+			Component: "system/audit/index",
+			Path:      "audit",
+			Pid:       int(parent.ID),
+		}
+		if createErr := Db.Create(&menu).Error; createErr != nil {
+			return
+		}
+		sc.Logger.Info("自动插入菜单：[系统管理] 操作审计 成功 🚀")
+	} else if menu.Title != "操作审计" || menu.Component != "system/audit/index" || menu.Path != "audit" {
+		_ = Db.Model(&menu).Updates(map[string]interface{}{
+			"title":     "操作审计",
+			"icon":      "ant-design:security-scan-outlined",
+			"type":      "1",
+			"show":      "1",
+			"order_no":  98,
+			"component": "system/audit/index",
+			"path":      "audit",
+			"pid":       int(parent.ID),
+		})
+	}
+
+	// 确保 API 接口存在
+	var api SystemApi
+	err = Db.Where("path = ? AND method = ?", "/api/system/getAuditLogList", "GET").First(&api).Error
+	if err != nil || api.ID == 0 {
+		api = SystemApi{
+			Path:   "/api/system/getAuditLogList",
+			Method: "GET",
+			Title:  "[审计模块]获取操作审计日志列表",
+			Type:   "1",
+		}
+		if createApiErr := Db.Create(&api).Error; createApiErr == nil {
+			sc.Logger.Info("自动插入API：[审计模块]获取操作审计日志列表 成功 🚀")
+		}
+	}
+
+	// 确保所有角色均关联审计菜单与 API
+	var roles []SystemRole
+	if Db.Find(&roles).Error == nil {
+		for _, r := range roles {
+			_ = Db.Model(&r).Association("Menus").Append(&menu)
+			if api.ID > 0 {
+				_ = Db.Model(&r).Association("Apis").Append(&api)
+			}
+			if CasbinEnforcer != nil && r.RoleValue != "" {
+				_, _ = CasbinEnforcer.AddPolicy(r.RoleValue, "/api/system/getAuditLogList", "GET")
+			}
+		}
+	}
+}
