@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/host"
@@ -165,4 +166,96 @@ func GenK8sClientSetByKubeconfigContent(c string, timeoutSeconds int) (*restclie
 	}
 	mClientSet, _ := metricsClientSet.NewForConfig(kConfig)
 	return kConfig, clientSet, mClientSet, nil
+}
+
+// NormalizeIP 规范化 IP 展示格式（转本地 IPv6 回环为 127.0.0.1，去除 IPv6 映射 IPv4 的前缀 ::ffff:）
+func NormalizeIP(ip string) string {
+	ip = strings.TrimSpace(ip)
+	if ip == "::1" || ip == "0:0:0:0:0:0:0:1" || ip == "[::1]" {
+		return "127.0.0.1"
+	}
+	if strings.HasPrefix(ip, "::ffff:") {
+		return strings.TrimPrefix(ip, "::ffff:")
+	}
+	return ip
+}
+
+// GetRealClientIP 获取客户端真实 IP
+func GetRealClientIP(c *gin.Context) string {
+	// 1. 优先获取反向代理/网关头 X-Forwarded-For
+	xForwardedFor := c.Request.Header.Get("X-Forwarded-For")
+	if xForwardedFor != "" {
+		parts := strings.Split(xForwardedFor, ",")
+		for _, part := range parts {
+			part = strings.TrimSpace(part)
+			if part != "" && part != "unknown" {
+				return NormalizeIP(part)
+			}
+		}
+	}
+
+	// 2. 其次尝试 X-Real-IP
+	xRealIP := c.Request.Header.Get("X-Real-IP")
+	if xRealIP != "" && xRealIP != "unknown" {
+		return NormalizeIP(xRealIP)
+	}
+
+	// 3. 再次获取 Gin 封装的 ClientIP
+	clientIP := c.ClientIP()
+	if clientIP != "" && clientIP != "unknown" {
+		return NormalizeIP(clientIP)
+	}
+
+	// 4. 最后兜底 RemoteAddr
+	remoteIP, _, err := net.SplitHostPort(c.Request.RemoteAddr)
+	if err == nil && remoteIP != "" {
+		return NormalizeIP(remoteIP)
+	}
+
+	return NormalizeIP(c.Request.RemoteAddr)
+}
+
+// ParseUserAgent 解析 User-Agent 请求头，返回浏览器和操作系统
+func ParseUserAgent(ua string) (browser string, os string) {
+	if ua == "" {
+		return "未知浏览器", "未知系统"
+	}
+
+	// 操作系统判断（注意：iPhone/iPad 的 UA 通常包含 "like Mac OS X"，因此 iOS 必须优先于 macOS 匹配！）
+	if strings.Contains(ua, "iPhone") {
+		os = "iOS (iPhone)"
+	} else if strings.Contains(ua, "iPad") {
+		os = "iOS (iPad)"
+	} else if strings.Contains(ua, "Android") {
+		os = "Android"
+	} else if strings.Contains(ua, "Windows") {
+		os = "Windows"
+	} else if strings.Contains(ua, "Macintosh") || strings.Contains(ua, "Mac OS") {
+		os = "macOS"
+	} else if strings.Contains(ua, "Linux") {
+		os = "Linux"
+	} else {
+		os = "其他系统"
+	}
+
+	// 浏览器判断（注意优先级：Edg 包含 Chrome，Chrome 包含 Safari）
+	if strings.Contains(ua, "Edg/") || strings.Contains(ua, "Edge/") || strings.Contains(ua, "EdgiOS/") {
+		browser = "Edge"
+	} else if strings.Contains(ua, "MicroMessenger") {
+		browser = "微信浏览器"
+	} else if strings.Contains(ua, "CriOS/") || strings.Contains(ua, "Chrome/") {
+		browser = "Chrome"
+	} else if strings.Contains(ua, "FxiOS/") || strings.Contains(ua, "Firefox/") {
+		browser = "Firefox"
+	} else if strings.Contains(ua, "Safari/") || strings.Contains(ua, "Mobile/") {
+		browser = "Safari"
+	} else if strings.Contains(ua, "Postman") {
+		browser = "Postman"
+	} else if strings.Contains(ua, "curl") {
+		browser = "cURL"
+	} else {
+		browser = "其他浏览器"
+	}
+
+	return browser, os
 }

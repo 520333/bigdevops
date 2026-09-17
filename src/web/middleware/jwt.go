@@ -77,6 +77,9 @@ func JWTAuthMiddleWare() func(c *gin.Context) {
 			c.Header("new-token", newToken)
 			c.Header("Access-Control-Expose-Headers", "new-token")
 		}
+		// 确保在线用户会话存在：即使服务重启，也能自动从有效 JWT 中自愈恢复在线会话并刷新最近活跃时间、真实IP与浏览器环境
+		models.EnsureOnlineSession(userClaims, parts[1], common.GetRealClientIP(c), c.Request.UserAgent())
+
 		//c.Set(common.GIN_CTX_JWT_CLAIM, userClaims)
 		c.Set(common.GIN_CTX_JWT_USER_NAME, userClaims.Username)
 		c.Next()

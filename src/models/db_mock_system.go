@@ -957,7 +957,7 @@ func EnsureAuditLogMenu(sc *config.ServerConfig) {
 	if err != nil || menu.ID == 0 {
 		menu = SystemMenu{
 			Name:      "AuditManagement",
-			Title:     "操作审计",
+			Title:     "日志审计",
 			Icon:      "ant-design:security-scan-outlined",
 			Type:      "1",
 			Show:      "1",
@@ -969,10 +969,10 @@ func EnsureAuditLogMenu(sc *config.ServerConfig) {
 		if createErr := Db.Create(&menu).Error; createErr != nil {
 			return
 		}
-		sc.Logger.Info("自动插入菜单：[系统管理] 操作审计 成功 🚀")
-	} else if menu.Title != "操作审计" || menu.Component != "system/audit/index" || menu.Path != "audit" {
+		sc.Logger.Info("自动插入菜单：[系统管理] 日志审计 成功 🚀")
+	} else if menu.Title != "日志审计" || menu.Component != "system/audit/index" || menu.Path != "audit" {
 		_ = Db.Model(&menu).Updates(map[string]interface{}{
-			"title":     "操作审计",
+			"title":     "日志审计",
 			"icon":      "ant-design:security-scan-outlined",
 			"type":      "1",
 			"show":      "1",
@@ -983,31 +983,36 @@ func EnsureAuditLogMenu(sc *config.ServerConfig) {
 		})
 	}
 
-	// 确保 API 接口存在
-	var api SystemApi
-	err = Db.Where("path = ? AND method = ?", "/api/system/getAuditLogList", "GET").First(&api).Error
-	if err != nil || api.ID == 0 {
-		api = SystemApi{
-			Path:   "/api/system/getAuditLogList",
-			Method: "GET",
-			Title:  "[审计模块]获取操作审计日志列表",
-			Type:   "1",
-		}
-		if createApiErr := Db.Create(&api).Error; createApiErr == nil {
-			sc.Logger.Info("自动插入API：[审计模块]获取操作审计日志列表 成功 🚀")
+	// 确保需要的 API 接口存在
+	apisToAdd := []SystemApi{
+		{Path: "/api/system/getAuditLogList", Method: "GET", Title: "[审计模块]获取操作审计日志列表", Type: "1"},
+		{Path: "/api/system/getOnlineUserList", Method: "GET", Title: "[用户模块]获取在线用户列表", Type: "1"},
+		{Path: "/api/system/kickoutUser", Method: "POST", Title: "[用户模块]强退指定在线用户", Type: "1"},
+	}
+
+	var createdApis []*SystemApi
+	for _, apiItem := range apisToAdd {
+		var existingApi SystemApi
+		if err := Db.Where("path = ? AND method = ?", apiItem.Path, apiItem.Method).First(&existingApi).Error; err != nil || existingApi.ID == 0 {
+			newApi := apiItem
+			if createApiErr := Db.Create(&newApi).Error; createApiErr == nil {
+				createdApis = append(createdApis, &newApi)
+			}
+		} else {
+			createdApis = append(createdApis, &existingApi)
 		}
 	}
 
-	// 确保所有角色均关联审计菜单与 API
+	// 确保所有角色均关联日志审计菜单与相关 API
 	var roles []SystemRole
 	if Db.Find(&roles).Error == nil {
 		for _, r := range roles {
 			_ = Db.Model(&r).Association("Menus").Append(&menu)
-			if api.ID > 0 {
-				_ = Db.Model(&r).Association("Apis").Append(&api)
-			}
-			if CasbinEnforcer != nil && r.RoleValue != "" {
-				_, _ = CasbinEnforcer.AddPolicy(r.RoleValue, "/api/system/getAuditLogList", "GET")
+			for _, api := range createdApis {
+				_ = Db.Model(&r).Association("Apis").Append(api)
+				if CasbinEnforcer != nil && r.RoleValue != "" {
+					_, _ = CasbinEnforcer.AddPolicy(r.RoleValue, api.Path, api.Method)
+				}
 			}
 		}
 	}

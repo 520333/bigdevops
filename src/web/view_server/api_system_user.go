@@ -77,7 +77,7 @@ func UserLogout(c *gin.Context) {
 		sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 		if claims, err := models.ParseToken(tokenStr, sc); err == nil && claims != nil {
 			c.Set(common.GIN_CTX_JWT_USER_NAME, claims.Username)
-			models.ClearUserActiveToken(claims.Username)
+			models.RemoveOnlineSession(claims.Username)
 		}
 	}
 
@@ -645,4 +645,45 @@ func uploadAvatar(c *gin.Context) {
 		"url":    fileURL,
 		"avatar": fileURL,
 	}, "头像上传成功", c)
+}
+
+// @Summary      获取当前在线用户列表
+// @Description  获取当前在线用户列表 接口
+// @Tags         system-user
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取当前在线用户列表 响应结果"
+// @Router       /system/getOnlineUserList [get]
+// @Security     Bearer
+func getOnlineUserList(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+	list := models.GetOnlineSessionList(sc)
+	common.OkWithDetailed(list, "获取在线用户列表成功", c)
+}
+
+type KickoutReq struct {
+	Username string `json:"userName" binding:"required"`
+}
+
+// @Summary      强退指定在线用户
+// @Description  强退指定在线用户 接口
+// @Tags         system-user
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "强退指定在线用户 响应结果"
+// @Router       /system/kickoutUser [post]
+// @Security     Bearer
+func kickoutUser(c *gin.Context) {
+	var req KickoutReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.ReqBadFailWithMessage("缺少用户名参数", c)
+		return
+	}
+	currentUsername := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)
+	if req.Username == currentUsername {
+		common.ReqBadFailWithMessage("不能强退当前正在操作的自身账号", c)
+		return
+	}
+	models.KickoutOnlineUser(req.Username)
+	common.OkWithMessage(fmt.Sprintf("用户 %s 已被成功强退下线", req.Username), c)
 }

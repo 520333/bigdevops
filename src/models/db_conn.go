@@ -156,6 +156,7 @@ func MigrateTable() error {
 func MockUserRegister(sc *config.ServerConfig) {
 	EnsureJenkinsPipelineMenu(sc)
 	EnsureAccountSettingMenu(sc)
+	EnsureAuditLogMenu(sc)
 	var count int64
 	err := Db.Model(&SystemUser{}).Where("username = ?", "admin").Count(&count).Error
 	if err == nil && count > 0 {
