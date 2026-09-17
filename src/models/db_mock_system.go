@@ -136,6 +136,7 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Name: "ChangePassword", Title: "修改密码", Icon: "ant-design:key-outlined", Type: "1", Show: "1", OrderNo: 94, Component: "system/password/index", Path: "changePassword"},
 				{Name: "ApiManagement", Title: "接口授权", Icon: "ant-design:safety-certificate-outlined", Type: "1", Show: "1", OrderNo: 95, Component: "system/api/index", Path: "api"},
 				{Name: "SystemSetting", Title: "系统设置", Icon: "ant-design:control-outlined", Type: "1", Show: "1", OrderNo: 96, Component: "system/settings/index", Path: "settings"},
+				{Name: "AuditManagement", Title: "操作审计", Icon: "ant-design:security-scan-outlined", Type: "1", Show: "1", OrderNo: 97, Component: "system/audit/index", Path: "audit"},
 			},
 		},
 	}
@@ -196,6 +197,7 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Path: "/api/system/deleteApi/:id", Method: "DELETE", Title: "[接口模块]删除API", Type: "1"},
 				{Path: "/api/system/setting/get", Method: "GET", Title: "系统管理-全局设置", Type: "1"},
 				{Path: "/api/system/setting/update", Method: "PUT", Title: "系统管理-更新设置", Type: "1"},
+				{Path: "/api/system/getAuditLogList", Method: "GET", Title: "[审计模块]获取操作审计日志列表", Type: "1"},
 			},
 		},
 

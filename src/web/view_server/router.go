@@ -13,8 +13,8 @@ func ConfigRouter(r *gin.Engine) {
 	base.GET("/ping", ping)
 	base.GET("/now", getNowTs)
 	base.GET("/long", longRequest)
-	base.POST("/login", UserLogin)
-	base.GET("/logout", UserLogout)
+	base.POST("/login", middleware.AuditLogMiddleWare(), UserLogin)
+	base.GET("/logout", middleware.AuditLogMiddleWare(), UserLogout)
 	base.GET("/auth/oidc/login", GetOidcLoginUrl) // sso单点登录
 	base.POST("/auth/oidc/callback", OidcCallback)
 
@@ -34,7 +34,8 @@ func ConfigRouter(r *gin.Engine) {
 	afterLoginApiGroup.
 		Use(middleware.JWTAuthMiddleWare()).    // jwt中间件
 		Use(middleware.UserStatusMiddleware()). // 用户状态中间件
-		Use(middleware.CasBinRbacMiddleware())  // rbac	中间件
+		Use(middleware.CasBinRbacMiddleware()). // rbac	中间件
+		Use(middleware.AuditLogMiddleWare())    // 审计日志中间件
 
 	{
 		afterLoginApiGroup.GET("/getUserInfo", getUserAfterLogin)
@@ -78,6 +79,9 @@ func ConfigRouter(r *gin.Engine) {
 		// system settings 路由
 		systemApiGroup.GET("/setting/get", GetSystemSetting)
 		systemApiGroup.PUT("/setting/update", UpdateSystemSetting)
+
+		// 审计日志路由
+		systemApiGroup.GET("/getAuditLogList", getAuditLogList)
 	}
 
 	artifactoryApiGroup := afterLoginApiGroup.Group("/artifactory")

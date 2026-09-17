@@ -90,6 +90,7 @@ func MigrateTable() error {
 		&SystemMenu{},
 		&SystemApi{},
 		&SystemSetting{},
+		&SystemAuditLog{},
 
 		&StreeNode{},
 		&ResourceEcs{},
