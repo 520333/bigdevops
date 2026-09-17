@@ -161,11 +161,13 @@ func updateMonitorPromScrapePool(c *gin.Context) {
 		return
 	}
 	// 检查是否存在
-	_, err = models.GetMonitorPromScrapePoolById(int(reqObj.ID))
+	dbPool, err := models.GetMonitorPromScrapePoolById(int(reqObj.ID))
 	if err != nil {
 		common.FailWithMessage("采集池不存在", c)
 		return
 	}
+	// 保持原有的创建人，防止编辑时丢失
+	reqObj.UserID = dbPool.UserID
 
 	// 更新
 	err = reqObj.UpdateOne()

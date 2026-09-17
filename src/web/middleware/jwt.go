@@ -35,7 +35,11 @@ func JWTAuthMiddleWare() func(c *gin.Context) {
 		sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 		userClaims, err := models.ParseToken(parts[1], sc)
 		if err != nil {
-			common.Req401WithDetailed(gin.H{"reload": true}, fmt.Sprintf("ParseToken 解析token包含的信息错误：%v", err.Error()), c)
+			msg := fmt.Sprintf("登录凭据校验失败：%v", err.Error())
+			if strings.Contains(err.Error(), "token is expired") {
+				msg = "登录已过期，请重新登录"
+			}
+			common.Req401WithDetailed(gin.H{"reload": true, "expired": true}, msg, c)
 			c.Abort()
 			return
 		}

@@ -189,11 +189,13 @@ func updateMonitorPromScrapeJob(c *gin.Context) {
 		return
 	}
 	// 检查是否存在
-	_, err = models.GetMonitorPromScrapeJobById(int(reqObj.ID))
+	dbJob, err := models.GetMonitorPromScrapeJobById(int(reqObj.ID))
 	if err != nil {
 		common.FailWithMessage("采集任务不存在", c)
 		return
 	}
+	// 保持原有的创建人，防止编辑时丢失
+	reqObj.UserID = dbJob.UserID
 	err = reqObj.ValidateRelabelConfigsYamlString()
 	if err != nil {
 		msg := "[监控模块]新增采集任务-解析relabelConfig错误"

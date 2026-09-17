@@ -15,7 +15,7 @@ type MonitorPromScrapePool struct {
 	Name                string      `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:采集池名称"`
 	PrometheusInstances StringArray `json:"prometheus_instances,omitempty"`
 
-	UserID uint
+	UserID uint `json:"userId,omitempty" gorm:"comment:创建人ID"`
 	// global段
 	ScrapeInterval int         `json:"scrapeInterval" gorm:"comment:采集间隔"`
 	ScrapeTimeout  int         `json:"scrapeTimeout" gorm:"comment:采集超时时间"`
@@ -51,7 +51,7 @@ func (obj *MonitorPromScrapePool) CreateOne() error {
 }
 
 func (obj *MonitorPromScrapePool) UpdateOne() error {
-	return Db.Model(obj).Select("*").Omit("id", "created_at").Updates(obj).Error
+	return Db.Model(obj).Select("*").Omit("id", "created_at", "user_id").Updates(obj).Error
 }
 
 func GetMonitorPromScrapePoolById(id int) (*MonitorPromScrapePool, error) {

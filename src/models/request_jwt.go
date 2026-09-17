@@ -3,6 +3,8 @@ package models
 import (
 	"bigdevops/src/common"
 	"bigdevops/src/config"
+	"errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -78,7 +80,11 @@ func ParseToken(jwtLongToken string, sc *config.ServerConfig) (*UserCustomClaims
 		},
 	)
 	if err != nil {
-		sc.Logger.Error("根据长tokenString解析错误", zap.Error(err))
+		if errors.Is(err, jwt.ErrTokenExpired) || strings.Contains(err.Error(), "token is expired") {
+			sc.Logger.Warn("用户token已过期", zap.Error(err))
+		} else {
+			sc.Logger.Error("根据长tokenString解析错误", zap.Error(err))
+		}
 		return nil, err
 	}
 	if claims, ok := tokenClaims.Claims.(*UserCustomClaims); ok && tokenClaims.Valid {

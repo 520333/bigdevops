@@ -16,7 +16,7 @@ type MonitorPromScrapeJob struct {
 	Model
 	Name string `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:采集任务名称"`
 
-	UserID uint
+	UserID uint `json:"userId,omitempty" gorm:"comment:创建人ID"`
 
 	Enable                   int    `json:"enable" gorm:"comment:是否被开启 1正常 2禁用"`
 	ServiceDiscoveryType     string `json:"serviceDiscoveryType" gorm:"comment:k8s or tree-http"`
@@ -67,7 +67,7 @@ func (obj *MonitorPromScrapeJob) CreateOne() error {
 }
 
 func (obj *MonitorPromScrapeJob) UpdateOne() error {
-	return Db.Model(obj).Select("*").Omit("id", "created_at").Updates(obj).Error
+	return Db.Model(obj).Select("*").Omit("id", "created_at", "user_id").Updates(obj).Error
 }
 
 func (obj *MonitorPromScrapeJob) IdsConvert() {
