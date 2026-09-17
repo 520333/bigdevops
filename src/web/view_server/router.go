@@ -27,6 +27,7 @@ func ConfigRouter(r *gin.Engine) {
 		noAuth.GET("/getLeafStreeNodeBindIps", getLeafStreeNodeBindIps)
 		noAuth.GET("/getDnsBlackboxTargets", getDnsBlackboxTargets)
 		noAuth.GET("/getMonitorOndutyGroupFuturePlan/:id", getMonitorOndutyGroupFuturePlan)
+		noAuth.GET("/platform/telemetry", GetPlatformTelemetry) // 登录大盘公开遥测数据
 	}
 
 	// 以下开始需要认证
