@@ -11,7 +11,7 @@ import (
 // SystemUser 基于前端依赖的user 字段
 type SystemUser struct {
 	Model
-	UserId      int    `json:"userId,omitempty" gorm:"comment:用户id"`
+	// UserId      int    `json:"userId,omitempty" gorm:"comment:用户id"`
 	Username    string `json:"userName" gorm:"type:varchar(100);uniqueIndex;comment:用户登录名"`
 	Password    string `json:"-" gorm:"comment:用户登录密码"`
 	ReqPassword string `json:"password,omitempty" gorm:"-"` //仅用于接收前端 JSON 中的 password 传参，不涉及数据库存取
