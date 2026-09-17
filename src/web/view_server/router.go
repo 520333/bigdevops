@@ -17,6 +17,8 @@ func ConfigRouter(r *gin.Engine) {
 	base.GET("/logout", middleware.AuditLogMiddleWare(), UserLogout)
 	base.GET("/auth/oidc/login", GetOidcLoginUrl) // sso单点登录
 	base.POST("/auth/oidc/callback", OidcCallback)
+	base.GET("/auth/dingtalk/login", GetDingTalkLoginUrl) // 钉钉单点登录
+	base.POST("/auth/dingtalk/callback", DingTalkCallback)
 
 	noAuth := r.Group("/noAuth")
 	{

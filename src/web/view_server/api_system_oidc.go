@@ -102,36 +102,70 @@ func OidcCallback(c *gin.Context) {
 	// 4. 自动开户/同步本地用户表 tbl_system_user
 	dbUser, err := models.GetUserByUsername(username)
 	if err != nil {
-		// 用户不存在，自动创建本地账号
-		newUser := &models.SystemUser{
-			Username: username,
-			RealName: claims.Name,
-			Email:    claims.Email,
-			Enable:   1, // 正常启用
-			HomePath: "/dashboard/analysis",
-			Password: common.BcryptHash("123456"),
-		}
-		// 插入数据库
-		if err := newUser.CreateOne(); err != nil {
-			common.ReqBadFailWithMessage(fmt.Sprintf("自动创建本地用户失败: %v", err), c)
-			return
-		}
-		dbUser, _ = models.GetUserByUsername(username)
+		// 4.1 检查是否该员工此前曾通过钉钉直接登录过 (避免同一个人先登钉钉再登Keycloak产生两个号)
+		var candidateUser models.SystemUser
+		matched := false
 
-		// 记录 SSO 首次自动开户审计日志
-		middleware.RecordAuditLogManual(
-			c,
-			dbUser.ID,
-			dbUser.Username,
-			dbUser.RealName,
-			"用户管理",
-			"SSO自动开户",
-			c.Request.Method,
-			c.Request.URL.Path,
-			200,
-			0,
-			fmt.Sprintf(`{"username":"%s","real_name":"%s","email":"%s","source":"oidc_sso"}`, dbUser.Username, dbUser.RealName, dbUser.Email),
-		)
+		// ① 优先通过企业真实邮箱匹配已有账号
+		if claims.Email != "" && !strings.Contains(claims.Email, "@dingtalk.local") {
+			if models.Db.Where("email = ?", claims.Email).First(&candidateUser).Error == nil {
+				matched = true
+			}
+		}
+
+		// ② 其次：若本地存在同名且带有钉钉绑定的临时账号 (如 manager4123)，自动认领平滑升级为正式 Keycloak 域账号
+		if !matched && claims.Name != "" {
+			if models.Db.Where("real_name = ? AND (ding_talk_user_id IS NOT NULL AND ding_talk_user_id != '')", claims.Name).First(&candidateUser).Error == nil {
+				matched = true
+			}
+		}
+
+		if matched {
+			// 将此前由钉钉创建的账号，无感平滑升级为正式域用户名 (如将 manager4123 更新为正式的 dawn)
+			updateData := map[string]interface{}{
+				"username": username,
+			}
+			if claims.Email != "" && !strings.Contains(claims.Email, "@dingtalk.local") {
+				updateData["email"] = claims.Email
+			}
+			if claims.Name != "" {
+				updateData["real_name"] = claims.Name
+			}
+			_ = models.Db.Model(&candidateUser).Updates(updateData)
+			dbUser, _ = models.GetUserByUsername(username)
+			fmt.Printf("[OIDC SSO] 已成功将已有钉钉绑定账号平滑认领升级为正式 Keycloak 域账号: old=%s, new=%s, name=%s\n", candidateUser.Username, username, candidateUser.RealName)
+		} else {
+			// 4.2 真正的新员工：自动创建本地账号
+			newUser := &models.SystemUser{
+				Username: username,
+				RealName: claims.Name,
+				Email:    claims.Email,
+				Enable:   1, // 正常启用
+				HomePath: "/dashboard/analysis",
+				Password: common.BcryptHash("123456"),
+			}
+			// 插入数据库
+			if err := newUser.CreateOne(); err != nil {
+				common.ReqBadFailWithMessage(fmt.Sprintf("自动创建本地用户失败: %v", err), c)
+				return
+			}
+			dbUser, _ = models.GetUserByUsername(username)
+
+			// 记录 SSO 首次自动开户审计日志
+			middleware.RecordAuditLogManual(
+				c,
+				dbUser.ID,
+				dbUser.Username,
+				dbUser.RealName,
+				"用户管理",
+				"SSO自动开户",
+				c.Request.Method,
+				c.Request.URL.Path,
+				200,
+				0,
+				fmt.Sprintf(`{"username":"%s","real_name":"%s","email":"%s","source":"oidc_sso"}`, dbUser.Username, dbUser.RealName, dbUser.Email),
+			)
+		}
 	}
 
 	// 5. 解析 Keycloak 组与角色并映射同步至数据库 user_roles 中间表

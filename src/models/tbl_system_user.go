@@ -23,6 +23,8 @@ type SystemUser struct {
 	Avatar             string                          `json:"avatar,omitempty" gorm:"type:varchar(500);comment:用户头像URL"`
 	Desc               string                          `json:"desc,omitempty" gorm:"comment:用户描述"`
 	FeiShuUserId       string                          `json:"feiShuUserId,omitempty" gorm:"comment:飞书userid"`
+	DingTalkUserId     string                          `json:"dingTalkUserId,omitempty" gorm:"type:varchar(100);index;comment:钉钉员工userid/工号"`
+	DingTalkUnionId    string                          `json:"dingTalkUnionId,omitempty" gorm:"type:varchar(100);index;comment:钉钉全局唯一unionid"`
 	HomePath           string                          `json:"homePath" gorm:"comment:登录后跳转地址"`
 	Enable             int                             `json:"enable" gorm:"default:1;comment:用户是否被冻结 1正常 2冻结"`
 	Roles              []*SystemRole                   `json:"roles,omitempty" gorm:"many2many:system_user_roles"`

@@ -29,9 +29,17 @@ type ServerConfig struct {
 	ImC                             *IMConfig            `yaml:"im"`
 	AlertManagerApi                 string               `yaml:"alert_manager_api"`
 	OIDC                            *KeycloakOIDC        `yaml:"oidc"`
+	DingTalkSSOC                    *DingTalkSSOConfig   `yaml:"dingtalk_sso"`
 	OSSC                            *OSSConfig           `yaml:"oss"`
 	ArtifactoryC                    *ArtifactoryConfig   `yaml:"artifactory"`
 	EnableSwagger                   bool                 `yaml:"enable_swagger"`
+}
+
+type DingTalkSSOConfig struct {
+	Enable       bool   `yaml:"enable"`
+	ClientID     string `yaml:"client_id"`     // AppKey
+	ClientSecret string `yaml:"client_secret"` // AppSecret
+	RedirectURI  string `yaml:"redirect_uri"`  // 前端回调地址
 }
 
 type ArtifactoryConfig struct {
