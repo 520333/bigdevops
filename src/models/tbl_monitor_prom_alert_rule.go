@@ -4,7 +4,6 @@ import (
 	"bigdevops/src/common"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"gorm.io/gorm"
@@ -18,11 +17,10 @@ type MonitorPromAlertRule struct {
 	Name string `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:告警规则名称"`
 
 	UserID      uint
-	PoolId      uint        `json:"poolId,omitempty" gorm:"comment:关联哪个prometheus实例"`
-	PoolIds     StringArray `json:"poolIds,omitempty" gorm:"comment:关联多个采集池ID列表"`
-	SendGroupId int         `json:"sendGroupId"`
-	TreeNodeId  uint        `json:"treeNodeId" gorm:"comment:绑定到哪个节点"`
-	Enable      int         `json:"enable" gorm:"comment:是否被开启 1正常 2禁用"`
+	PoolId      uint `json:"poolId,omitempty" gorm:"comment:关联哪个prometheus实例"`
+	SendGroupId int  `json:"sendGroupId"`
+	TreeNodeId  uint `json:"treeNodeId" gorm:"comment:绑定到哪个节点"`
+	Enable      int  `json:"enable" gorm:"comment:是否被开启 1正常 2禁用"`
 
 	GrafanaLink string `json:"grafanaLink" gorm:"type:text;comment:grafana面板地址"`
 
@@ -36,10 +34,9 @@ type MonitorPromAlertRule struct {
 	TreeNodeIds StringArray `json:"treeNodeIds,omitempty" gorm:"comment:如果使用了服务树接口 通过树id获取ip列表"`
 	Key         string      `json:"key" gorm:"-"` // 前端表格使用
 
-	PoolName       string   `json:"poolName" gorm:"-"`
-	PoolNames      []string `json:"poolNames" gorm:"-"`
-	SendGroupName  string   `json:"sendGroupName" gorm:"-"`
-	CreateUserName string   `json:"createUserName" gorm:"-"`
+	PoolName       string `json:"poolName" gorm:"-"`
+	SendGroupName  string `json:"sendGroupName" gorm:"-"`
+	CreateUserName string `json:"createUserName" gorm:"-"`
 
 	LabelsFront      string            `json:"labelsFront" gorm:"-"`
 	AnnotationsFront string            `json:"annotationsFront" gorm:"-"`
@@ -77,29 +74,7 @@ func GetMonitorPromAlertById(id int) (*MonitorPromAlertRule, error) {
 }
 
 func GetMonitorPromAlertRuleByPoolId(poolId uint) (ps []*MonitorPromAlertRule, err error) {
-	poolIdStr := fmt.Sprintf("%d", poolId)
-	var all []*MonitorPromAlertRule
-	err = Db.Where("enable = 1").Find(&all).Error
-	if err != nil {
-		return nil, err
-	}
-	seen := make(map[uint]bool)
-	for _, r := range all {
-		matched := false
-		for _, pid := range r.PoolIds {
-			if pid == poolIdStr {
-				matched = true
-				break
-			}
-		}
-		if !matched && r.PoolId == poolId {
-			matched = true
-		}
-		if matched && !seen[r.ID] {
-			seen[r.ID] = true
-			ps = append(ps, r)
-		}
-	}
+	err = Db.Where("enable = 1 AND pool_id = ? ", poolId).Find(&ps).Error
 	return
 }
 
@@ -156,26 +131,9 @@ func (obj *MonitorPromAlertRule) FillFrontAllData() {
 		obj.CreateUserName = fmt.Sprintf("%s(%s)", dbUser.Username, dbUser.RealName)
 	}
 
-	var poolNames []string
-	if len(obj.PoolIds) > 0 {
-		for _, pidStr := range obj.PoolIds {
-			pid, _ := strconv.Atoi(pidStr)
-			if pid > 0 {
-				if pool, err := GetMonitorPromScrapePoolById(pid); err == nil && pool != nil {
-					poolNames = append(poolNames, pool.Name)
-				}
-			}
-		}
-	} else if obj.PoolId > 0 {
-		obj.PoolIds = []string{fmt.Sprintf("%d", obj.PoolId)}
-		if promM, _ := GetMonitorPromScrapePoolById(int(obj.PoolId)); promM != nil {
-			poolNames = append(poolNames, promM.Name)
-		}
-	}
-
-	obj.PoolNames = poolNames
-	if len(poolNames) > 0 {
-		obj.PoolName = strings.Join(poolNames, ", ")
+	dbPool, _ := GetMonitorPromScrapePoolById(int(obj.PoolId))
+	if dbPool != nil {
+		obj.PoolName = dbPool.Name
 	}
 	sengGroup, _ := GetMonitorAlertManagerSendGroupById(int(obj.SendGroupId))
 	if sengGroup != nil {
