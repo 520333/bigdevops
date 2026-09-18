@@ -20,10 +20,23 @@ func GetSystemSetting(c *gin.Context) {
 	if err != nil {
 		// 如果不存在，创建一条默认记录
 		setting = models.SystemSetting{
-			WatermarkEnabled: false,
-			WatermarkText:    "",
+			WatermarkEnabled:     false,
+			WatermarkText:        "",
+			UpgradePromptEnabled: false,
+			UpgradePromptTiming:  "version_once",
+			UpgradePromptTitle:   "新版本发布",
+			UpgradePromptVersion: "v1.0.0",
+			UpgradePromptContent: "系统已升级至最新版本，优化了部分功能并提升了运行稳定性。",
 		}
 		models.Db.Create(&setting)
+	} else {
+		// 针对老数据补齐默认值
+		if setting.UpgradePromptTiming == "" {
+			setting.UpgradePromptTiming = "version_once"
+		}
+		if setting.UpgradePromptTitle == "" {
+			setting.UpgradePromptTitle = "新版本发布"
+		}
 	}
 
 	common.OkWithData(setting, c)
@@ -53,6 +66,11 @@ func UpdateSystemSetting(c *gin.Context) {
 		// 更新
 		setting.WatermarkEnabled = req.WatermarkEnabled
 		setting.WatermarkText = req.WatermarkText
+		setting.UpgradePromptEnabled = req.UpgradePromptEnabled
+		setting.UpgradePromptTiming = req.UpgradePromptTiming
+		setting.UpgradePromptTitle = req.UpgradePromptTitle
+		setting.UpgradePromptVersion = req.UpgradePromptVersion
+		setting.UpgradePromptContent = req.UpgradePromptContent
 		models.Db.Save(&setting)
 	}
 

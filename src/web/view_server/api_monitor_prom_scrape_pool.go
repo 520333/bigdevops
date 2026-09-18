@@ -166,6 +166,15 @@ func updateMonitorPromScrapePool(c *gin.Context) {
 		common.FailWithMessage("采集池不存在", c)
 		return
 	}
+
+	// 检查采集池名称是否被其他采集池占用
+	var sameNameCount int64
+	models.Db.Model(&models.MonitorPromScrapePool{}).Where("name = ? AND id != ?", reqObj.Name, reqObj.ID).Count(&sameNameCount)
+	if sameNameCount > 0 {
+		common.FailWithMessage("采集池名称已存在", c)
+		return
+	}
+
 	// 保持原有的创建人，防止编辑时丢失
 	reqObj.UserID = dbPool.UserID
 

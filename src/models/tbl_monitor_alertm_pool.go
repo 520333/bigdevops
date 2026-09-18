@@ -75,17 +75,17 @@ func (obj *MonitorAlertManagerPool) CheckInstanceIpExists() bool {
 	ipMap := map[string]string{}
 	for _, p := range all {
 		p := p
-		if p.Name == obj.Name {
+		// 编辑时按 ID 排除当前自身记录；新建时按 Name 排除
+		if (obj.ID != 0 && p.ID == obj.ID) || (obj.ID == 0 && p.Name == obj.Name) {
 			continue
 		}
 		for _, ip := range p.AlertManagerInstances {
 			ipMap[ip] = ip
 		}
-		for _, ip := range obj.AlertManagerInstances {
-			_, ok := ipMap[ip]
-			if ok {
-				return true
-			}
+	}
+	for _, ip := range obj.AlertManagerInstances {
+		if _, ok := ipMap[ip]; ok {
+			return true
 		}
 	}
 	return false
