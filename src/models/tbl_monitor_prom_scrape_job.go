@@ -3,8 +3,6 @@ package models
 import (
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/prometheus/prometheus/model/relabel"
 	"gopkg.in/yaml.v3"
@@ -20,15 +18,14 @@ type MonitorPromScrapeJob struct {
 
 	UserID uint `json:"userId,omitempty" gorm:"comment:创建人ID"`
 
-	Enable                   int         `json:"enable" gorm:"comment:是否被开启 1正常 2禁用"`
-	ServiceDiscoveryType     string      `json:"serviceDiscoveryType" gorm:"comment:k8s or tree-http"`
-	MetricsPath              string      `json:"metricsPath"`
-	Scheme                   string      `json:"scheme"`
-	ScrapeInterval           int         `json:"scrapeInterval" gorm:"comment:采集间隔"`
-	ScrapeTimeout            int         `json:"scrapeTimeout" gorm:"comment:采集超时时间"`
-	PoolId                   uint        `json:"poolId"`
-	PoolIds                  StringArray `json:"poolIds,omitempty" gorm:"comment:关联多个采集池ID列表"`
-	RelabelConfigsYamlString string      `json:"relabelConfigsYamlString,omitempty" gorm:"type:text;comment:yaml字符串"`
+	Enable                   int    `json:"enable" gorm:"comment:是否被开启 1正常 2禁用"`
+	ServiceDiscoveryType     string `json:"serviceDiscoveryType" gorm:"comment:k8s or tree-http"`
+	MetricsPath              string `json:"metricsPath"`
+	Scheme                   string `json:"scheme"`
+	ScrapeInterval           int    `json:"scrapeInterval" gorm:"comment:采集间隔"`
+	ScrapeTimeout            int    `json:"scrapeTimeout" gorm:"comment:采集超时时间"`
+	PoolId                   uint   `json:"poolId"`
+	RelabelConfigsYamlString string `json:"relabelConfigsYamlString,omitempty" gorm:"type:text;comment:yaml字符串"`
 
 	// 服务发现 http
 	Port            int         `json:"port,omitempty" gorm:"comment:用虚拟机类型的时候 服务树服务发现接口类型 需要传port"`
@@ -52,10 +49,9 @@ type MonitorPromScrapeJob struct {
 	//KubeletClientCert string
 	//KubeletClientKey  string
 
-	Key            string   `json:"key" gorm:"-"` // 前端表格使用
-	PoolName       string   `json:"poolName" gorm:"-"`
-	PoolNames      []string `json:"poolNames" gorm:"-"`
-	CreateUserName string   `json:"createUserName" gorm:"-"`
+	Key            string `json:"key" gorm:"-"` // 前端表格使用
+	PoolName       string `json:"poolName" gorm:"-"`
+	CreateUserName string `json:"createUserName" gorm:"-"`
 }
 
 func (obj *MonitorPromScrapeJob) Create() error {
@@ -99,29 +95,7 @@ func GetMonitorPromScrapeJobById(id int) (*MonitorPromScrapeJob, error) {
 }
 
 func GetMonitorPromScrapeJobByPoolId(poolId uint) (ps []*MonitorPromScrapeJob, err error) {
-	poolIdStr := fmt.Sprintf("%d", poolId)
-	var all []*MonitorPromScrapeJob
-	err = Db.Where("enable = 1").Find(&all).Error
-	if err != nil {
-		return nil, err
-	}
-	seen := make(map[uint]bool)
-	for _, j := range all {
-		matched := false
-		for _, pid := range j.PoolIds {
-			if pid == poolIdStr {
-				matched = true
-				break
-			}
-		}
-		if !matched && j.PoolId == poolId {
-			matched = true
-		}
-		if matched && !seen[j.ID] {
-			seen[j.ID] = true
-			ps = append(ps, j)
-		}
-	}
+	err = Db.Where("enable = 1 AND pool_id = ? ", poolId).Find(&ps).Error
 	return
 }
 
@@ -135,27 +109,9 @@ func (obj *MonitorPromScrapeJob) FillFrontAllData() {
 	if dbUser != nil {
 		obj.CreateUserName = fmt.Sprintf("%s(%s)", dbUser.Username, dbUser.RealName)
 	}
-
-	var poolNames []string
-	if len(obj.PoolIds) > 0 {
-		for _, pidStr := range obj.PoolIds {
-			pid, _ := strconv.Atoi(pidStr)
-			if pid > 0 {
-				if pool, err := GetMonitorPromScrapePoolById(pid); err == nil && pool != nil {
-					poolNames = append(poolNames, pool.Name)
-				}
-			}
-		}
-	} else if obj.PoolId > 0 {
-		obj.PoolIds = []string{fmt.Sprintf("%d", obj.PoolId)}
-		if dbPool, _ := GetMonitorPromScrapePoolById(int(obj.PoolId)); dbPool != nil {
-			poolNames = append(poolNames, dbPool.Name)
-		}
-	}
-
-	obj.PoolNames = poolNames
-	if len(poolNames) > 0 {
-		obj.PoolName = strings.Join(poolNames, ", ")
+	dbPool, _ := GetMonitorPromScrapePoolById(int(obj.PoolId))
+	if dbPool != nil {
+		obj.PoolName = dbPool.Name
 	}
 	obj.Key = fmt.Sprintf("%d", obj.ID)
 }

@@ -151,15 +151,6 @@ func createMonitorPromScrapeJob(c *gin.Context) {
 		return
 	}
 
-	// 兼容处理 PoolIds 与 PoolId 双向同步
-	if len(reqObj.PoolIds) > 0 {
-		if firstId, err := strconv.Atoi(reqObj.PoolIds[0]); err == nil {
-			reqObj.PoolId = uint(firstId)
-		}
-	} else if reqObj.PoolId > 0 {
-		reqObj.PoolIds = []string{fmt.Sprintf("%d", reqObj.PoolId)}
-	}
-
 	// 获取当前用户ID
 	userName := c.MustGet(common.GIN_CTX_JWT_USER_NAME).(string)
 	dbUser, err := models.GetUserByUsername(userName)
@@ -202,15 +193,6 @@ func updateMonitorPromScrapeJob(c *gin.Context) {
 	if err != nil {
 		common.FailWithMessage("采集任务不存在", c)
 		return
-	}
-
-	// 兼容处理 PoolIds 与 PoolId 双向同步
-	if len(reqObj.PoolIds) > 0 {
-		if firstId, err := strconv.Atoi(reqObj.PoolIds[0]); err == nil {
-			reqObj.PoolId = uint(firstId)
-		}
-	} else if reqObj.PoolId > 0 {
-		reqObj.PoolIds = []string{fmt.Sprintf("%d", reqObj.PoolId)}
 	}
 
 	// 保持原有的创建人，防止编辑时丢失
