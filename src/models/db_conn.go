@@ -154,13 +154,13 @@ func MigrateTable() error {
 }
 
 func MockUserRegister(sc *config.ServerConfig) {
-	EnsureJenkinsPipelineMenu(sc)
-	EnsureAccountSettingMenu(sc)
-	EnsureAuditLogMenu(sc)
 	var count int64
 	err := Db.Model(&SystemUser{}).Where("username = ?", "admin").Count(&count).Error
 	if err == nil && count > 0 {
 		sc.Logger.Info("检测到数据库已完成初始化，跳过 Mock 数据注入 🛡️")
+		EnsureJenkinsPipelineMenu(sc)
+		EnsureAccountSettingMenu(sc)
+		EnsureAuditLogMenu(sc)
 		return
 	}
 	// 1. 系统基础数据（依赖顺序：最优先执行，返回超管用户供后续模块绑定关系）
@@ -189,6 +189,11 @@ func MockUserRegister(sc *config.ServerConfig) {
 
 	// 8.代码仓库
 	mockCodeGitData(sc, adminUser)
+
+	// 基础数据注入完毕后，确保增量菜单与权限就绪
+	EnsureJenkinsPipelineMenu(sc)
+	EnsureAccountSettingMenu(sc)
+	EnsureAuditLogMenu(sc)
 
 	sc.Logger.Info("全模块 Mock 基础数据初始化成功 🚀")
 }

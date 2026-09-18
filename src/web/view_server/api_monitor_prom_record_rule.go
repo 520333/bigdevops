@@ -135,6 +135,15 @@ func createMonitorPromRecordRule(c *gin.Context) {
 		reqObj.UserID = dbUser.ID
 	}
 
+	// 兼容处理 PoolIds 与 PoolId 双向同步
+	if len(reqObj.PoolIds) > 0 {
+		if firstId, err := strconv.Atoi(reqObj.PoolIds[0]); err == nil {
+			reqObj.PoolId = uint(firstId)
+		}
+	} else if reqObj.PoolId > 0 {
+		reqObj.PoolIds = []string{fmt.Sprintf("%d", reqObj.PoolId)}
+	}
+
 	reqObj.FillDefaultData()
 	// 存入数据库
 	err = reqObj.CreateOne()
@@ -172,6 +181,16 @@ func updateMonitorPromRecordRule(c *gin.Context) {
 		common.FailWithMessage("聚合规则配置不存在", c)
 		return
 	}
+
+	// 兼容处理 PoolIds 与 PoolId 双向同步
+	if len(reqObj.PoolIds) > 0 {
+		if firstId, err := strconv.Atoi(reqObj.PoolIds[0]); err == nil {
+			reqObj.PoolId = uint(firstId)
+		}
+	} else if reqObj.PoolId > 0 {
+		reqObj.PoolIds = []string{fmt.Sprintf("%d", reqObj.PoolId)}
+	}
+
 	reqObj.UserID = dbOld.UserID
 	pt := commonPromqlExprCheck(reqObj.Expr)
 	if !pt.Success {

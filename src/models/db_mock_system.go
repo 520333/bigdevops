@@ -134,9 +134,10 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Name: "AccountManagement", Title: "用户管理", Icon: "ant-design:user-outlined", Type: "1", Show: "1", OrderNo: 92, Component: "system/account/index", Path: "account"},
 				{Name: "RoleManagement", Title: "角色管理", Icon: "ant-design:solution-outlined", Type: "1", Show: "1", OrderNo: 93, Component: "system/role/index", Path: "role"},
 				{Name: "ChangePassword", Title: "修改密码", Icon: "ant-design:key-outlined", Type: "1", Show: "1", OrderNo: 94, Component: "system/password/index", Path: "changePassword"},
-				{Name: "ApiManagement", Title: "接口授权", Icon: "ant-design:safety-certificate-outlined", Type: "1", Show: "1", OrderNo: 95, Component: "system/api/index", Path: "api"},
-				{Name: "SystemSetting", Title: "系统设置", Icon: "ant-design:control-outlined", Type: "1", Show: "1", OrderNo: 96, Component: "system/settings/index", Path: "settings"},
-				{Name: "AuditManagement", Title: "操作审计", Icon: "ant-design:security-scan-outlined", Type: "1", Show: "1", OrderNo: 97, Component: "system/audit/index", Path: "audit"},
+				{Name: "AccountSetting", Title: "个人设置", Icon: "ant-design:user-outlined", Type: "1", Show: "1", OrderNo: 95, Component: "system/account/setting/index", Path: "accountSetting"},
+				{Name: "ApiManagement", Title: "接口授权", Icon: "ant-design:safety-certificate-outlined", Type: "1", Show: "1", OrderNo: 96, Component: "system/api/index", Path: "api"},
+				{Name: "SystemSetting", Title: "系统设置", Icon: "ant-design:control-outlined", Type: "1", Show: "1", OrderNo: 97, Component: "system/settings/index", Path: "settings"},
+				{Name: "AuditManagement", Title: "操作审计", Icon: "ant-design:security-scan-outlined", Type: "1", Show: "1", OrderNo: 98, Component: "system/audit/index", Path: "audit"},
 			},
 		},
 	}
@@ -722,7 +723,7 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 
 	var userMenus []*SystemMenu
 	for _, m := range menus {
-		if m.Name == "Dashboard" || m.Name == "Analysis" || m.Name == "System" || m.Name == "ChangePassword" {
+		if m.Name == "Dashboard" || m.Name == "Analysis" || m.Name == "System" || m.Name == "ChangePassword" || m.Name == "AccountSetting" {
 			userMenus = append(userMenus, m)
 		}
 	}
@@ -1003,10 +1004,23 @@ func EnsureAuditLogMenu(sc *config.ServerConfig) {
 		}
 	}
 
-	// 确保所有角色均关联日志审计菜单与相关 API
+	// 确保只有管理类/运维类角色关联日志审计菜单与相关 API，普通用户（user）排除
 	var roles []SystemRole
 	if Db.Find(&roles).Error == nil {
 		for _, r := range roles {
+			// 普通用户 (user) 严禁拥有日志审计菜单与敏感 API
+			if r.RoleValue == "user" {
+				_ = Db.Model(&r).Association("Menus").Delete(&menu)
+				for _, api := range createdApis {
+					_ = Db.Model(&r).Association("Apis").Delete(api)
+					if CasbinEnforcer != nil && r.RoleValue != "" {
+						_, _ = CasbinEnforcer.RemovePolicy(r.RoleValue, api.Path, api.Method)
+					}
+				}
+				continue
+			}
+
+			// 管理类角色关联菜单与 API
 			_ = Db.Model(&r).Association("Menus").Append(&menu)
 			for _, api := range createdApis {
 				_ = Db.Model(&r).Association("Apis").Append(api)

@@ -113,7 +113,7 @@ func getMonitorPromScrapeJobOne(c *gin.Context) {
 	sc.Logger.Info("采集任务实例", zap.Any("id", id))
 	intVar, _ := strconv.Atoi(id)
 
-	dbObj, err := models.GetJobTaskById(intVar)
+	dbObj, err := models.GetMonitorPromScrapeJobById(intVar)
 	if err != nil {
 		sc.Logger.Error("根据id找采集任务实例错误", zap.Any("采集任务实例", id), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
@@ -149,6 +149,15 @@ func createMonitorPromScrapeJob(c *gin.Context) {
 		sc.Logger.Error(msg, zap.Any("采集池", reqObj.Name), zap.Any("yaml", reqObj.RelabelConfigsYamlString), zap.Error(err))
 		common.FailWithMessage(msg, c)
 		return
+	}
+
+	// 兼容处理 PoolIds 与 PoolId 双向同步
+	if len(reqObj.PoolIds) > 0 {
+		if firstId, err := strconv.Atoi(reqObj.PoolIds[0]); err == nil {
+			reqObj.PoolId = uint(firstId)
+		}
+	} else if reqObj.PoolId > 0 {
+		reqObj.PoolIds = []string{fmt.Sprintf("%d", reqObj.PoolId)}
 	}
 
 	// 获取当前用户ID
@@ -194,6 +203,16 @@ func updateMonitorPromScrapeJob(c *gin.Context) {
 		common.FailWithMessage("采集任务不存在", c)
 		return
 	}
+
+	// 兼容处理 PoolIds 与 PoolId 双向同步
+	if len(reqObj.PoolIds) > 0 {
+		if firstId, err := strconv.Atoi(reqObj.PoolIds[0]); err == nil {
+			reqObj.PoolId = uint(firstId)
+		}
+	} else if reqObj.PoolId > 0 {
+		reqObj.PoolIds = []string{fmt.Sprintf("%d", reqObj.PoolId)}
+	}
+
 	// 保持原有的创建人，防止编辑时丢失
 	reqObj.UserID = dbJob.UserID
 	err = reqObj.ValidateRelabelConfigsYamlString()
