@@ -140,6 +140,14 @@ func createMonitorPromRecordRule(c *gin.Context) {
 	err = reqObj.CreateOne()
 	if err != nil {
 		sc.Logger.Error("新增聚合规则配置执行数据库失败", zap.Error(err))
+		if strings.Contains(err.Error(), "idx_monitor_prom_record_rules_record_name") {
+			common.FailWithMessage("聚合指标名称(recordName)已存在，请修改后再保存", c)
+			return
+		}
+		if strings.Contains(err.Error(), "idx_monitor_prom_record_rules_name") {
+			common.FailWithMessage("聚合规则名称(name)已存在，请修改后再保存", c)
+			return
+		}
 		common.FailWithMessage("存入数据库失败: "+err.Error(), c)
 		return
 	}
@@ -185,6 +193,14 @@ func updateMonitorPromRecordRule(c *gin.Context) {
 	err = reqObj.UpdateOne()
 	if err != nil {
 		sc.Logger.Error("更新聚合规则配置执行错误", zap.Error(err))
+		if strings.Contains(err.Error(), "idx_monitor_prom_record_rules_record_name") {
+			common.FailWithMessage("聚合指标名称(recordName)已存在，请修改后再保存", c)
+			return
+		}
+		if strings.Contains(err.Error(), "idx_monitor_prom_record_rules_name") {
+			common.FailWithMessage("聚合规则名称(name)已存在，请修改后再保存", c)
+			return
+		}
 		common.FailWithMessage("更新失败: "+err.Error(), c)
 		return
 	}

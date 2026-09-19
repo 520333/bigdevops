@@ -14,8 +14,8 @@ import (
 
 type MonitorPromRecordRule struct {
 	Model
-	Name       string `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:告警规则名称"`
-	RecordName string `json:"recordName,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:预聚合名称"`
+	Name       string `json:"name,omitempty" gorm:"type:varchar(100);comment:预聚合规则名称"`
+	RecordName string `json:"recordName,omitempty" gorm:"type:varchar(100);comment:预聚合名称"`
 
 	UserID     uint
 	PoolId     uint `json:"poolId,omitempty" gorm:"comment:关联哪个prometheus实例"`

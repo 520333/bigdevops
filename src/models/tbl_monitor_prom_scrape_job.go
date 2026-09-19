@@ -14,7 +14,7 @@ import (
 
 type MonitorPromScrapeJob struct {
 	Model
-	Name string `json:"name,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:采集任务名称"`
+	Name string `json:"name,omitempty" gorm:"type:varchar(100);comment:采集任务名称"`
 
 	UserID uint `json:"userId,omitempty" gorm:"comment:创建人ID"`
 
