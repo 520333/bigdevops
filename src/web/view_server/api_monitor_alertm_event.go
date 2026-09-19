@@ -52,11 +52,7 @@ func getMonitorAlertManagerEventList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	currentPage, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-
-	//searchUserID := c.DefaultQuery("UserID", "")
-	//searchUserIDInt, _ := strconv.Atoi(searchUserID)
 	searchTitle := c.DefaultQuery("name", "")
-	//searchCreateUserName := c.DefaultQuery("createUserName", "")
 
 	offset := 0
 	limit := pageSize
@@ -64,59 +60,21 @@ func getMonitorAlertManagerEventList(c *gin.Context) {
 		offset = (currentPage - 1) * limit
 	}
 
-	objs, err := models.GetMonitorAlertManagerEventAll()
+	pagedObjs, total, err := models.GetMonitorAlertManagerEventPage(searchTitle, limit, offset)
 	if err != nil {
-		sc.Logger.Error("去数据库中拿所有的集群执行错误", zap.Error(err))
-		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的集群执行错误：%v", err.Error()), c)
-		return
-	}
-	allIds := []int{}
-
-	for _, obj := range objs {
-		//if searchUserID != "" && int(obj.UserID) != searchUserIDInt {
-		//	continue
-		//}
-
-		if searchTitle != "" && !strings.Contains(obj.AlertName, searchTitle) {
-			continue
-		}
-
-		// 填充前端需要的数据（拿到组合好的 CreateUserName）
-		obj.FillFrontAllData()
-
-		// 🚀 修复 1：对比的应该是刚填充好的 CreateUserName 字段，而不是 UserID
-		//if searchCreateUserName != "" && !strings.Contains(obj.CreateUserName, searchCreateUserName) {
-		//	continue
-		//}
-
-		allIds = append(allIds, int(obj.ID))
-	}
-
-	// 如果过滤后没有数据，直接返回空列表
-	if len(allIds) == 0 {
-		common.OkWithDetailed(gin.H{
-			"items": []models.MonitorAlertManagerEvent{},
-			"total": 0,
-		}, "ok", c)
+		sc.Logger.Error("查询告警事件列表执行错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("查询告警事件列表错误：%v", err.Error()), c)
 		return
 	}
 
-	// 根据过滤后的 ID 进行分页查询
-	pagedObjs, err := models.GetMonitorAlertManagerEventByIdsWithLimitOffset(allIds, limit, offset)
-	if err != nil {
-		sc.Logger.Error("limit-offset 去数据库中拿所有的集群执行错误", zap.Error(err))
-		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有的集群执行错误：%v", err.Error()), c)
-		return
-	}
-
-	// 🚀 修复 2：分页查出来的新对象，必须再次遍历填充一次虚拟字段，否则响应里还是空的！
+	// 仅对当前页的条目填充前端需要的关联字段，高效且性能可控
 	for _, obj := range pagedObjs {
 		obj.FillFrontAllData()
 	}
 
 	common.OkWithDetailed(gin.H{
 		"items": pagedObjs,
-		"total": len(allIds),
+		"total": total,
 	}, "ok", c)
 }
 
@@ -166,7 +124,7 @@ func alertManagerEventReLing(c *gin.Context) {
 		dbUser.RealName, "认领告警", event.AlertName, common.TimeNowString())
 	go event.SendImMessageToQunLiaoByEvent(msg, sc.ImC.FeiShu.Webhook, sc.Logger, sc.ImC.FeiShu.RequestTimeoutSeconds)
 
-	common.OkWithMessage("静默成功", c)
+	common.OkWithMessage("认领成功", c)
 }
 
 func doUnSilence(sc *config.ServerConfig, eventID int, user *models.SystemUser) error {
@@ -183,7 +141,13 @@ func doUnSilence(sc *config.ServerConfig, eventID int, user *models.SystemUser) 
 		return fmt.Errorf("event (ID: %d) has no silence ID", eventID)
 	}
 
-	url := fmt.Sprintf("%s/%s/%v", sc.AlertManagerApi, "api/v2/silence", event.SilenceID)
+	alm, err := models.GetMonitorAlertManagerPoolById(int(event.SendGroup.PoolId))
+	if err != nil || len(alm.AlertManagerInstances) == 0 {
+		return fmt.Errorf("failed to find alertmanager instance for event (ID: %d)", eventID)
+	}
+
+	almAddr := fmt.Sprintf("http://%v:9093", alm.AlertManagerInstances[0])
+	url := fmt.Sprintf("%s/%s/%v", almAddr, "api/v2/silence", event.SilenceID)
 	emptyMap := map[string]string{}
 
 	bodyBytes, err := common.DeleteWithId(sc.Logger, "AlertSilence",
@@ -198,8 +162,14 @@ func doUnSilence(sc *config.ServerConfig, eventID int, user *models.SystemUser) 
 	now := time.Now()
 	event.Status = common.MONITOR_ALERT_STATUS_FIRING
 	event.UnsilencedAt = &now
+	event.SilenceID = ""
 
-	_ = event.UpdateOne()
+	updates := map[string]interface{}{
+		"status":        common.MONITOR_ALERT_STATUS_FIRING,
+		"unsilenced_at": &now,
+		"silence_id":    "",
+	}
+	_ = models.Db.Model(&models.MonitorAlertManagerEvent{}).Where("id = ?", event.ID).Updates(updates).Error
 
 	msg := fmt.Sprintf("用户:%v  动作:%v 告警:%v 时间:%v",
 		user.RealName, "解除屏蔽", event.AlertName, common.TimeNowString())

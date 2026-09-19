@@ -65,19 +65,39 @@ func (obj *MonitorAlertManagerEvent) UpdateOrCreateOne() error {
 
 	if obj.Status != common.MONITOR_ALERT_STATUS_RESOLVED {
 		if dbobj.Status == common.MONITOR_ALERT_STATUS_RENLING || dbobj.Status == common.MONITOR_ALERT_STATUS_SILIENCED {
+			// 如果之前是认领中或静默中，且告警仍然是 firing，维持原认领/静默状态
 			obj.Status = dbobj.Status
+			obj.ReLingUserId = dbobj.ReLingUserId
+			obj.SilenceID = dbobj.SilenceID
+			obj.UnsilencedAt = dbobj.UnsilencedAt
+		} else if dbobj.Status == common.MONITOR_ALERT_STATUS_RESOLVED {
+			// 上次已恢复，本次重新触发 Firing，重置历史认领人和已失效静默
+			obj.ReLingUserId = 0
+			obj.SilenceID = ""
+			obj.UnsilencedAt = nil
 		}
+	} else {
+		// 当前已恢复，继承历史认领人和静默信息便于事后复盘追溯
+		obj.ReLingUserId = dbobj.ReLingUserId
+		obj.SilenceID = dbobj.SilenceID
+		obj.UnsilencedAt = dbobj.UnsilencedAt
 	}
 
-	// 继承数据库里的关键字段
 	obj.ID = dbobj.ID
 	obj.EventTimes = dbobj.EventTimes + 1
-	obj.ReLingUserId = dbobj.ReLingUserId
-	obj.SilenceID = dbobj.SilenceID
 
-	obj.UnsilencedAt = dbobj.UnsilencedAt
-
-	return obj.UpdateOne()
+	updates := map[string]interface{}{
+		"status":          obj.Status,
+		"event_times":     obj.EventTimes,
+		"re_ling_user_id": obj.ReLingUserId,
+		"silence_id":      obj.SilenceID,
+		"unsilenced_at":   obj.UnsilencedAt,
+		"labels":          obj.Labels,
+		"alert_name":      obj.AlertName,
+		"rule_id":         obj.RuleId,
+		"send_group_id":   obj.SendGroupId,
+	}
+	return Db.Model(&MonitorAlertManagerEvent{}).Where("id = ?", obj.ID).Updates(updates).Error
 }
 
 func (obj *MonitorAlertManagerEvent) UpdateOne() error {
@@ -107,10 +127,23 @@ func GetMonitorAlertManagerEventAll() (obj []*MonitorAlertManagerEvent, err erro
 	return
 }
 
+func GetMonitorAlertManagerEventPage(name string, limit, offset int) (objs []*MonitorAlertManagerEvent, total int64, err error) {
+	tx := Db.Model(&MonitorAlertManagerEvent{})
+	if name != "" {
+		tx = tx.Where("alert_name LIKE ?", "%"+name+"%")
+	}
+	err = tx.Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	err = tx.Order("id DESC").Limit(limit).Offset(offset).Find(&objs).Error
+	return
+}
+
 func (obj *MonitorAlertManagerEvent) GenMapFromKvs() map[string]string {
 	labelsM := map[string]string{}
 	for _, i := range obj.Labels {
-		kvs := strings.Split(i, "=")
+		kvs := strings.SplitN(i, "=", 2)
 		if len(kvs) != 2 {
 			continue
 		}
