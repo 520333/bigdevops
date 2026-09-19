@@ -44,15 +44,30 @@ func JWTAuthMiddleWare() func(c *gin.Context) {
 			return
 		}
 
-		// 03. 单设备互斥登录校验：如果当前 Token 不是该用户最新活跃的 Token，判定为被顶号下线
-		if !models.IsLatestUserToken(userClaims.Username, parts[1]) {
-			sc.Logger.Error("用户账号在其他设备登录，强制当前设备下线",
-				zap.String("user", userClaims.Username),
-				zap.Uint("userId", userClaims.SystemUser.ID),
-			)
-			common.Req401WithDetailed(gin.H{"reload": true, "kicked": true}, "该账号已在其他设备登录，您已被强制下线！", c)
+		// 03. 单设备互斥登录与强退校验 (支持续期过渡宽限期与管理员强退精准识别)
+		valid, isKickedOut, latestToken := models.CheckUserTokenStatus(userClaims.Username, parts[1])
+		if !valid {
+			if isKickedOut {
+				sc.Logger.Warn("用户已被管理员强制下线",
+					zap.String("user", userClaims.Username),
+					zap.Uint("userId", userClaims.SystemUser.ID),
+				)
+				common.Req401WithDetailed(gin.H{"reload": true, "kicked": true}, "该账号已被管理员强制下线，请重新登录！", c)
+			} else {
+				sc.Logger.Warn("用户账号在其他设备登录，强制当前设备下线",
+					zap.String("user", userClaims.Username),
+					zap.Uint("userId", userClaims.SystemUser.ID),
+				)
+				common.Req401WithDetailed(gin.H{"reload": true, "kicked": true}, "该账号已在其他设备登录，您已被强制下线！", c)
+			}
 			c.Abort()
 			return
+		}
+
+		// 若当前请求使用的是处于平滑过渡宽限期内的上一版旧 Token，主动在响应头回传最新 Token 加快前端同步
+		if latestToken != "" && latestToken != parts[1] {
+			c.Header("new-token", latestToken)
+			c.Header("Access-Control-Expose-Headers", "new-token")
 		}
 
 		// 04.传递给业务处理函数使用
@@ -60,18 +75,18 @@ func JWTAuthMiddleWare() func(c *gin.Context) {
 		// 05.续期 前端需要获取Header中的new-token
 		// 如果 (过期时间 - 当前时间) < 缓冲时间，说明快过期了
 		if userClaims.RegisteredClaims.ExpiresAt.Unix()-time.Now().Unix() < int64(sc.JWTC.BufferDuration/time.Second) {
-			sc.Logger.Info("jwt临期，自动刷新jwt续签",
-				zap.String("user", userClaims.Username),
-				zap.Int64("剩余秒数", userClaims.RegisteredClaims.ExpiresAt.Unix()-time.Now().Unix()),
-			)
-			newToken, err := models.GenJWTToken(userClaims.SystemUser, sc)
+			newToken, isNew, err := models.RenewUserToken(userClaims.SystemUser, parts[1], sc)
 			if err != nil {
-				common.Result5xx(0, gin.H{}, fmt.Sprintf("ParseToken 解析token包含的信息错误：%v", err.Error()), c)
+				common.Result5xx(0, gin.H{}, fmt.Sprintf("自动续签token失败：%v", err.Error()), c)
 				c.Abort()
+				return
 			}
-			// 同步刷新该用户最新活跃 Token，防止自身续签后误判为被顶号
-			models.SetUserActiveToken(userClaims.Username, newToken)
-
+			if isNew {
+				sc.Logger.Info("jwt临期，完成平滑自动续签",
+					zap.String("user", userClaims.Username),
+					zap.Int64("剩余秒数", userClaims.RegisteredClaims.ExpiresAt.Unix()-time.Now().Unix()),
+				)
+			}
 			// 将新 Token 放入响应头，约定 Key 为 "new-token"
 			// 前端拦截器检测到这个 Header 时，自动更新本地存储
 			c.Header("new-token", newToken)

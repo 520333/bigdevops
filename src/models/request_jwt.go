@@ -14,7 +14,16 @@ import (
 	"go.uber.org/zap"
 )
 
-// UserActiveTokens 全局维护：username -> 当前合法的最新 Token (用于单设备登录/顶号互斥控制)
+// UserTokenState 用户设备Token状态管理 (支持单设备互斥、临期续签平滑过渡与管理员强退)
+type UserTokenState struct {
+	LatestToken            string    `json:"latestToken"`            // 当前最新签发的合法活跃 Token
+	PreviousToken          string    `json:"previousToken"`          // 上一版合法 Token（刚被续期替换下来的旧 Token）
+	PreviousTokenExpiresAt time.Time `json:"previousTokenExpiresAt"` // 上一版旧 Token 的过渡宽限截止时间（默认60秒）
+	KickedOut              bool      `json:"kickedOut"`              // 是否被管理员手动强制下线
+	LastRenewTime          time.Time `json:"lastRenewTime"`          // 上次自动续签生成时间（用于并发请求防抖冷却）
+}
+
+// UserActiveTokens 全局维护：username -> *UserTokenState
 var UserActiveTokens sync.Map
 
 // OnlineSession 在线用户会话结构
@@ -34,9 +43,97 @@ type OnlineSession struct {
 // OnlineUserSessions 全局维护：username -> OnlineSession
 var OnlineUserSessions sync.Map
 
-// SetUserActiveToken 记录用户的最新活跃 Token
+// SetUserActiveToken 用户主动登录/重新登录时记录最新活跃 Token，清空旧 Token 宽限期（确保单设备互斥安全）
 func SetUserActiveToken(username string, token string) {
-	UserActiveTokens.Store(username, token)
+	UserActiveTokens.Store(username, &UserTokenState{
+		LatestToken:   token,
+		PreviousToken: "",
+		KickedOut:     false,
+	})
+}
+
+// RenewUserToken 用户临期自动续签：支持防并发高频重复签发冷却与旧 Token 60秒过渡宽限期
+// 返回 (最新Token, 是否全新签发, 错误)
+func RenewUserToken(user *SystemUser, oldToken string, sc *config.ServerConfig) (string, bool, error) {
+	now := time.Now()
+	username := user.Username
+
+	val, ok := UserActiveTokens.Load(username)
+	if ok && val != nil {
+		if state, ok2 := val.(*UserTokenState); ok2 {
+			// 1. 如果已被管理员强制踢下线，拒绝续签
+			if state.KickedOut {
+				return "", false, errors.New("账号已被强制下线")
+			}
+			// 2. 防并发重复签发冷却：若距离上次续签不足 30 秒，直接复用已签发的最新 Token
+			if !state.LastRenewTime.IsZero() && now.Sub(state.LastRenewTime) < 30*time.Second && state.LatestToken != "" {
+				return state.LatestToken, false, nil
+			}
+		}
+	}
+
+	// 3. 生成新 Token
+	newToken, err := GenJWTToken(user, sc)
+	if err != nil {
+		return "", false, err
+	}
+
+	// 4. 设定旧 Token 宽限期为 60 秒（充分覆盖并发请求与前端异步存储延迟）
+	gracePeriod := 60 * time.Second
+	UserActiveTokens.Store(username, &UserTokenState{
+		LatestToken:            newToken,
+		PreviousToken:          oldToken,
+		PreviousTokenExpiresAt: now.Add(gracePeriod),
+		KickedOut:              false,
+		LastRenewTime:          now,
+	})
+
+	return newToken, true, nil
+}
+
+// CheckUserTokenStatus 综合校验当前 Token 状态
+// 返回: (valid: 是否合法通过, isKickedOut: 是否是被管理员强退, latestToken: 当前系统最新有效Token)
+func CheckUserTokenStatus(username string, currentToken string) (bool, bool, string) {
+	val, ok := UserActiveTokens.Load(username)
+	if !ok || val == nil {
+		// 服务刚重启或该用户尚无记录时，自动自愈当前有效 Token 为最新 Token
+		UserActiveTokens.Store(username, &UserTokenState{
+			LatestToken: currentToken,
+		})
+		return true, false, currentToken
+	}
+
+	state, ok2 := val.(*UserTokenState)
+	if !ok2 {
+		// 兼容可能遗留的纯字符串格式
+		if strVal, isStr := val.(string); isStr {
+			if strVal == "KICKED_OUT" {
+				return false, true, ""
+			}
+			if strVal == currentToken {
+				return true, false, currentToken
+			}
+		}
+		return false, false, ""
+	}
+
+	// 1. 管理员主动踢出
+	if state.KickedOut {
+		return false, true, ""
+	}
+
+	// 2. 当前请求携带的是最新 Token
+	if state.LatestToken == currentToken {
+		return true, false, state.LatestToken
+	}
+
+	// 3. 当前请求携带的是刚被续签替换的上一版旧 Token，且处于 60 秒宽限期内 (并发请求平滑过渡)
+	if state.PreviousToken == currentToken && time.Now().Before(state.PreviousTokenExpiresAt) {
+		return true, false, state.LatestToken
+	}
+
+	// 4. 既非最新 Token 也过了宽限期，判定为被新设备登录顶号
+	return false, false, state.LatestToken
 }
 
 // RegisterOnlineSession 注册/更新在线用户会话
@@ -148,7 +245,9 @@ func RemoveOnlineSession(username string) {
 func KickoutOnlineUser(username string) {
 	OnlineUserSessions.Delete(username)
 	// 标记为已强退，阻断该用户旧 Token 继续通过单设备校验自愈
-	UserActiveTokens.Store(username, "KICKED_OUT")
+	UserActiveTokens.Store(username, &UserTokenState{
+		KickedOut: true,
+	})
 }
 
 // GetOnlineSessionList 获取所有当前有效的在线用户会话
@@ -171,15 +270,10 @@ func GetOnlineSessionList(sc *config.ServerConfig) []OnlineSession {
 	return list
 }
 
-// IsLatestUserToken 校验当前 Token 是否为该用户最新活跃 Token
+// IsLatestUserToken 校验当前 Token 是否为该用户最新活跃 Token (兼容旧方法名)
 func IsLatestUserToken(username string, currentToken string) bool {
-	val, ok := UserActiveTokens.Load(username)
-	if !ok {
-		// 服务刚重启或该用户尚无记录时，将当前有效 Token 作为最新 Token
-		UserActiveTokens.Store(username, currentToken)
-		return true
-	}
-	return val.(string) == currentToken
+	valid, _, _ := CheckUserTokenStatus(username, currentToken)
+	return valid
 }
 
 // ClearUserActiveToken 用户退出登录时清理
