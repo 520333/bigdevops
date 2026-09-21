@@ -243,6 +243,11 @@ func RemoveOnlineSession(username string) {
 
 // KickoutOnlineUser 管理员强制将用户踢下线
 func KickoutOnlineUser(username string) {
+	if val, ok := OnlineUserSessions.Load(username); ok {
+		if session, ok2 := val.(OnlineSession); ok2 {
+			RecordLoginLogDirect(session.Username, session.RealName, session.IP, session.OS, session.Browser, "强退下线", 1, "管理员强制下线")
+		}
+	}
 	OnlineUserSessions.Delete(username)
 	// 标记为已强退，阻断该用户旧 Token 继续通过单设备校验自愈
 	UserActiveTokens.Store(username, &UserTokenState{
@@ -293,6 +298,18 @@ func TokenNext(dbUser *SystemUser, c *gin.Context) {
 	// 提取客户端真实 IP 并注册在线会话
 	clientIP := common.GetRealClientIP(c)
 	RegisterOnlineSession(dbUser, token, clientIP, c.Request.UserAgent())
+
+	// 记录登录审计日志
+	loginType := "密码登录"
+	if c.Request != nil && c.Request.URL != nil {
+		pathLower := strings.ToLower(c.Request.URL.Path)
+		if strings.Contains(pathLower, "oidc") {
+			loginType = "OIDC单点"
+		} else if strings.Contains(pathLower, "dingtalk") {
+			loginType = "钉钉扫码"
+		}
+	}
+	RecordLoginLog(c, dbUser.Username, dbUser.RealName, loginType, 1, "登录成功")
 
 	userRsp := UserLoginResponse{
 		SystemUser: dbUser,

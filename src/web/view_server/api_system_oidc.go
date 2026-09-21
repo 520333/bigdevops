@@ -76,8 +76,9 @@ func OidcCallback(c *gin.Context) {
 		return
 	}
 	verifier := provider.Verifier(&oidc.Config{ClientID: sc.OIDC.ClientID})
-	idToken, err := verifier.Verify(ctx, rawIDToken)
+	idToken, err := verifier.Verify(context.Background(), rawIDToken)
 	if err != nil {
+		models.RecordLoginLog(c, "", "", "OIDC单点", 0, fmt.Sprintf("校验 ID Token 失败: %v", err))
 		common.ReqBadFailWithMessage(fmt.Sprintf("校验 ID Token 失败: %v", err), c)
 		return
 	}

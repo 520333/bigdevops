@@ -55,6 +55,9 @@ func GetAuditLogList(filter AuditLogFilter, page, pageSize int) ([]*SystemAuditL
 	}
 	if filter.Module != "" {
 		db = db.Where("module = ?", filter.Module)
+	} else {
+		// 默认排除“用户认证”，保证操作日志纯粹展示业务增删改查
+		db = db.Where("module != ?", "用户认证")
 	}
 	if filter.Status > 0 {
 		db = db.Where("status = ?", filter.Status)

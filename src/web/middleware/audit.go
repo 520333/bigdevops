@@ -22,14 +22,22 @@ func AuditLogMiddleWare() gin.HandlerFunc {
 		method := c.Request.Method
 		path := c.Request.URL.Path
 
-		// 记录写操作 (POST, PUT, DELETE)，以及退出登录 (GET /logout)
-		if method != "POST" && method != "PUT" && method != "DELETE" && !strings.Contains(path, "logout") {
+		// 记录常规写操作 (POST, PUT, DELETE)
+		if method != "POST" && method != "PUT" && method != "DELETE" {
 			c.Next()
 			return
 		}
 
-		// 排除纯日志查询或特定高频无状态接口
-		if strings.Contains(path, "/getAuditLogList") || strings.Contains(path, "/health") {
+		// 排除日志查询、健康检查以及由“登录日志”独立管理的认证接口
+		pathLower := strings.ToLower(path)
+		if strings.Contains(path, "/getAuditLogList") ||
+			strings.Contains(path, "/getLoginLogList") ||
+			strings.Contains(path, "/getOnlineUserList") ||
+			strings.Contains(path, "/health") ||
+			strings.Contains(pathLower, "login") ||
+			strings.Contains(pathLower, "logout") ||
+			strings.Contains(pathLower, "oidc") ||
+			strings.Contains(pathLower, "dingtalk") {
 			c.Next()
 			return
 		}

@@ -199,6 +199,7 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Path: "/api/system/setting/get", Method: "GET", Title: "系统管理-全局设置", Type: "1"},
 				{Path: "/api/system/setting/update", Method: "PUT", Title: "系统管理-更新设置", Type: "1"},
 				{Path: "/api/system/getAuditLogList", Method: "GET", Title: "[审计模块]获取操作审计日志列表", Type: "1"},
+				{Path: "/api/system/getLoginLogList", Method: "GET", Title: "[审计模块]获取登录审计日志列表", Type: "1"},
 			},
 		},
 
@@ -984,11 +985,19 @@ func EnsureAuditLogMenu(sc *config.ServerConfig) {
 		})
 	}
 
+	// 确保父级系统管理 API 存在并获取其 ID 作为 Pid
+	var parentApi SystemApi
+	parentPid := 0
+	if err := Db.Where("path = ? AND type = ?", "/api/system", "0").First(&parentApi).Error; err == nil && parentApi.ID > 0 {
+		parentPid = int(parentApi.ID)
+	}
+
 	// 确保需要的 API 接口存在
 	apisToAdd := []SystemApi{
-		{Path: "/api/system/getAuditLogList", Method: "GET", Title: "[审计模块]获取操作审计日志列表", Type: "1"},
-		{Path: "/api/system/getOnlineUserList", Method: "GET", Title: "[用户模块]获取在线用户列表", Type: "1"},
-		{Path: "/api/system/kickoutUser", Method: "POST", Title: "[用户模块]强退指定在线用户", Type: "1"},
+		{Path: "/api/system/getAuditLogList", Method: "GET", Title: "[审计模块]获取操作审计日志列表", Type: "1", Pid: parentPid},
+		{Path: "/api/system/getLoginLogList", Method: "GET", Title: "[审计模块]获取登录审计日志列表", Type: "1", Pid: parentPid},
+		{Path: "/api/system/getOnlineUserList", Method: "GET", Title: "[用户模块]获取在线用户列表", Type: "1", Pid: parentPid},
+		{Path: "/api/system/kickoutUser", Method: "POST", Title: "[用户模块]强退指定在线用户", Type: "1", Pid: parentPid},
 	}
 
 	var createdApis []*SystemApi
@@ -996,10 +1005,16 @@ func EnsureAuditLogMenu(sc *config.ServerConfig) {
 		var existingApi SystemApi
 		if err := Db.Where("path = ? AND method = ?", apiItem.Path, apiItem.Method).First(&existingApi).Error; err != nil || existingApi.ID == 0 {
 			newApi := apiItem
+			newApi.Pid = parentPid
 			if createApiErr := Db.Create(&newApi).Error; createApiErr == nil {
 				createdApis = append(createdApis, &newApi)
 			}
 		} else {
+			// 如果已有接口的 Pid 是 0，自动自愈修正归属到系统管理父级模块下
+			if existingApi.Pid == 0 && parentPid > 0 {
+				existingApi.Pid = parentPid
+				_ = Db.Model(&existingApi).Update("pid", parentPid)
+			}
 			createdApis = append(createdApis, &existingApi)
 		}
 	}

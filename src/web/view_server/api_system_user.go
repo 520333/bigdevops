@@ -51,6 +51,7 @@ func UserLogin(c *gin.Context) {
 	dbUser, err := models.CheckUserPassword(&user)
 	if err != nil {
 		sc.Logger.Error("登录失败！用户名不存在或者密码错误", zap.Error(err))
+		models.RecordLoginLog(c, user.Username, "", "密码登录", 0, "用户名不存在或者密码错误")
 		common.ReqBadFailWithMessage(fmt.Sprintf("用户不存在或者密码错误 %v", err.Error()), c)
 		return
 	}
@@ -78,6 +79,7 @@ func UserLogout(c *gin.Context) {
 		if claims, err := models.ParseToken(tokenStr, sc); err == nil && claims != nil {
 			c.Set(common.GIN_CTX_JWT_USER_NAME, claims.Username)
 			models.RemoveOnlineSession(claims.Username)
+			models.RecordLoginLog(c, claims.Username, "", "退出登录", 1, "主动退出系统")
 		}
 	}
 

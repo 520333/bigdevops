@@ -87,6 +87,7 @@ func ConfigRouter(r *gin.Engine) {
 
 		// 审计日志路由
 		systemApiGroup.GET("/getAuditLogList", getAuditLogList)
+		systemApiGroup.GET("/getLoginLogList", getLoginLogList)
 	}
 
 	artifactoryApiGroup := afterLoginApiGroup.Group("/artifactory")

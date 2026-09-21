@@ -91,6 +91,7 @@ func MigrateTable() error {
 		&SystemApi{},
 		&SystemSetting{},
 		&SystemAuditLog{},
+		&SystemLoginLog{},
 
 		&StreeNode{},
 		&ResourceEcs{},
