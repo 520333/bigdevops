@@ -319,33 +319,8 @@ func TokenNext(dbUser *SystemUser, c *gin.Context) {
 }
 
 func GenJWTToken(dbUser *SystemUser, sc *config.ServerConfig) (string, error) {
-	if dbUser == nil {
-		return "", errors.New("user is nil")
-	}
-
-	// 浅拷贝并瘦身：严禁将角色关联的全量菜单树 (Menus) 和其他重型关联塞入 JWT Payload，
-	// 避免 JWT Token 膨胀至数十 KB 导致击穿 Nginx / 网关 Header 缓冲区引发网络错误 (ERR_CONNECTION_RESET)
-	cleanRoles := make([]*SystemRole, len(dbUser.Roles))
-	for i, r := range dbUser.Roles {
-		if r != nil {
-			cleanRoles[i] = &SystemRole{
-				Model:     r.Model,
-				RoleName:  r.RoleName,
-				RoleValue: r.RoleValue,
-			}
-		}
-	}
-
-	cleanUser := *dbUser
-	cleanUser.Roles = cleanRoles
-	cleanUser.OpsNodes = nil
-	cleanUser.StaticReceiveUsers = nil
-	cleanUser.FirstUpgradeUsers = nil
-	cleanUser.MonitorOnDutyGroup = nil
-	cleanUser.RolesFront = nil
-
 	c := UserCustomClaims{
-		SystemUser: &cleanUser,
+		SystemUser: dbUser,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        uuid.New().String(), // 唯一JWT标识(JTI)，确保每次签发的Token完全独立唯一，防止同一秒内/高频登录生成相同Token
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
