@@ -181,6 +181,7 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Path: "/api/system/updateUserInfo", Method: "POST", Title: "[用户模块]修改个人设置", Type: "1"},
 				{Path: "/api/system/uploadAvatar", Method: "POST", Title: "[用户模块]上传个人头像", Type: "1"},
 				{Path: "/api/system/getAllUserAndRoles", Method: "GET", Title: "[用户模块]获取所有用户与角色", Type: "1"},
+				{Path: "/api/system/syncKeycloakUsers", Method: "POST", Title: "[用户模块]同步Keycloak全量用户", Type: "1"},
 				{Path: "/api/system/getMenuList", Method: "GET", Title: "[菜单模块]获取用户菜单", Type: "1"},
 				{Path: "/api/system/getMenuListAll", Method: "GET", Title: "[菜单模块]获取全量菜单", Type: "1"},
 				{Path: "/api/system/createMenu", Method: "POST", Title: "[菜单模块]创建菜单", Type: "1"},
@@ -998,6 +999,7 @@ func EnsureAuditLogMenu(sc *config.ServerConfig) {
 		{Path: "/api/system/getLoginLogList", Method: "GET", Title: "[审计模块]获取登录审计日志列表", Type: "1", Pid: parentPid},
 		{Path: "/api/system/getOnlineUserList", Method: "GET", Title: "[用户模块]获取在线用户列表", Type: "1", Pid: parentPid},
 		{Path: "/api/system/kickoutUser", Method: "POST", Title: "[用户模块]强退指定在线用户", Type: "1", Pid: parentPid},
+		{Path: "/api/system/syncKeycloakUsers", Method: "POST", Title: "[用户模块]同步Keycloak全量用户", Type: "1", Pid: parentPid},
 	}
 
 	var createdApis []*SystemApi

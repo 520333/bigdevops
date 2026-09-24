@@ -82,11 +82,13 @@ func OidcCallback(c *gin.Context) {
 		common.ReqBadFailWithMessage(fmt.Sprintf("校验 ID Token 失败: %v", err), c)
 		return
 	}
-	// 3. 解析用户 Claim 信息 (包含 Keycloak 传过来的 groups 字段)
+	// 3. 解析用户 Claim 信息 (包含 Keycloak 传过来的 groups 字段及自定义显示名 zh_name)
 	var claims struct {
 		PreferredUsername string   `json:"preferred_username"`
 		Email             string   `json:"email"`
 		Name              string   `json:"name"`
+		ZhName            string   `json:"zh_name"`
+		DisplayName       string   `json:"displayName"`
 		Groups            []string `json:"groups"` // Keycloak 分配的组/角色
 		RealmAccess       struct {
 			Roles []string `json:"roles"`
@@ -99,6 +101,13 @@ func OidcCallback(c *gin.Context) {
 	username := claims.PreferredUsername
 	if username == "" {
 		username = claims.Email
+	}
+	realName := strings.TrimSpace(claims.ZhName)
+	if realName == "" {
+		realName = strings.TrimSpace(claims.DisplayName)
+	}
+	if realName == "" {
+		realName = strings.TrimSpace(claims.Name)
 	}
 	// 4. 自动开户/同步本地用户表 tbl_system_user
 	dbUser, err := models.GetUserByUsername(username)
@@ -129,8 +138,8 @@ func OidcCallback(c *gin.Context) {
 			if claims.Email != "" && !strings.Contains(claims.Email, "@dingtalk.local") {
 				updateData["email"] = claims.Email
 			}
-			if claims.Name != "" {
-				updateData["real_name"] = claims.Name
+			if realName != "" {
+				updateData["real_name"] = realName
 			}
 			_ = models.Db.Model(&candidateUser).Updates(updateData)
 			dbUser, _ = models.GetUserByUsername(username)
@@ -139,7 +148,7 @@ func OidcCallback(c *gin.Context) {
 			// 4.2 真正的新员工：自动创建本地账号
 			newUser := &models.SystemUser{
 				Username: username,
-				RealName: claims.Name,
+				RealName: realName,
 				Email:    claims.Email,
 				Enable:   1, // 正常启用
 				HomePath: "/dashboard/analysis",

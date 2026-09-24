@@ -3,6 +3,7 @@ package models
 import (
 	"bigdevops/src/common"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -106,6 +107,18 @@ func (obj *SystemUser) UpdateOne(roles []*SystemRole) error {
 
 func GetUserAll() (users []*SystemUser, err error) {
 	err = Db.Preload("Roles").Find(&users).Error
+	return
+}
+
+func GetUserListWithFilter(userName, realName string) (users []*SystemUser, err error) {
+	query := Db.Model(&SystemUser{}).Preload("Roles")
+	if userName = strings.TrimSpace(userName); userName != "" {
+		query = query.Where("username LIKE ?", "%"+userName+"%")
+	}
+	if realName = strings.TrimSpace(realName); realName != "" {
+		query = query.Where("real_name LIKE ?", "%"+realName+"%")
+	}
+	err = query.Order("id asc").Find(&users).Error
 	return
 }
 

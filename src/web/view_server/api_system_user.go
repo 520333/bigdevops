@@ -362,11 +362,14 @@ func deleteAccount(c *gin.Context) {
 // @Security     Bearer
 func getAccountList(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-	// 数据库中拿到所有的menu列表
-	users, err := models.GetUserAll()
+
+	userName := c.DefaultQuery("userName", "")
+	realName := c.DefaultQuery("realName", "")
+
+	users, err := models.GetUserListWithFilter(userName, realName)
 	if err != nil {
-		sc.Logger.Error("去数据库中拿所有用户错误", zap.Error(err))
-		common.ReqBadFailWithMessage(fmt.Sprintf("去数据库中拿所有用户错误：%v", err.Error()), c)
+		sc.Logger.Error("查询用户列表错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("查询用户列表错误：%v", err.Error()), c)
 		return
 	}
 

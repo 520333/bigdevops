@@ -59,6 +59,7 @@ func ConfigRouter(r *gin.Engine) {
 		systemApiGroup.GET("/getAllUserAndRoles", getAllUserAndRoles)
 		systemApiGroup.GET("/getOnlineUserList", getOnlineUserList)
 		systemApiGroup.POST("/kickoutUser", kickoutUser)
+		systemApiGroup.POST("/syncKeycloakUsers", syncKeycloakUsers)
 
 		// 菜单路由
 		systemApiGroup.GET("/getMenuList", getMenuList)
