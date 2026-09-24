@@ -9,16 +9,16 @@ import (
 
 type SystemRole struct {
 	Model
-	OrderNo   int           `json:"orderNo" gorm:"comment:排序"`
-	RoleName  string        `json:"roleName" gorm:"type:varchar(100);uniqueIndex;comment:角色中文名称"`
-	RoleValue string        `json:"roleValue" gorm:"type:varchar(100);uniqueIndex;comment:角色值"`
-	Remark    string        `json:"remark" gorm:"comment:用户描述"`
-	Status    string        `json:"status" gorm:"default:1;comment:角色是否开启 1正常 2冻结"`
-	Users     []*SystemUser `json:"users" gorm:"many2many:system_user_roles"`
-	Menus     []*SystemMenu `json:"menus" gorm:"many2many:system_role_menus"`
-	Apis      []*SystemApi  `json:"apis" gorm:"many2many:system_role_apis"`
-	MenuIds   []int         `json:"menuIds" gorm:"-"`
-	ApiIds    []int         `json:"apiIds" gorm:"-"`
+	OrderNo   int           `json:"orderNo,omitempty" gorm:"comment:排序"`
+	RoleName  string        `json:"roleName,omitempty" gorm:"type:varchar(100);uniqueIndex;comment:角色中文名称"`
+	RoleValue string        `json:"roleValue,omitempty" gorm:"type:varchar(100);uniqueIndex;comment:角色值"`
+	Remark    string        `json:"remark,omitempty" gorm:"comment:用户描述"`
+	Status    string        `json:"status,omitempty" gorm:"default:1;comment:角色是否开启 1正常 2冻结"`
+	Users     []*SystemUser `json:"users,omitempty" gorm:"many2many:system_user_roles"`
+	Menus     []*SystemMenu `json:"menus,omitempty" gorm:"many2many:system_role_menus"`
+	Apis      []*SystemApi  `json:"apis,omitempty" gorm:"many2many:system_role_apis"`
+	MenuIds   []int         `json:"menuIds,omitempty" gorm:"-"`
+	ApiIds    []int         `json:"apiIds,omitempty" gorm:"-"`
 }
 
 func GetRoleAll() (roles []*SystemRole, err error) {

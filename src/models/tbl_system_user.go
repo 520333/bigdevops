@@ -17,17 +17,17 @@ type SystemUser struct {
 	Password    string `json:"-" gorm:"comment:用户登录密码"`
 	ReqPassword string `json:"password,omitempty" gorm:"-"` //仅用于接收前端 JSON 中的 password 传参，不涉及数据库存取
 
-	Email  string `json:"email" gorm:"comment:用户邮箱"`
+	Email  string `json:"email,omitempty" gorm:"comment:用户邮箱"`
 	Mobile string `json:"mobile,omitempty" gorm:"type:varchar(20);comment:用户手机号"`
 
-	RealName           string                          `json:"realName" gorm:"comment:用户昵称"`
+	RealName           string                          `json:"realName,omitempty" gorm:"comment:用户昵称"`
 	Avatar             string                          `json:"avatar,omitempty" gorm:"type:varchar(500);comment:用户头像URL"`
 	Desc               string                          `json:"desc,omitempty" gorm:"comment:用户描述"`
 	FeiShuUserId       string                          `json:"feiShuUserId,omitempty" gorm:"comment:飞书userid"`
 	DingTalkUserId     string                          `json:"dingTalkUserId,omitempty" gorm:"type:varchar(100);index;comment:钉钉员工userid/工号"`
 	DingTalkUnionId    string                          `json:"dingTalkUnionId,omitempty" gorm:"type:varchar(100);index;comment:钉钉全局唯一unionid"`
-	HomePath           string                          `json:"homePath" gorm:"comment:登录后跳转地址"`
-	Enable             int                             `json:"enable" gorm:"default:1;comment:用户是否被冻结 1正常 2冻结"`
+	HomePath           string                          `json:"homePath,omitempty" gorm:"comment:登录后跳转地址"`
+	Enable             int                             `json:"enable,omitempty" gorm:"default:1;comment:用户是否被冻结 1正常 2冻结"`
 	Roles              []*SystemRole                   `json:"roles,omitempty" gorm:"many2many:system_user_roles"`
 	OpsNodes           []*StreeNode                    `json:"ops_nodes,omitempty" gorm:"many2many:resource_stree_ops_admins;comment:人员服务树节点"`
 	StaticReceiveUsers []*MonitorAlertManagerSendGroup `json:"staticReceiveUsers,omitempty" gorm:"many2many:monitor_alert_static_receive_users;comment:人员告警组节点"`
