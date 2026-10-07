@@ -467,6 +467,36 @@ func createJenkinsJob(c *gin.Context) {
 		return
 	}
 
+	createdJob, err := doCreateJenkinsJobCore(c.Request.Context(), sc, client, req)
+	if err != nil {
+		sc.Logger.Error("创建 Jenkins Job 失败", zap.Error(err))
+		common.ReqBadFailWithMessage(err.Error(), c)
+		return
+	}
+
+	common.OkWithMessage(fmt.Sprintf("Job 任务及项目构架 '%s' 校验完好并落地建档成真！", createdJob.Name), c)
+}
+
+// doCreateJenkinsJobCore 纯粹底层的创建 Jenkins Job 逻辑，既供 API 控制器调用，也供工单系统机器人调用
+func doCreateJenkinsJobCore(ctx context.Context, sc *config.ServerConfig, client *gojenkins.Jenkins, req createOrUpdateJobReq) (*models.JenkinsJob, error) {
+	req.ParseIDs()
+	if req.InstanceID == 0 {
+		return nil, fmt.Errorf("参数缺失: 需要合法的 instanceId 实例配置")
+	}
+
+	jobName := req.JobName
+	if jobName == "" {
+		jobName = req.Name
+	}
+	if jobName == "" {
+		return nil, fmt.Errorf("服务名(jobName)为必填属性")
+	}
+
+	folder := req.Folder
+	if folder == "" && req.ProjectName != "" {
+		folder = req.ProjectName
+	}
+
 	folder, realJobName, fullJobName := parseFolderAndJobName(folder, jobName)
 
 	script := req.PipelineScript
@@ -478,8 +508,7 @@ func createJenkinsJob(c *gin.Context) {
 	valid, errMsg := verifyJenkinsScriptSyntax(req.InstanceID, script)
 	if !valid {
 		sc.Logger.Warn("Jenkins Pipeline 语法终审被主动拒止", zap.String("error", errMsg))
-		common.ReqBadFailWithMessage(fmt.Sprintf("⚠️ Jenkinsfile 官方面向语法解析不合规，已封锁远端创建申请: \n%s", errMsg), c)
-		return
+		return nil, fmt.Errorf("⚠️ Jenkinsfile 官方面向语法解析不合规，已封锁远端创建申请: \n%s", errMsg)
 	}
 
 	var buf bytes.Buffer
@@ -499,7 +528,6 @@ func createJenkinsJob(c *gin.Context) {
   <disabled>false</disabled>
 </flow-definition>`, escapedScript)
 
-	ctx := c.Request.Context()
 	var err error
 	var jenkinsURL string
 
@@ -523,8 +551,7 @@ func createJenkinsJob(c *gin.Context) {
 
 	if err != nil {
 		sc.Logger.Error("调用远程 Jenkins 引擎创建作业过程报错", zap.Error(err))
-		common.ReqBadFailWithMessage(fmt.Sprintf("远端创建执行发生错误: %v", err), c)
-		return
+		return nil, fmt.Errorf("远端创建执行发生错误: %v", err)
 	}
 
 	branch := req.GitBranch
@@ -558,11 +585,10 @@ func createJenkinsJob(c *gin.Context) {
 		}(), // 1开启删除 2禁止删除 默认为2
 	}
 	if err := models.SaveOrUpdateJenkinsJob(dbObj); err != nil {
-		common.ReqBadFailWithMessage(fmt.Sprintf("远端创建成功但保存基线失败: %v", err), c)
-		return
+		return nil, fmt.Errorf("远端创建成功但保存基线失败: %v", err)
 	}
 
-	common.OkWithMessage(fmt.Sprintf("Job 任务及项目构架 '%s' 校验完好并落地建档成真！", fullJobName), c)
+	return dbObj, nil
 }
 
 // updateJenkinsJob 更新 Job (直接提交更新至远端配置不变动 DB 的 PipelineScript)

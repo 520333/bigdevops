@@ -1,6 +1,7 @@
 package view_server
 
 import (
+	"bigdevops/src/cache"
 	"bigdevops/src/common"
 	"bigdevops/src/config"
 	"bigdevops/src/models"
@@ -134,6 +135,15 @@ func approvalWorkOrderInstance(c *gin.Context) {
 		sc.Logger.Error("更新审批记录错误", zap.Any("工单实例", id), zap.Error(err))
 		common.FailWithMessage(err.Error(), c)
 		return
+	}
+
+	// 🚨 挂载机器人自动执行流水线开通任务
+	if approvalAction == common.ApprovalActionPass && dbObj.Status == common.WORKORDER_INSTANCE_PENDING_ACTION && dbObj.CurrentFlowNode == "auto_order_robot" {
+		if jcVal, ok := c.Get(common.GIN_CTX_JENKINS_CACHE); ok {
+			if jc, ok := jcVal.(*cache.JenkinsCache); ok {
+				go autoExecuteOrderRobotTask(sc, jc, int(dbObj.ID))
+			}
+		}
 	}
 
 	// 5. 返回结果
@@ -593,6 +603,16 @@ func createWorkOrderInstance(c *gin.Context) {
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
+
+	// 🚨 免审批工单直接为机器人执行节点时的自动触发
+	if reqObj.CurrentFlowNode == "auto_order_robot" {
+		if jcVal, ok := c.Get(common.GIN_CTX_JENKINS_CACHE); ok {
+			if jc, ok := jcVal.(*cache.JenkinsCache); ok {
+				go autoExecuteOrderRobotTask(sc, jc, int(reqObj.ID))
+			}
+		}
+	}
+
 	common.OkWithMessage("创建成功", c)
 }
 
