@@ -351,6 +351,7 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 			Parent: &SystemApi{Path: "/api/code", Method: "GET", Title: "代码管理", Type: "0"},
 			Children: []*SystemApi{
 				{Path: "/api/code/getCodeGitServerList", Method: "GET", Title: "[代码管理]获取Git服务器列表", Type: "1"},
+				{Path: "/api/code/getCodeGitServerDetail", Method: "GET", Title: "[代码管理]获取Git服务器详情", Type: "1"},
 				{Path: "/api/code/createCodeGitServer", Method: "POST", Title: "[代码管理]创建Git服务器", Type: "1"},
 				{Path: "/api/code/updateCodeGitServer", Method: "POST", Title: "[代码管理]更新Git服务器", Type: "1"},
 				{Path: "/api/code/deleteCodeGitServer/:id", Method: "DELETE", Title: "[代码管理]删除Git服务器", Type: "1"},
@@ -487,6 +488,7 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 			Parent: &SystemApi{Path: "/api/cicd", Method: "GET", Title: "Jenkins服务模块", Type: "0"},
 			Children: []*SystemApi{
 				{Path: "/api/cicd/getJenkinsInstanceList", Method: "GET", Title: "[Jenkins]获取实例列表", Type: "1"},
+				{Path: "/api/cicd/getJenkinsInstanceDetail", Method: "GET", Title: "[Jenkins]获取实例详情", Type: "1"},
 				{Path: "/api/cicd/createJenkinsInstance", Method: "POST", Title: "[Jenkins]创建实例", Type: "1"},
 				{Path: "/api/cicd/updateJenkinsInstance", Method: "POST", Title: "[Jenkins]更新实例", Type: "1"},
 				{Path: "/api/cicd/deleteJenkinsInstance", Method: "DELETE", Title: "[Jenkins]删除实例", Type: "1"},
@@ -500,6 +502,7 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Path: "/api/cicd/getJenkinsJobRemotePipeline", Method: "GET", Title: "[Jenkins]获取远程Pipeline定义", Type: "1"},
 				{Path: "/api/cicd/getJenkinsJobStageView", Method: "GET", Title: "[Jenkins]获取Stage视图", Type: "1"},
 				{Path: "/api/cicd/toggleJenkinsJobDeleteLock", Method: "POST", Title: "[Jenkins]切换删除锁", Type: "1"},
+				{Path: "/api/cicd/getJenkinsJobParameters", Method: "GET", Title: "[Jenkins]获取Job构建参数", Type: "1"},
 				{Path: "/api/cicd/getJenkinsPipelineList", Method: "GET", Title: "[Jenkins]获取流水线配置列表", Type: "1"},
 				{Path: "/api/cicd/createJenkinsPipeline", Method: "POST", Title: "[Jenkins]创建流水线配置", Type: "1"},
 				{Path: "/api/cicd/updateJenkinsPipeline", Method: "POST", Title: "[Jenkins]更新流水线配置", Type: "1"},
@@ -1039,6 +1042,63 @@ func EnsureAuditLogMenu(sc *config.ServerConfig) {
 
 			// 管理类角色关联菜单与 API
 			_ = Db.Model(&r).Association("Menus").Append(&menu)
+			for _, api := range createdApis {
+				_ = Db.Model(&r).Association("Apis").Append(api)
+				if CasbinEnforcer != nil && r.RoleValue != "" {
+					_, _ = CasbinEnforcer.AddPolicy(r.RoleValue, api.Path, api.Method)
+				}
+			}
+		}
+	}
+}
+
+// EnsureIncrementalApis 确保增量新增的 API 权限已自动注入并同步至角色与 Casbin
+func EnsureIncrementalApis(sc *config.ServerConfig) {
+	var codeParentApi, cicdParentApi SystemApi
+	codePid := 0
+	if err := Db.Where("path = ? AND type = ?", "/api/code", "0").First(&codeParentApi).Error; err == nil && codeParentApi.ID > 0 {
+		codePid = int(codeParentApi.ID)
+	}
+	cicdPid := 0
+	if err := Db.Where("path = ? AND type = ?", "/api/cicd", "0").First(&cicdParentApi).Error; err == nil && cicdParentApi.ID > 0 {
+		cicdPid = int(cicdParentApi.ID)
+	}
+
+	apisToAdd := []SystemApi{
+		{Path: "/api/code/getCodeGitServerDetail", Method: "GET", Title: "[代码管理]获取Git服务器详情", Type: "1", Pid: codePid},
+		{Path: "/api/cicd/getJenkinsInstanceDetail", Method: "GET", Title: "[Jenkins]获取实例详情", Type: "1", Pid: cicdPid},
+	}
+
+	var createdApis []*SystemApi
+	for _, apiItem := range apisToAdd {
+		var existingApi SystemApi
+		if err := Db.Where("path = ? AND method = ?", apiItem.Path, apiItem.Method).First(&existingApi).Error; err != nil || existingApi.ID == 0 {
+			newApi := apiItem
+			if createApiErr := Db.Create(&newApi).Error; createApiErr == nil {
+				createdApis = append(createdApis, &newApi)
+				if sc != nil && sc.Logger != nil {
+					sc.Logger.Info(fmt.Sprintf("自动注册接口权限：%s %s 成功 🚀", newApi.Method, newApi.Path))
+				}
+			}
+		} else {
+			if existingApi.Pid == 0 && apiItem.Pid > 0 {
+				existingApi.Pid = apiItem.Pid
+				_ = Db.Model(&existingApi).Update("pid", apiItem.Pid)
+			}
+			createdApis = append(createdApis, &existingApi)
+		}
+	}
+
+	// 为管理和运维类角色自动分配这些新接口权限
+	var roles []SystemRole
+	if Db.Find(&roles).Error == nil {
+		for _, r := range roles {
+			// 普通用户 user 排除
+			if r.RoleValue == "user" {
+				continue
+			}
+
+			// super, ops, bot_super 等管理与运维角色分配权限并添加 Casbin 策略
 			for _, api := range createdApis {
 				_ = Db.Model(&r).Association("Apis").Append(api)
 				if CasbinEnforcer != nil && r.RoleValue != "" {

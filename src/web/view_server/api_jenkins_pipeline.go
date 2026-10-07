@@ -179,5 +179,5 @@ func validateJenkinsPipeline(c *gin.Context) {
 	common.OkWithDetailed(gin.H{
 		"valid":  false,
 		"errors": syntaxErrors,
-	}, "Jenkins 官方语法检测未通过 ⚠️", c)
+	}, "Jenkins 官方语法检测未通过", c)
 }

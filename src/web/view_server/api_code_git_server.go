@@ -66,10 +66,16 @@ func updateCodeGitServer(c *gin.Context) {
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
-	_, err := models.GetCodeGitServerById(int(reqObj.ID))
+	oldServer, err := models.GetCodeGitServerById(int(reqObj.ID))
 	if err != nil {
 		common.FailWithMessage("要更新的配置不存在", c)
 		return
+	}
+	// 安全保护：若未修改 token（即 reqObj.ReqToken 为空且 reqObj.Token 也为空或掩码），则保留数据库中原有的 token，不进行覆盖
+	if reqObj.ReqToken != "" && reqObj.ReqToken != "******" {
+		reqObj.Token = reqObj.ReqToken
+	} else if reqObj.Token == "" || reqObj.Token == "******" {
+		reqObj.Token = oldServer.Token
 	}
 	if err := reqObj.UpdateOne(); err != nil {
 		sc.Logger.Error("更新CodeGitServer失败", zap.Error(err))
@@ -142,6 +148,40 @@ func getCodeGitServerList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      获取GitServer单条实例详情(用于编辑回显)
+// @Description  获取GitServer单条实例详情 接口
+// @Tags         code-git
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取GitServer单条实例详情 响应结果"
+// @Router       /code/getCodeGitServerDetail [get]
+// @Security     Bearer
+func getCodeGitServerDetail(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Query("id"))
+	if id <= 0 {
+		common.FailWithMessage("缺少实例ID", c)
+		return
+	}
+	dbObj, err := models.GetCodeGitServerById(id)
+	if err != nil {
+		common.FailWithMessage("实例不存在", c)
+		return
+	}
+
+	common.OkWithDetailed(gin.H{
+		"id":          dbObj.ID,
+		"name":        dbObj.Name,
+		"platform":    dbObj.Platform,
+		"endpoint":    dbObj.Endpoint,
+		"description": dbObj.Description,
+		"token":       dbObj.Token, // 仅在编辑详情中返回真实 Token 用于表单回显展示
+		"skipVerify":  dbObj.SkipVerify,
+		"authType":    dbObj.AuthType,
+		"username":    dbObj.Username,
+		"status":      dbObj.Status,
+	}, "ok", c)
+}
+
 // @Summary      测试GitServer连接连通性
 // @Description  测试GitServer连接连通性 接口
 // @Tags         code-git
@@ -156,6 +196,22 @@ func pingCodeGitServer(c *gin.Context) {
 	if err := c.ShouldBindJSON(&reqObj); err != nil {
 		common.FailWithMessage("参数解析失败", c)
 		return
+	}
+
+	// 安全保护：若传入的是已有实例且未传递有效新 Token，自动取库中原真实凭据进行握手检测与保全
+	if reqObj.ID > 0 && (reqObj.ReqToken == "" || reqObj.ReqToken == "******") && (reqObj.Token == "" || reqObj.Token == "******") {
+		oldServer, err := models.GetCodeGitServerById(int(reqObj.ID))
+		if err == nil && oldServer != nil {
+			reqObj.Token = oldServer.Token
+			if reqObj.Endpoint == "" {
+				reqObj.Endpoint = oldServer.Endpoint
+			}
+			if reqObj.Platform == "" {
+				reqObj.Platform = oldServer.Platform
+			}
+		}
+	} else if reqObj.ReqToken != "" {
+		reqObj.Token = reqObj.ReqToken
 	}
 
 	// 初始化 HTTP Client (处理自签证书跳过校验)

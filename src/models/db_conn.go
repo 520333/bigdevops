@@ -143,6 +143,7 @@ func MigrateTable() error {
 		&JenkinsStage{},
 		&JenkinsEnvVar{},
 		&JenkinsBuildParam{},
+		&JenkinsUserToken{},
 
 		// git
 		&CodeGitServer{},
@@ -162,6 +163,7 @@ func MockUserRegister(sc *config.ServerConfig) {
 		EnsureJenkinsPipelineMenu(sc)
 		EnsureAccountSettingMenu(sc)
 		EnsureAuditLogMenu(sc)
+		EnsureIncrementalApis(sc)
 		return
 	}
 	// 1. 系统基础数据（依赖顺序：最优先执行，返回超管用户供后续模块绑定关系）
@@ -195,6 +197,7 @@ func MockUserRegister(sc *config.ServerConfig) {
 	EnsureJenkinsPipelineMenu(sc)
 	EnsureAccountSettingMenu(sc)
 	EnsureAuditLogMenu(sc)
+	EnsureIncrementalApis(sc)
 
 	sc.Logger.Info("全模块 Mock 基础数据初始化成功 🚀")
 }

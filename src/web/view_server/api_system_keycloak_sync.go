@@ -180,7 +180,7 @@ func syncKeycloakUsers(c *gin.Context) {
 				Email:    ku.Email,
 				Enable:   enableStatus,
 				HomePath: "/dashboard/analysis",
-				Password: common.BcryptHash("123456"), // 初始临时密码
+				Password: common.BcryptHash(common.INITPWD), // 初始临时密码
 			}
 			if cErr := newUser.CreateOne(); cErr == nil {
 				createdCount++

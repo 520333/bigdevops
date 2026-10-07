@@ -219,17 +219,30 @@ func SyncJenkinsJobsToDB(ctx context.Context, instanceId uint, client *gojenkins
 		return err
 	}
 	allJobs := getAllJobsRecursive(ctx, topJobs, "")
+	// 记录远端当前真实存在的所有 Job 唯一标识: "folder|jobName"
+	remoteKeys := make(map[string]bool)
+
 	for _, j := range allJobs {
 		var count int64 = j.Raw.LastBuild.Number
-		if count == 0 {
-			if lb, lbErr := j.GetLastBuild(ctx); lbErr == nil && lb != nil {
+		var lastBuildTime *time.Time
+		if lb, lbErr := j.GetLastBuild(ctx); lbErr == nil && lb != nil {
+			t := lb.GetTimestamp()
+			lastBuildTime = &t
+			if count == 0 {
 				count = lb.GetBuildNumber()
 			}
 		}
-		folder, shortJobName, fullJobName := parseFolderAndJobName("", j.Raw.Name)
+		folder, shortJobName, _ := parseFolderAndJobName("", j.Raw.Name)
+		remoteKeys[fmt.Sprintf("%s|%s", folder, shortJobName)] = true
 
 		var existing models.JenkinsJob
-		_ = models.Db.Where("instance_id = ? AND (name = ? OR name = ?)", instanceId, shortJobName, fullJobName).First(&existing).Error
+		q := models.Db.Where("instance_id = ? AND name = ?", instanceId, shortJobName)
+		if folder != "" {
+			q = q.Where("project_name = ?", folder)
+		} else {
+			q = q.Where("project_name = '' OR project_name IS NULL")
+		}
+		_ = q.First(&existing).Error
 
 		jobObj := &models.JenkinsJob{
 			InstanceID:     instanceId,
@@ -244,7 +257,18 @@ func SyncJenkinsJobsToDB(ctx context.Context, instanceId uint, client *gojenkins
 			GitBranch:      existing.GitBranch,
 			Lang:           existing.Lang,
 			CreateUserName: existing.CreateUserName,
-			EnableDelete:   existing.EnableDelete,
+			EnableDelete: func() int {
+				if existing.EnableDelete == 1 {
+					return 1
+				}
+				return 2
+			}(),
+			LastBuildTime: func() *time.Time {
+				if lastBuildTime != nil {
+					return lastBuildTime
+				}
+				return existing.LastBuildTime
+			}(),
 		}
 		if existing.GitRepo != "" {
 			jobObj.GitRepo = existing.GitRepo
@@ -263,6 +287,18 @@ func SyncJenkinsJobsToDB(ctx context.Context, instanceId uint, client *gojenkins
 		}
 		_ = models.SaveOrUpdateJenkinsJob(jobObj)
 	}
+
+	// 自动差量清理：如果在 Jenkins 远端已被删除（包括整个 Folder 或单个 Job 被删），则同步清除本地 DB 中的孤儿记录
+	var currentDbJobs []models.JenkinsJob
+	if err := models.Db.Where("instance_id = ?", instanceId).Find(&currentDbJobs).Error; err == nil {
+		for _, dbJob := range currentDbJobs {
+			key := fmt.Sprintf("%s|%s", dbJob.ProjectName, dbJob.Name)
+			if !remoteKeys[key] {
+				_ = models.Db.Delete(&dbJob).Error
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -279,18 +315,24 @@ func getJenkinsJobList(c *gin.Context) {
 		param.InstanceID = instanceId
 	}
 
-	// 1. 先从数据库提取条件结果
+	forceSync := c.Query("sync") == "true" || c.Query("refresh") == "true"
+
+	// 1. 如果请求显式要求同步，或数据库首次无数据，先从 Jenkins 远端拉取并同步
+	if forceSync {
+		_ = SyncJenkinsJobsToDB(c.Request.Context(), instanceId, client)
+	}
+
+	// 2. 从数据库提取条件结果
 	dbJobs, err := models.GetJenkinsJobListByParam(&param)
 	if err != nil {
 		common.ReqBadFailWithMessage(fmt.Sprintf("获取 Job 列表失败: %v", err), c)
 		return
 	}
 
-	// 2. 首次查询无数据则同步一轮，否则自动开启底层后台轮询异步更新实况状态
-	if len(dbJobs) == 0 {
+	if len(dbJobs) == 0 && !forceSync {
 		_ = SyncJenkinsJobsToDB(c.Request.Context(), instanceId, client)
 		dbJobs, _ = models.GetJenkinsJobListByParam(&param)
-	} else {
+	} else if !forceSync {
 		go func(instId uint, cli *gojenkins.Jenkins) {
 			_ = SyncJenkinsJobsToDB(context.Background(), instId, cli)
 		}(instanceId, client)
@@ -339,28 +381,63 @@ func verifyJenkinsScriptSyntax(instanceId uint, script string) (bool, string) {
 }
 
 type createOrUpdateJobReq struct {
-	ID             uint   `json:"id"`
-	InstanceID     uint   `json:"instanceId"`
-	DeployType     string `json:"deployType"`
-	DeployEnv      string `json:"deployEnv"`
-	Name           string `json:"name"`
-	JobName        string `json:"jobName"`
-	ProjectName    string `json:"projectName"` // Git仓库group组名/文件夹名
-	Folder         string `json:"folder"`      // 支持可选入参 不入库
-	GitRepo        string `json:"gitRepo"`     // 仓库全息链接
-	GitBranch      string `json:"gitBranch"`   // 编译部署选定分支
-	Lang           string `json:"lang"`
-	PipelineScript string `json:"pipelineScript"` // 本字段不进数据库
-	CreateUserName string `json:"createUserName"`
-	EnableDelete   bool   `json:"enableDelete"`
+	RawID          interface{} `json:"id"`
+	RawInstanceID  interface{} `json:"instanceId"`
+	ID             uint        `json:"-"`
+	InstanceID     uint        `json:"-"`
+	DeployType     string      `json:"deployType"`
+	DeployEnv      string      `json:"deployEnv"`
+	Name           string      `json:"name"`
+	JobName        string      `json:"jobName"`
+	ProjectName    string      `json:"projectName"` // Git仓库group组名/文件夹名
+	Folder         string      `json:"folder"`      // 支持可选入参 不入库
+	GitRepo        string      `json:"gitRepo"`     // 仓库全息链接
+	GitBranch      string      `json:"gitBranch"`   // 编译部署选定分支
+	Lang           string      `json:"lang"`
+	PipelineScript string      `json:"pipelineScript"` // 本字段不进数据库
+	CreateUserName string      `json:"createUserName"`
+	EnableDelete   int         `json:"enableDelete"` // 1 开启删除 2 禁止删除 默认为2
+}
+
+func (r *createOrUpdateJobReq) ParseIDs() {
+	if r.RawID != nil {
+		switch v := r.RawID.(type) {
+		case float64:
+			r.ID = uint(v)
+		case int:
+			r.ID = uint(v)
+		case string:
+			if num, err := strconv.Atoi(v); err == nil && num > 0 {
+				r.ID = uint(num)
+			}
+		}
+	}
+	if r.RawInstanceID != nil {
+		switch v := r.RawInstanceID.(type) {
+		case float64:
+			r.InstanceID = uint(v)
+		case int:
+			r.InstanceID = uint(v)
+		case string:
+			if num, err := strconv.Atoi(v); err == nil && num > 0 {
+				r.InstanceID = uint(num)
+			}
+		}
+	}
 }
 
 // createJenkinsJob 新建 Job (调用官方语法严审后同步建表与入远端端点，杜绝无效或脚本废案进库)
 func createJenkinsJob(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var req createOrUpdateJobReq
-	if err := c.ShouldBindJSON(&req); err != nil || req.InstanceID == 0 {
-		common.ReqBadFailWithMessage("参数缺失: 需要合法的 instanceId 及服务名与目录配置", c)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		sc.Logger.Error("创建 Jenkins Job JSON 入参绑定失败", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("参数绑定错误: %v", err), c)
+		return
+	}
+	req.ParseIDs()
+	if req.InstanceID == 0 {
+		common.ReqBadFailWithMessage("参数缺失: 需要合法的 instanceId 实例配置", c)
 		return
 	}
 
@@ -413,48 +490,7 @@ func createJenkinsJob(c *gin.Context) {
 <flow-definition plugin="workflow-job">
   <description>Created via BigDevOps Baseline Architecture</description>
   <keepDependencies>false</keepDependencies>
-  <properties>
-    <hudson.model.ParametersDefinitionProperty>
-      <parameterDefinitions>
-        <hudson.model.StringParameterDefinition>
-          <name>BUILD_USER</name>
-          <description>BigDevOps 触发人账号</description>
-          <defaultValue>系统/未知</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>OPERATOR</name>
-          <description>操作人账号</description>
-          <defaultValue>系统/未知</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>branch</name>
-          <description>Git 分支</description>
-          <defaultValue>main</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>deployEnv</name>
-          <description>部署环境</description>
-          <defaultValue>dev</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>deployType</name>
-          <description>部署目标类型</description>
-          <defaultValue>host</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>gitRepo</name>
-          <description>Git 仓库地址</description>
-          <defaultValue></defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-      </parameterDefinitions>
-    </hudson.model.ParametersDefinitionProperty>
-  </properties>
+  <properties/>
   <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
     <script>%s</script>
     <sandbox>true</sandbox>
@@ -514,7 +550,12 @@ func createJenkinsJob(c *gin.Context) {
 		Count:          0,
 		Status:         "NOT_BUILT",
 		CreateUserName: req.CreateUserName,
-		EnableDelete:   false, // 创建Job后默认锁定
+		EnableDelete: func() int {
+			if req.EnableDelete == 1 {
+				return 1
+			}
+			return 2
+		}(), // 1开启删除 2禁止删除 默认为2
 	}
 	if err := models.SaveOrUpdateJenkinsJob(dbObj); err != nil {
 		common.ReqBadFailWithMessage(fmt.Sprintf("远端创建成功但保存基线失败: %v", err), c)
@@ -528,8 +569,14 @@ func createJenkinsJob(c *gin.Context) {
 func updateJenkinsJob(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
 	var req createOrUpdateJobReq
-	if err := c.ShouldBindJSON(&req); err != nil || req.InstanceID == 0 {
-		common.ReqBadFailWithMessage("入参无法匹配，缺少重要指引", c)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		sc.Logger.Error("更新 Jenkins Job JSON 入参绑定失败", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("参数绑定错误: %v", err), c)
+		return
+	}
+	req.ParseIDs()
+	if req.InstanceID == 0 {
+		common.ReqBadFailWithMessage("缺少有效的 Jenkins 实例 ID (instanceId)", c)
 		return
 	}
 
@@ -570,48 +617,7 @@ func updateJenkinsJob(c *gin.Context) {
 <flow-definition plugin="workflow-job">
   <description>Updated via BigDevOps Baseline Architecture</description>
   <keepDependencies>false</keepDependencies>
-  <properties>
-    <hudson.model.ParametersDefinitionProperty>
-      <parameterDefinitions>
-        <hudson.model.StringParameterDefinition>
-          <name>BUILD_USER</name>
-          <description>BigDevOps 触发人账号</description>
-          <defaultValue>系统/未知</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>OPERATOR</name>
-          <description>操作人账号</description>
-          <defaultValue>系统/未知</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>branch</name>
-          <description>Git 分支</description>
-          <defaultValue>main</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>deployEnv</name>
-          <description>部署环境</description>
-          <defaultValue>dev</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>deployType</name>
-          <description>部署目标类型</description>
-          <defaultValue>host</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>gitRepo</name>
-          <description>Git 仓库地址</description>
-          <defaultValue></defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-      </parameterDefinitions>
-    </hudson.model.ParametersDefinitionProperty>
-  </properties>
+  <properties/>
   <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
     <script>%s</script>
     <sandbox>true</sandbox>
@@ -623,7 +629,11 @@ func updateJenkinsJob(c *gin.Context) {
 		ctx := c.Request.Context()
 		job, err := getJenkinsJobHelper(ctx, client, fullJobName, folder)
 		if err == nil && job != nil {
-			_ = job.UpdateConfig(ctx, xmlConfig)
+			if updateErr := job.UpdateConfig(ctx, xmlConfig); updateErr != nil {
+				sc.Logger.Error("向 Jenkins 写入新流水线配置失败", zap.Error(updateErr))
+				common.ReqBadFailWithMessage(fmt.Sprintf("向 Jenkins 写入新流水线失败: %v", updateErr), c)
+				return
+			}
 		} else {
 			if folder != "" {
 				folders := strings.Split(folder, "/")
@@ -644,31 +654,68 @@ func updateJenkinsJob(c *gin.Context) {
 	}
 
 	var dbJob models.JenkinsJob
-	err := models.Db.Where("instance_id = ? AND (name = ? OR name = ?)", req.InstanceID, realJobName, fullJobName).First(&dbJob).Error
-	if err != nil && req.ID > 0 {
-		_ = models.Db.Where("id = ?", req.ID).First(&dbJob).Error
+	var found bool
+	if req.ID > 0 {
+		if err := models.Db.Where("id = ?", req.ID).First(&dbJob).Error; err == nil {
+			found = true
+		}
+	}
+	if !found {
+		q := models.Db.Where("instance_id = ? AND name = ?", req.InstanceID, realJobName)
+		if folder != "" {
+			q = q.Where("project_name = ?", folder)
+		} else {
+			q = q.Where("project_name = '' OR project_name IS NULL")
+		}
+		if err := q.First(&dbJob).Error; err == nil {
+			found = true
+		}
 	}
 
-	dbJob.InstanceID = req.InstanceID
-	dbJob.DeployType = req.DeployType
-	dbJob.DeployEnv = req.DeployEnv
-	dbJob.Name = realJobName
-	dbJob.ProjectName = folder
-	dbJob.GitRepo = req.GitRepo
-	if req.GitBranch != "" {
-		dbJob.GitBranch = req.GitBranch
+	enableDelete := req.EnableDelete
+	if enableDelete != 1 && enableDelete != 2 {
+		if found && (dbJob.EnableDelete == 1 || dbJob.EnableDelete == 2) {
+			enableDelete = dbJob.EnableDelete
+		} else {
+			enableDelete = 2
+		}
 	}
-	if req.Lang != "" {
-		dbJob.Lang = req.Lang
+
+	if !found {
+		dbJob = models.JenkinsJob{
+			InstanceID:     req.InstanceID,
+			Name:           realJobName,
+			ProjectName:    folder,
+			DeployType:     req.DeployType,
+			DeployEnv:      req.DeployEnv,
+			GitRepo:        req.GitRepo,
+			GitBranch:      req.GitBranch,
+			Lang:           req.Lang,
+			CreateUserName: req.CreateUserName,
+			EnableDelete:   enableDelete,
+		}
+	} else {
+		dbJob.InstanceID = req.InstanceID
+		dbJob.DeployType = req.DeployType
+		dbJob.DeployEnv = req.DeployEnv
+		dbJob.Name = realJobName
+		dbJob.ProjectName = folder
+		dbJob.GitRepo = req.GitRepo
+		if req.GitBranch != "" {
+			dbJob.GitBranch = req.GitBranch
+		}
+		if req.Lang != "" {
+			dbJob.Lang = req.Lang
+		}
+		if req.CreateUserName != "" {
+			dbJob.CreateUserName = req.CreateUserName
+		}
+		dbJob.EnableDelete = enableDelete
 	}
-	if req.CreateUserName != "" {
-		dbJob.CreateUserName = req.CreateUserName
-	}
-	dbJob.EnableDelete = req.EnableDelete
 
 	if err := models.SaveOrUpdateJenkinsJob(&dbJob); err != nil {
 		sc.Logger.Error("执行同步变更基线字段失败", zap.Error(err))
-		common.ReqBadFailWithMessage("记录持久化更新遇到意外拦截", c)
+		common.ReqBadFailWithMessage(fmt.Sprintf("记录持久化更新失败: %v", err), c)
 		return
 	}
 
@@ -676,20 +723,64 @@ func updateJenkinsJob(c *gin.Context) {
 }
 
 func extractScriptFromXml(xmlContent string) string {
-	startTag := "<script>"
-	endTag := "</script>"
-	startIdx := strings.Index(xmlContent, startTag)
-	if startIdx == -1 {
-		return ""
+	// 1. 优先从 <definition> 标签块中精准提取流水线脚本
+	defIdx := strings.Index(xmlContent, "<definition ")
+	if defIdx == -1 {
+		defIdx = strings.Index(xmlContent, "<definition>")
 	}
-	startIdx += len(startTag)
-	endIdx := strings.Index(xmlContent[startIdx:], endTag)
-	if endIdx == -1 {
-		return ""
-	}
-	escapedScript := xmlContent[startIdx : startIdx+endIdx]
 
-	script := strings.ReplaceAll(escapedScript, "&amp;", "&")
+	if defIdx != -1 {
+		defEnd := strings.Index(xmlContent[defIdx:], "</definition>")
+		var defContent string
+		if defEnd != -1 {
+			defContent = xmlContent[defIdx : defIdx+defEnd+13]
+		} else {
+			defContent = xmlContent[defIdx:]
+		}
+
+		startTag := "<script>"
+		endTag := "</script>"
+		startIdx := strings.Index(defContent, startTag)
+		if startIdx != -1 {
+			startIdx += len(startTag)
+			endIdx := strings.LastIndex(defContent, endTag)
+			if endIdx > startIdx {
+				return unescapeJenkinsXml(defContent[startIdx:endIdx])
+			}
+		}
+
+		if strings.Contains(defContent, "CpsScmFlowDefinition") {
+			return "// 此任务配置为【Pipeline script from SCM】模式 (直接从代码仓库拉取 Jenkinsfile)\n// 任务脚本由代码仓库维护。"
+		}
+	}
+
+	// 2. 兜底方案：寻找包含 pipeline 关键字的 script 块
+	re := regexp.MustCompile(`(?s)<script>(.*?pipeline\s*\{.*?)</script>`)
+	matches := re.FindStringSubmatch(xmlContent)
+	if len(matches) > 1 {
+		return unescapeJenkinsXml(matches[1])
+	}
+
+	return ""
+}
+
+func extractGitRepoFromXml(xmlContent string) string {
+	// 匹配常见 git url 格式
+	re := regexp.MustCompile(`(?i)(?:https?|ssh|git)://[^\s"'<>\&]+?\.git`)
+	matches := re.FindAllString(xmlContent, -1)
+	for _, m := range matches {
+		if !strings.Contains(m, "gitlab.com") || len(matches) == 1 {
+			return m
+		}
+	}
+	if len(matches) > 0 {
+		return matches[0]
+	}
+	return ""
+}
+
+func unescapeJenkinsXml(script string) string {
+	script = strings.ReplaceAll(script, "&amp;", "&")
 	script = strings.ReplaceAll(script, "&lt;", "<")
 	script = strings.ReplaceAll(script, "&gt;", ">")
 	script = strings.ReplaceAll(script, "&quot;", "\"")
@@ -699,7 +790,7 @@ func extractScriptFromXml(xmlContent string) string {
 
 // getJenkinsJobRemotePipeline 独占查询方法：拉取远端的 Pipeline 脚本(不落库纯在线取样渲染)
 func getJenkinsJobRemotePipeline(c *gin.Context) {
-	client, _, ok := getJenkinsClientFromCtx(c)
+	client, instanceId, ok := getJenkinsClientFromCtx(c)
 	if !ok {
 		return
 	}
@@ -725,18 +816,31 @@ func getJenkinsJobRemotePipeline(c *gin.Context) {
 	}
 
 	script := extractScriptFromXml(configXml)
+	gitRepo := extractGitRepoFromXml(configXml)
+
+	// 如果数据库中该 Job 的 git_repo 为空，顺便异步回填更新到本地数据库
+	if gitRepo != "" && instanceId > 0 {
+		go func(instId uint, jName, repo string) {
+			_ = models.Db.Model(&models.JenkinsJob{}).
+				Where("instance_id = ? AND (name = ? OR name LIKE ?)", instId, jName, "%"+jName).
+				Where("git_repo IS NULL OR git_repo = ''").
+				Update("git_repo", repo).Error
+		}(instanceId, jobName, gitRepo)
+	}
+
 	common.OkWithData(gin.H{
 		"pipelineScript": script,
+		"gitRepo":        gitRepo,
 		"rawXml":         configXml,
 	}, c)
 }
 
 type toggleDeleteLockReq struct {
-	InstanceID  uint   `json:"instanceId"`
-	JobName     string `json:"jobName"`
-	Enable      bool   `json:"enable"`
-	Folder      string `json:"folder"`
-	ProjectName string `json:"projectName"`
+	InstanceID  uint        `json:"instanceId"`
+	JobName     string      `json:"jobName"`
+	Enable      interface{} `json:"enable"` // 1 开启删除 2 禁止删除 默认为2
+	Folder      string      `json:"folder"`
+	ProjectName string      `json:"projectName"`
 }
 
 // toggleJenkinsJobDeleteLock 创建job后锁定 开关控制 开启后删除按钮可以使用 关闭时删除按钮禁用
@@ -756,17 +860,33 @@ func toggleJenkinsJobDeleteLock(c *gin.Context) {
 		fullName = folder + "/" + req.JobName
 	}
 
+	targetVal := 2
+	switch v := req.Enable.(type) {
+	case float64:
+		if int(v) == 1 {
+			targetVal = 1
+		}
+	case int:
+		if v == 1 {
+			targetVal = 1
+		}
+	case bool:
+		if v {
+			targetVal = 1
+		}
+	}
+
 	err := models.Db.Model(&models.JenkinsJob{}).
 		Where("instance_id = ? AND (name = ? OR name = ?)", req.InstanceID, req.JobName, fullName).
-		Update("enable_delete", req.Enable).Error
+		Update("enable_delete", targetVal).Error
 
 	if err != nil {
 		common.ReqBadFailWithMessage("变更专属安全锁状态失败！", c)
 		return
 	}
-	statusText := "锁死不可删除 (保持高度容灾与安全态)"
-	if req.Enable {
-		statusText = "安全锁已开启 (此任务已开放直接销毁)"
+	statusText := "禁止删除 (默认防误删安全态)"
+	if targetVal == 1 {
+		statusText = "开启删除 (此任务已开放删除)"
 	}
 	common.OkWithMessage(fmt.Sprintf("任务 [%s] 防护状态更新为: %s", req.JobName, statusText), c)
 }
@@ -792,8 +912,8 @@ func deleteJenkinsJob(c *gin.Context) {
 
 	var existing models.JenkinsJob
 	err := models.Db.Where("instance_id = ? AND (name = ? OR name = ?)", instanceId, jobName, fullJobName).First(&existing).Error
-	if err == nil && !existing.EnableDelete {
-		common.ReqBadFailWithMessage(fmt.Sprintf("安全风控触发：作业 '%s' 目前处于删防关闭锁定态！严禁非法暴力强行释放。如需废止请在视图操作表中明确拨开【释放删除锁】开关！", jobName), c)
+	if err == nil && existing.EnableDelete != 1 {
+		common.ReqBadFailWithMessage(fmt.Sprintf("安全风控触发：作业 '%s' 目前处于禁止删除状态！如需删除请在编辑配置中开启删除权限！", jobName), c)
 		return
 	}
 
@@ -828,12 +948,198 @@ type triggerBuildReq struct {
 	CustomParams   map[string]interface{} `json:"customParams"`
 }
 
+// executeJenkinsGroovy 向 Jenkins 发送并执行 Groovy 脚本，返回纯文本响应
+func executeJenkinsGroovy(ctx context.Context, inst *models.JenkinsInstance, script string) (string, error) {
+	data := url.Values{}
+	data.Set("script", script)
+	endpoint := strings.TrimRight(inst.URL, "/") + "/scriptText"
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, strings.NewReader(data.Encode()))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth(inst.Username, inst.ApiToken)
+
+	httpClient := &http.Client{Timeout: 15 * time.Second}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(bodyBytes), nil
+}
+
+// ensureUserJenkinsToken 方案2：自动为用户代生成并代管 Jenkins 专属 API Token
+func ensureUserJenkinsToken(ctx context.Context, logger *zap.Logger, inst *models.JenkinsInstance, username string) (string, error) {
+	if username == "" || strings.EqualFold(username, inst.Username) {
+		return inst.ApiToken, nil
+	}
+
+	// 1. 优先从数据库查询是否已为该用户生成并代管了专属 API Token
+	userToken, err := models.GetJenkinsUserToken(inst.ID, username)
+	if err == nil && userToken != "" {
+		if logger != nil {
+			logger.Info("[Jenkins专属Token] 命中本地代管Token",
+				zap.String("username", username),
+				zap.Uint("instanceId", inst.ID))
+		}
+		return userToken, nil
+	}
+
+	if logger != nil {
+		logger.Info("[Jenkins专属Token] 本地无该用户Token，正在通过管理员权限为用户自动生成专属Token...",
+			zap.String("username", username),
+			zap.Uint("instanceId", inst.ID))
+	}
+
+	groovyScript := fmt.Sprintf(`
+try {
+    def user = hudson.model.User.getById("%s", true)
+    if (user != null) {
+        def prop = user.getProperty(jenkins.security.ApiTokenProperty.class)
+        if (prop == null) {
+            prop = new jenkins.security.ApiTokenProperty()
+            user.addProperty(prop)
+        }
+        def result = prop.tokenStore.generateNewToken("bigdevops-auto-token")
+        user.save()
+        def tokenVal = result.hasProperty("plainValue") ? result.plainValue : (result.hasProperty("tokenValue") ? result.tokenValue : result.toString())
+        println "TOKEN_OK:" + tokenVal
+    } else {
+        println "ERROR:USER_NOT_FOUND"
+    }
+} catch(Exception e) {
+    println "ERROR:" + e.getMessage()
+}
+`, username)
+
+	respContent, err := executeJenkinsGroovy(ctx, inst, groovyScript)
+	if err != nil {
+		if logger != nil {
+			logger.Warn("[Jenkins专属Token] Groovy执行请求失败", zap.Error(err))
+		}
+		return "", err
+	}
+
+	if strings.Contains(respContent, "TOKEN_OK:") {
+		idx := strings.Index(respContent, "TOKEN_OK:")
+		newToken := strings.TrimSpace(respContent[idx+len("TOKEN_OK:"):])
+		if endIdx := strings.IndexAny(newToken, "\r\n"); endIdx != -1 {
+			newToken = strings.TrimSpace(newToken[:endIdx])
+		}
+		if newToken != "" {
+			_ = models.SaveJenkinsUserToken(inst.ID, username, newToken)
+			if logger != nil {
+				logger.Info("[Jenkins专属Token] 成功为用户自动生成并代管专属Token！",
+					zap.String("username", username),
+					zap.Uint("instanceId", inst.ID))
+			}
+			return newToken, nil
+		}
+	}
+
+	if logger != nil {
+		logger.Warn("[Jenkins专属Token] 自动生成专属Token未成功",
+			zap.String("username", username),
+			zap.String("respContent", respContent))
+	}
+	return "", fmt.Errorf("生成专属Token失败: %s", respContent)
+}
+
+// triggerJenkinsBuildWithCause 原生注入操作人的 UserIdCause 调度 Jenkins 构建，并安全透传所有参数
+func triggerJenkinsBuildWithCause(ctx context.Context, inst *models.JenkinsInstance, jobFullName string, operator string, params map[string]string) (int64, error) {
+	var paramStatements []string
+	for k, v := range params {
+		escapedK := strings.ReplaceAll(k, "\"", "\\\"")
+		escapedV := strings.ReplaceAll(v, "\"", "\\\"")
+		paramStatements = append(paramStatements, fmt.Sprintf(`paramValues.add(new StringParameterValue("%s", "%s"))`, escapedK, escapedV))
+	}
+
+	groovyScript := fmt.Sprintf(`
+import hudson.model.*
+
+def job = jenkins.model.Jenkins.instance.getItemByFullName("%s")
+if (job == null) {
+    println "ERROR:JOB_NOT_FOUND"
+    return
+}
+
+def cause = new Cause.UserIdCause("%s")
+def causeAction = new CauseAction(cause)
+
+def paramValues = []
+%s
+
+def actions = [causeAction]
+if (!paramValues.isEmpty()) {
+    actions.add(new ParametersAction(paramValues))
+}
+
+def queueItem = jenkins.model.Jenkins.instance.queue.schedule2(job, 0, actions).getItem()
+if (queueItem != null) {
+    println "QUEUE_OK:" + queueItem.getId()
+} else {
+    println "ERROR:QUEUE_FAILED"
+}
+`, jobFullName, operator, strings.Join(paramStatements, "\n"))
+
+	respContent, err := executeJenkinsGroovy(ctx, inst, groovyScript)
+	if err != nil {
+		return 0, err
+	}
+
+	if strings.Contains(respContent, "QUEUE_OK:") {
+		idx := strings.Index(respContent, "QUEUE_OK:")
+		queueStr := strings.TrimSpace(respContent[idx+len("QUEUE_OK:"):])
+		if endIdx := strings.IndexAny(queueStr, "\r\n"); endIdx != -1 {
+			queueStr = strings.TrimSpace(queueStr[:endIdx])
+		}
+		return strconv.ParseInt(queueStr, 10, 64)
+	}
+
+	return 0, fmt.Errorf("调度响应异常: %s", respContent)
+}
+
 // triggerJenkinsBuild 触发构建部署 (构建时可带入并承载分级环境变更命令与快调)
 func triggerJenkinsBuild(c *gin.Context) {
 	var req triggerBuildReq
 	if err := c.ShouldBindJSON(&req); err != nil || req.InstanceID == 0 || req.JobName == "" {
 		common.ReqBadFailWithMessage("触发展望入参存在短缺异常", c)
 		return
+	}
+
+	var logger *zap.Logger
+	if scVal, ok := c.Get(common.GIN_CTX_CONFIG_CONFIG); ok {
+		if sc, ok := scVal.(*config.ServerConfig); ok {
+			logger = sc.Logger
+		}
+	}
+
+	// 优先取登录人真实账号（Keycloak 登录名，如 xin），杜绝中文真实姓名干扰
+	operator := ""
+	if userNameVal, ok := c.Get(common.GIN_CTX_JWT_USER_NAME); ok {
+		operator = strings.TrimSpace(fmt.Sprintf("%v", userNameVal))
+	}
+	if operator == "" {
+		operator = strings.TrimSpace(req.CreateUserName)
+	}
+
+	ctx := c.Request.Context()
+
+	inst, err := models.GetJenkinsInstanceById(req.InstanceID)
+	if err != nil || inst == nil {
+		common.ReqBadFailWithMessage("Jenkins 实例配置不存在", c)
+		return
+	}
+
+	// 方案2：为当前操作人代管/代生成 Jenkins 专属 Token (存入 jenkins_user_token)
+	if operator != "" {
+		_, _ = ensureUserJenkinsToken(ctx, logger, inst, operator)
 	}
 
 	jcVal, ok := c.Get(common.GIN_CTX_JENKINS_CACHE)
@@ -847,11 +1153,22 @@ func triggerJenkinsBuild(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
 	job, err := getJenkinsJobHelper(ctx, client, req.JobName, req.Folder, req.ProjectName)
 	if err != nil {
 		common.ReqBadFailWithMessage(fmt.Sprintf("解析远程任务定义发生奔溃或对象已失联: %v", err), c)
 		return
+	}
+
+	// 防重复构建校验：如果远端任务正在排队中，或者当前最后一次构建仍在运行中，阻断并发重复触发
+	if job.Raw.InQueue {
+		common.ReqBadFailWithMessage(fmt.Sprintf("任务 [%s] 当前已在 Jenkins 调度队列中排队，请勿重复触发！", req.JobName), c)
+		return
+	}
+	if lb, lbErr := job.GetLastBuild(ctx); lbErr == nil && lb != nil {
+		if lb.IsRunning(ctx) {
+			common.ReqBadFailWithMessage(fmt.Sprintf("任务 [%s] 当前正在构建中（构建号 #%d），请等待当前构建结束后再触发！", req.JobName, lb.GetBuildNumber()), c)
+			return
+		}
 	}
 
 	params := make(map[string]string)
@@ -859,121 +1176,109 @@ func triggerJenkinsBuild(c *gin.Context) {
 		"status": "BUILDING",
 	}
 
-	operator := req.CreateUserName
-	if operator == "" {
-		if userNameVal, ok := c.Get(common.GIN_CTX_JWT_USER_NAME); ok {
-			operator = fmt.Sprintf("%v", userNameVal)
-		}
+	if operator != "" {
+		updates["create_user_name"] = operator
 	}
-	if operator == "" {
-		authHeaderString := c.Request.Header.Get("Authorization")
-		if authHeaderString != "" {
-			parts := strings.SplitN(authHeaderString, " ", 2)
-			if len(parts) == 2 && parts[0] == "Bearer" {
-				sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
-				if claims, err := models.ParseToken(parts[1], sc); err == nil && claims != nil {
-					if claims.SystemUser != nil {
-						if claims.SystemUser.Username != "" {
-							operator = claims.SystemUser.Username
-						} else if claims.SystemUser.RealName != "" {
-							operator = claims.SystemUser.RealName
-						}
-					}
+
+	branch := strings.TrimSpace(req.Branch)
+	if branch == "" && req.CustomParams != nil {
+		for k, v := range req.CustomParams {
+			lk := strings.ToLower(strings.TrimSpace(k))
+			if lk == "branch" || lk == "gitbranch" || lk == "git_branch" || lk == "branchname" || strings.Contains(k, "分支") {
+				if strVal := strings.TrimSpace(fmt.Sprintf("%v", v)); strVal != "" {
+					branch = strVal
+					break
 				}
 			}
 		}
 	}
-	if operator != "" {
-		params["BUILD_USER"] = operator
-		params["buildUser"] = operator
-		params["BUILD_USER_ID"] = operator
-		params["OPERATOR"] = operator
-		params["operator"] = operator
-		updates["create_user_name"] = operator
-	}
-
-	if req.Branch != "" {
-		params["branch"] = req.Branch
-		params["BRANCH"] = req.Branch
-		updates["git_branch"] = req.Branch
+	if branch != "" {
+		updates["git_branch"] = branch
 	}
 	if req.DeployType != "" {
-		params["deployType"] = req.DeployType
-		params["DEPLOY_TYPE"] = req.DeployType
 		updates["deploy_type"] = req.DeployType
 	}
 	if req.GitRepo != "" {
-		params["gitRepo"] = req.GitRepo
-		params["GIT_REPO"] = req.GitRepo
 		updates["git_repo"] = req.GitRepo
 	}
 	if req.DeployEnv != "" {
-		params["deployEnv"] = req.DeployEnv
-		params["DEPLOY_ENV"] = req.DeployEnv
 		updates["deploy_env"] = req.DeployEnv
 	}
 
-	// 生产环境适配参数全量映射
-	if req.ScanCode {
-		params["scanCode"] = "true"
-		params["SCAN_CODE"] = "true"
-	} else {
-		params["scanCode"] = "false"
-		params["SCAN_CODE"] = "false"
-	}
-	if req.BuildNode != "" {
-		params["node"] = req.BuildNode
-		params["NODE"] = req.BuildNode
-		params["buildNode"] = req.BuildNode
-	}
-	if req.JdkVersion != "" {
-		params["jdkVersion"] = req.JdkVersion
-		params["JDK_VERSION"] = req.JdkVersion
-	}
-	if req.BuildCommand != "" {
-		params["buildCommand"] = req.BuildCommand
-		params["BUILD_COMMAND"] = req.BuildCommand
-	}
-	if req.Module != "" {
-		params["module"] = req.Module
-		params["MODULE"] = req.Module
-	}
-	if req.ConfigFile != "" {
-		params["configFile"] = req.ConfigFile
-		params["CONFIG_FILE"] = req.ConfigFile
-	}
-	if req.Port != "" {
-		params["port"] = req.Port
-		params["PORT"] = req.Port
-	}
-	if req.TargetHost != "" {
-		params["targetHost"] = req.TargetHost
-		params["TARGET_HOST"] = req.TargetHost
-	}
-
-	// 自由新增参数 CustomParams 无缝注入
+	// 纯净模式：严禁硬编码注入 BUILD_USER、OPERATOR 等变量
+	// 完全以用户表单提交的真实参数 (CustomParams) 精准透传给 Jenkins
 	for k, v := range req.CustomParams {
-		if strings.TrimSpace(k) != "" && v != nil {
-			strVal := fmt.Sprintf("%v", v)
-			params[k] = strVal
-			params[strings.ToUpper(k)] = strVal
+		key := strings.TrimSpace(k)
+		if key != "" && v != nil {
+			params[key] = fmt.Sprintf("%v", v)
 		}
 	}
 
-	queueID, err := job.InvokeSimple(ctx, params)
-	if err != nil {
-		common.ReqBadFailWithMessage(fmt.Sprintf("调度触发流失速报错: %v", err), c)
-		return
+	jobFullName := req.JobName
+	if req.Folder != "" && !strings.HasPrefix(req.JobName, req.Folder+"/") {
+		jobFullName = req.Folder + "/" + req.JobName
+	} else if req.ProjectName != "" && !strings.HasPrefix(req.JobName, req.ProjectName+"/") {
+		jobFullName = req.ProjectName + "/" + req.JobName
+	}
+
+	var queueID int64
+	// 优先使用 UserIdCause 调度，确保 Jenkins 构建记录原生就是 Started by user <operator>
+	if operator != "" {
+		queueID, err = triggerJenkinsBuildWithCause(ctx, inst, jobFullName, operator, params)
+	}
+
+	// 若未指定 operator 或 Cause 调度失败，优雅回退到 client.InvokeSimple
+	if queueID == 0 || err != nil {
+		if err != nil && logger != nil {
+			logger.Warn("[Jenkins构建调度] UserIdCause调度异常，回退到默认客户端调度", zap.Error(err))
+		}
+		queueID, err = job.InvokeSimple(ctx, params)
+		if err != nil {
+			if logger != nil {
+				logger.Error("[Jenkins构建调度失败]", zap.String("operator", operator), zap.String("jobName", req.JobName), zap.Error(err))
+			}
+			common.ReqBadFailWithMessage(fmt.Sprintf("调度触发流失速报错: %v", err), c)
+			return
+		}
+	}
+
+	if logger != nil {
+		logger.Info("[Jenkins构建调度成功]",
+			zap.String("operator", operator),
+			zap.String("jobName", req.JobName),
+			zap.Int64("queueID", queueID))
 	}
 
 	var buildNumber int64 = 0
-	build, _ := client.GetBuildFromQueueID(ctx, job, queueID)
-	if build != nil {
-		buildNumber = build.GetBuildNumber()
-		updates["count"] = buildNumber
+	now := time.Now()
+	updates["last_build_time"] = &now
+	// 尝试快速短轮询（300ms x 6次），尽量在首次响应时直接拿到真实构建号
+	for i := 0; i < 6; i++ {
+		build, _ := client.GetBuildFromQueueID(ctx, job, queueID)
+		if build != nil {
+			buildNumber = build.GetBuildNumber()
+			updates["count"] = buildNumber
+			t := build.GetTimestamp()
+			if !t.IsZero() {
+				updates["last_build_time"] = &t
+			}
+			break
+		}
+		time.Sleep(300 * time.Millisecond)
 	}
 
-	_ = models.Db.Model(&models.JenkinsJob{}).Where("instance_id = ? AND name = ?", req.InstanceID, req.JobName).Updates(updates).Error
+	targetJobName := req.JobName
+	if strings.Contains(targetJobName, "/") {
+		parts := strings.Split(targetJobName, "/")
+		targetJobName = parts[len(parts)-1]
+	}
+	dbQuery := models.Db.Model(&models.JenkinsJob{}).Where("instance_id = ? AND name = ?", req.InstanceID, targetJobName)
+	if req.Folder != "" {
+		dbQuery = dbQuery.Where("project_name = ?", req.Folder)
+	} else if req.ProjectName != "" {
+		dbQuery = dbQuery.Where("project_name = ?", req.ProjectName)
+	}
+	_ = dbQuery.Updates(updates).Error
 
 	common.OkWithData(gin.H{
 		"queueId":     queueID,
@@ -987,6 +1292,35 @@ type stopBuildReq struct {
 	BuildNumber int64  `json:"buildNumber"`
 	Folder      string `json:"folder"`
 	ProjectName string `json:"projectName"`
+}
+
+// getJenkinsBuildSafe 安全获取目标构建对象，规避 gojenkins 库在 Jenkins 域名反代/内网IP不一致时的 URL 拼接 Bug
+func getJenkinsBuildSafe(ctx context.Context, job *gojenkins.Job, buildNum int64) (*gojenkins.Build, error) {
+	if buildNum <= 0 {
+		return job.GetLastBuild(ctx)
+	}
+
+	// 1. 如果刚好是最后一次构建
+	if lb, err := job.GetLastBuild(ctx); err == nil && lb != nil && lb.GetBuildNumber() == buildNum {
+		return lb, nil
+	}
+
+	// 2. 使用稳定的相对 Base 路径规避原生库的 URL 拼接 Bug
+	base := fmt.Sprintf("%s/%d", strings.TrimRight(job.Base, "/"), buildNum)
+	build := &gojenkins.Build{
+		Jenkins: job.Jenkins,
+		Depth:   1,
+		Job:     job,
+		Raw:     new(gojenkins.BuildResponse),
+		Base:    base,
+	}
+	status, err := build.Poll(ctx)
+	if err == nil && status == 200 {
+		return build, nil
+	}
+
+	// 兜底尝试原生方法
+	return job.GetBuild(ctx, buildNum)
 }
 
 func stopJenkinsBuild(c *gin.Context) {
@@ -1012,12 +1346,7 @@ func stopJenkinsBuild(c *gin.Context) {
 		return
 	}
 
-	var build *gojenkins.Build
-	if req.BuildNumber > 0 {
-		build, err = job.GetBuild(ctx, req.BuildNumber)
-	} else {
-		build, err = job.GetLastBuild(ctx)
-	}
+	build, err := getJenkinsBuildSafe(ctx, job, req.BuildNumber)
 	if err != nil || build == nil {
 		common.ReqBadFailWithMessage("远端 Jenkins 不存在目标构建序列号号段", c)
 		return
@@ -1069,14 +1398,21 @@ func getJenkinsBuildLogs(c *gin.Context) {
 		return
 	}
 
-	var build *gojenkins.Build
-	if buildNum > 0 {
-		build, err = job.GetBuild(ctx, buildNum)
-	} else {
-		build, err = job.GetLastBuild(ctx)
-	}
+	build, err := getJenkinsBuildSafe(ctx, job, buildNum)
 	if err != nil || build == nil {
-		common.ReqBadFailWithMessage("当前管道可能从未来得及触发实际运作或已被释放清偿，请手动试运行一期", c)
+		// 检查任务是否在 Jenkins 调度队列中排队中
+		if job.Raw.InQueue {
+			common.OkWithDetailed(gin.H{
+				"content":     "⏳ 任务已成功提交至 Jenkins 调度队列，正在等待执行节点分配，请稍候...\n",
+				"offset":      0,
+				"isRunning":   true,
+				"status":      "QUEUEING",
+				"buildNumber": 0,
+			}, "构建排队中", c)
+			return
+		}
+
+		common.ReqBadFailWithMessage(fmt.Sprintf("任务 [%s] 当前无可用构建记录（历史上从未构建或历史构建已被清理）。请点击【发起构建部署】进行首次构建运行。", jobName), c)
 		return
 	}
 
@@ -1198,4 +1534,136 @@ func getJenkinsJobStageView(c *gin.Context) {
 		"status":      "NOT_BUILT",
 		"stages":      defaultStages,
 	}, c)
+}
+
+// JobParameterDefItem 动态 Jenkins 任务参数定义
+type JobParameterDefItem struct {
+	Name         string   `json:"name"`
+	Type         string   `json:"type"` // boolean, choice, string, branch
+	DefaultValue string   `json:"defaultValue"`
+	Description  string   `json:"description"`
+	Choices      []string `json:"choices,omitempty"`
+}
+
+func isIgnoredParam(name string) bool {
+	upper := strings.ToUpper(strings.TrimSpace(name))
+	switch upper {
+	case "BUILD_USER", "BUILD_USER_ID", "OPERATOR", "BRANCH", "DEPLOYENV", "DEPLOY_ENV", "DEPLOYTYPE", "DEPLOY_TYPE", "GITREPO", "GIT_REPO":
+		return true
+	}
+	return false
+}
+
+// parseJenkinsXmlParams 从 Jenkins Job XML 报文中解析真实的参数定义，杜绝写死表单导致传参失灵
+func parseJenkinsXmlParams(xmlContent string) []JobParameterDefItem {
+	var params []JobParameterDefItem
+
+	startTag := "<parameterDefinitions>"
+	endTag := "</parameterDefinitions>"
+	sIdx := strings.Index(xmlContent, startTag)
+	eIdx := strings.Index(xmlContent, endTag)
+	if sIdx == -1 || eIdx == -1 || eIdx <= sIdx {
+		return params
+	}
+
+	innerXml := xmlContent[sIdx+len(startTag) : eIdx]
+	decoder := xml.NewDecoder(strings.NewReader("<root>" + innerXml + "</root>"))
+
+	var curParam *JobParameterDefItem
+	var curTag string
+	var inChoices bool
+
+	for {
+		tok, err := decoder.Token()
+		if err != nil {
+			break
+		}
+		switch t := tok.(type) {
+		case xml.StartElement:
+			curTag = t.Name.Local
+			tagLower := strings.ToLower(curTag)
+			if strings.Contains(tagLower, "parameterdefinition") || strings.Contains(tagLower, "choiceparameter") {
+				curParam = &JobParameterDefItem{Type: "string"}
+				if strings.Contains(tagLower, "boolean") {
+					curParam.Type = "boolean"
+				} else if strings.Contains(tagLower, "choice") {
+					curParam.Type = "choice"
+				}
+			}
+			if curTag == "choices" {
+				inChoices = true
+			}
+		case xml.EndElement:
+			endTagLocal := t.Name.Local
+			tagLower := strings.ToLower(endTagLocal)
+			if curTag == "choices" {
+				inChoices = false
+			}
+			if (strings.Contains(tagLower, "parameterdefinition") || strings.Contains(tagLower, "choiceparameter")) && curParam != nil {
+				pName := strings.TrimSpace(curParam.Name)
+				if isIgnoredParam(pName) {
+					curParam = nil
+					curTag = ""
+					continue
+				}
+				if strings.Contains(curParam.Name, "分支") || strings.EqualFold(curParam.Name, "branch") {
+					curParam.Type = "branch"
+				}
+				params = append(params, *curParam)
+				curParam = nil
+			}
+			curTag = ""
+		case xml.CharData:
+			val := strings.TrimSpace(string(t))
+			if curParam != nil && val != "" {
+				switch curTag {
+				case "name":
+					curParam.Name = val
+				case "description":
+					curParam.Description = val
+				case "defaultValue":
+					curParam.DefaultValue = val
+					if curParam.Type == "choice" && len(curParam.Choices) == 0 {
+						curParam.Choices = append(curParam.Choices, val)
+					}
+				case "string":
+					if inChoices {
+						curParam.Choices = append(curParam.Choices, val)
+					}
+				}
+			}
+		}
+	}
+	return params
+}
+
+// getJenkinsJobParameters 动态提取 Jenkins Job 真实参数结构，供前端自适应渲染
+func getJenkinsJobParameters(c *gin.Context) {
+	client, _, ok := getJenkinsClientFromCtx(c)
+	if !ok {
+		return
+	}
+
+	jobName := c.DefaultQuery("jobName", c.DefaultQuery("job_name", c.Query("name")))
+	folder := c.DefaultQuery("folder", c.Query("projectName"))
+	if jobName == "" {
+		common.ReqBadFailWithMessage("缺少必要的任务名称(jobName)", c)
+		return
+	}
+
+	ctx := c.Request.Context()
+	job, err := getJenkinsJobHelper(ctx, client, jobName, folder)
+	if err != nil || job == nil {
+		common.ReqBadFailWithMessage(fmt.Sprintf("无法定位 Jenkins 作业: %v", err), c)
+		return
+	}
+
+	configXML, err := job.GetConfig(ctx)
+	if err != nil || configXML == "" {
+		common.ReqBadFailWithMessage(fmt.Sprintf("获取作业配置失败: %v", err), c)
+		return
+	}
+
+	params := parseJenkinsXmlParams(configXML)
+	common.OkWithData(params, c)
 }

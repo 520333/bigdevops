@@ -356,7 +356,7 @@ func DingTalkCallback(c *gin.Context) {
 			DingTalkUnionId: userInfo.UnionId,
 			Enable:          1, // 正常启用
 			HomePath:        "/dashboard/analysis",
-			Password:        common.BcryptHash("123456"),
+			Password:        common.BcryptHash(common.INITPWD),
 		}
 		if err := newUser.CreateOne(); err != nil {
 			sc.Logger.Error("钉钉SSO自动创建用户失败", zap.Error(err))

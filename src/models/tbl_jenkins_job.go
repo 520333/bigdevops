@@ -2,6 +2,7 @@ package models
 
 import (
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -11,20 +12,21 @@ import (
 // 严密贴合重构需求，仅保留规范明确规定的关键字段，所有无效旧字段彻底清除。
 type JenkinsJob struct {
 	Model
-	InstanceID     uint   `json:"instanceId" gorm:"uniqueIndex:uk_inst_job_proj;comment:关联实例ID"`
-	DeployType     string `json:"deployType" gorm:"type:varchar(64);comment:部署方式(主机IP、容器集群)(构建时传参)"`
-	DeployEnv      string `json:"deployEnv" gorm:"type:varchar(32);comment:部署环境(dev|test|stage|uat|pre|prod)"`
-	Name           string `json:"name" gorm:"uniqueIndex:uk_inst_job_proj;type:varchar(128);comment:服务名(与Jenkins中的名称一致,创建Job时用)"`
-	ProjectName    string `json:"projectName" gorm:"type:varchar(128);comment:项目名称(对应的是GIT仓库的group名称,创建Job时用)"`
-	Folder         string `json:"folder" gorm:"-"` // 支持文件夹传参 不入库
-	GitRepo        string `json:"gitRepo" gorm:"column:git_repo;type:varchar(255);comment:GIT仓库克隆地址(构建时传参)"`
-	GitBranch      string `json:"gitBranch" gorm:"column:git_branch;type:varchar(64);default:'main';comment:GIT分支(构建时传参)"`
-	URL            string `json:"url" gorm:"type:varchar(255);comment:该job的jenkins地址"`
-	Lang           string `json:"lang" gorm:"type:varchar(32);default:'Java';comment:该job是什么技术栈"`
-	Count          int64  `json:"count" gorm:"column:count;default:0;comment:最后构建号"`
-	Status         string `json:"status" gorm:"column:status;type:varchar(32);default:'NOT_BUILT';comment:同步jenkins真实的job状态"`
-	CreateUserName string `json:"createUserName" gorm:"column:create_user_name;type:varchar(64);comment:创建人"`
-	EnableDelete   bool   `json:"enableDelete" gorm:"column:enable_delete;default:false;comment:创建job后锁定 开关控制 开启后删除按钮可以使用 关闭时删除按钮禁用"`
+	InstanceID     uint       `json:"instanceId" gorm:"uniqueIndex:uk_inst_job_proj;comment:关联实例ID"`
+	DeployType     string     `json:"deployType" gorm:"type:varchar(64);comment:部署方式(主机IP、容器集群)(构建时传参)"`
+	DeployEnv      string     `json:"deployEnv" gorm:"type:varchar(32);comment:部署环境(dev|test|stage|uat|pre|prod)"`
+	Name           string     `json:"name" gorm:"uniqueIndex:uk_inst_job_proj;type:varchar(128);comment:服务名(与Jenkins中的名称一致,创建Job时用)"`
+	ProjectName    string     `json:"projectName" gorm:"uniqueIndex:uk_inst_job_proj;type:varchar(128);comment:项目名称(对应的是GIT仓库的group名称,创建Job时用)"`
+	Folder         string     `json:"folder" gorm:"-"` // 支持文件夹传参 不入库
+	GitRepo        string     `json:"gitRepo" gorm:"column:git_repo;type:varchar(255);comment:GIT仓库克隆地址(构建时传参)"`
+	GitBranch      string     `json:"gitBranch" gorm:"column:git_branch;type:varchar(64);default:'main';comment:最后GIT分支(构建时传参)"`
+	URL            string     `json:"url" gorm:"type:varchar(255);comment:该job的jenkins地址"`
+	Lang           string     `json:"lang" gorm:"type:varchar(32);default:'Java';comment:该job是什么技术栈"`
+	Count          int64      `json:"count" gorm:"column:count;default:0;comment:最后构建号"`
+	Status         string     `json:"status" gorm:"column:status;type:varchar(32);default:'NOT_BUILT';comment:同步jenkins真实的job状态"`
+	CreateUserName string     `json:"createUserName" gorm:"column:create_user_name;type:varchar(64);comment:创建人"`
+	EnableDelete   int        `json:"enableDelete" gorm:"column:enable_delete;type:tinyint;default:2;comment:删除控制: 1-开启删除 2-禁止删除 默认为2"`
+	LastBuildTime  *time.Time `json:"lastBuildTime" gorm:"column:last_build_time;type:datetime;comment:最后构建时间"`
 }
 
 func (obj *JenkinsJob) AfterFind(tx *gorm.DB) (err error) {
@@ -122,11 +124,18 @@ func SaveOrUpdateJenkinsJob(job *JenkinsJob) error {
 	var existing JenkinsJob
 	var err error
 
-	if job.ID > 0 {
-		err = Db.Where("id = ?", job.ID).First(&existing).Error
+	// 1. 优先按唯一索引检查库中是否已有此唯一记录 (instance_id, name, project_name)
+	q := Db.Where("instance_id = ? AND name = ?", job.InstanceID, job.Name)
+	if job.ProjectName != "" {
+		q = q.Where("project_name = ?", job.ProjectName)
+	} else {
+		q = q.Where("project_name = '' OR project_name IS NULL")
 	}
-	if err != nil || job.ID == 0 {
-		err = Db.Where("instance_id = ? AND name = ?", job.InstanceID, job.Name).First(&existing).Error
+	err = q.First(&existing).Error
+
+	// 2. 如果唯一索引未命中，但指定了有效 ID，则通过 ID 查找原记录 (处理用户重命名场景)
+	if err != nil && job.ID > 0 {
+		err = Db.Where("id = ?", job.ID).First(&existing).Error
 	}
 
 	if err == nil && existing.ID > 0 {
@@ -138,11 +147,47 @@ func SaveOrUpdateJenkinsJob(job *JenkinsJob) error {
 		if job.Count == 0 && existing.Count > 0 {
 			job.Count = existing.Count
 		}
-		// 默认保持原有防删除开关状态，未显式改变不重置
-		if !job.EnableDelete && existing.EnableDelete {
-			job.EnableDelete = existing.EnableDelete
+
+		enableDelete := job.EnableDelete
+		if enableDelete != 1 && enableDelete != 2 {
+			if existing.EnableDelete == 1 || existing.EnableDelete == 2 {
+				enableDelete = existing.EnableDelete
+			} else {
+				enableDelete = 2
+			}
 		}
-		return Db.Model(&existing).Updates(job).Error
+
+		// 使用 map 更新确保所有字段均能准确持久化
+		updates := map[string]interface{}{
+			"instance_id":   job.InstanceID,
+			"deploy_type":   job.DeployType,
+			"deploy_env":    job.DeployEnv,
+			"name":          job.Name,
+			"project_name":  job.ProjectName,
+			"git_repo":      job.GitRepo,
+			"git_branch":    job.GitBranch,
+			"lang":          job.Lang,
+			"enable_delete": enableDelete,
+		}
+		if job.CreateUserName != "" {
+			updates["create_user_name"] = job.CreateUserName
+		}
+		if job.URL != "" {
+			updates["url"] = job.URL
+		}
+		if job.Status != "" {
+			updates["status"] = job.Status
+		}
+		if job.Count > 0 {
+			updates["count"] = job.Count
+		}
+		if job.LastBuildTime != nil {
+			updates["last_build_time"] = job.LastBuildTime
+		}
+		return Db.Model(&existing).Updates(updates).Error
+	}
+	if job.EnableDelete != 1 && job.EnableDelete != 2 {
+		job.EnableDelete = 2
 	}
 	return Db.Create(job).Error
 }

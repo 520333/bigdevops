@@ -719,7 +719,9 @@ func fetchBranchesForServer(server models.CodeGitServer, repoId int, fullName st
 		if repoId == 0 && fullName != "" {
 			pid = fullName
 		}
-		gitlabBranches, _, err := client.Branches.ListBranches(pid, &gitlab.ListBranchesOptions{})
+		gitlabBranches, _, err := client.Branches.ListBranches(pid, &gitlab.ListBranchesOptions{
+			ListOptions: gitlab.ListOptions{PerPage: 100},
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -749,6 +751,18 @@ func fetchBranchesForServer(server models.CodeGitServer, repoId int, fullName st
 	return nil, fmt.Errorf("unsupported platform")
 }
 
+func isNumericPort(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
 func parseGitUrlToPath(raw string) string {
 	clean := strings.TrimSpace(raw)
 	clean = strings.TrimSuffix(clean, ".git")
@@ -758,13 +772,24 @@ func parseGitUrlToPath(raw string) string {
 	if idx := strings.Index(clean, "@"); idx != -1 {
 		clean = clean[idx+1:]
 	}
-	if strings.Contains(clean, "/") {
-		parts := strings.Split(clean, "/")
-		if len(parts) > 1 {
-			return strings.Join(parts[1:], "/")
+	// 处理 SSH 冒号分隔符 (如 host:group/repo 或 host:8080/group/repo)
+	if idx := strings.Index(clean, ":"); idx != -1 {
+		clean = clean[idx+1:]
+	}
+	clean = strings.TrimPrefix(clean, "/")
+
+	// 循环检查并剔除第一段中的域名、主机IP、纯数字端口号 (如 gitlab.com、192.168.1.10、222、8080)
+	parts := strings.Split(clean, "/")
+	for len(parts) > 2 {
+		first := parts[0]
+		isHostOrPort := strings.Contains(first, ".") || strings.Contains(first, ":") || isNumericPort(first)
+		if isHostOrPort {
+			parts = parts[1:]
+		} else {
+			break
 		}
 	}
-	return clean
+	return strings.Join(parts, "/")
 }
 
 func getRepoBranches(c *gin.Context) {
@@ -784,7 +809,10 @@ func getRepoBranches(c *gin.Context) {
 
 	// 1. 尝试直接查数据库的代码仓库记录匹配精确 Server与ProjectID
 	var dbRepo models.CodeGitRepo
-	if err := models.Db.Where("full_name = ? OR clone_url_ssh LIKE ? OR clone_url_http LIKE ?", cleanPath, "%"+cleanPath+"%", "%"+cleanPath+"%").First(&dbRepo).Error; err == nil {
+	if err := models.Db.Where(
+		"full_name = ? OR full_name LIKE ? OR clone_url_ssh = ? OR clone_url_http = ? OR clone_url_ssh LIKE ? OR clone_url_http LIKE ?",
+		cleanPath, "%"+cleanPath, fullName, fullName, "%"+cleanPath+"%", "%"+cleanPath+"%",
+	).First(&dbRepo).Error; err == nil {
 		if server, err := models.GetCodeGitServerById(int(dbRepo.ServerID)); err == nil {
 			if branches, err := fetchBranchesForServer(*server, dbRepo.ProjectID, dbRepo.FullName); err == nil && len(branches) > 0 {
 				common.OkWithData(branches, c)

@@ -25,9 +25,9 @@ func getJenkinsInstanceList(c *gin.Context) {
 		return
 	}
 
-	if hasCache && jc != nil {
-		jenkinsCache := jc.(*cache.JenkinsCache)
-		for _, obj := range objs {
+	for _, obj := range objs {
+		if hasCache && jc != nil {
+			jenkinsCache := jc.(*cache.JenkinsCache)
 			obj.LastProbSuccess = jenkinsCache.GetJenkinsProbeResultById(obj.ID)
 			obj.LastProbErrMsg = jenkinsCache.GetJenkinsProbeErrMsgById(obj.ID)
 		}
@@ -36,6 +36,32 @@ func getJenkinsInstanceList(c *gin.Context) {
 	common.OkWithDetailed(gin.H{
 		"items": objs,
 		"total": len(objs),
+	}, "获取成功", c)
+}
+
+// getJenkinsInstanceDetail 获取 Jenkins 单条实例详情 (用于编辑回显真实 Token)
+func getJenkinsInstanceDetail(c *gin.Context) {
+	idStr := c.Query("id")
+	id, _ := strconv.Atoi(idStr)
+	if id <= 0 {
+		common.ReqBadFailWithMessage("缺少实例ID", c)
+		return
+	}
+
+	dbObj, err := models.GetJenkinsInstanceById(uint(id))
+	if err != nil {
+		common.ReqBadFailWithMessage("实例不存在", c)
+		return
+	}
+
+	common.OkWithDetailed(gin.H{
+		"id":                   dbObj.ID,
+		"name":                 dbObj.Name,
+		"url":                  dbObj.URL,
+		"username":             dbObj.Username,
+		"apiToken":             dbObj.ApiToken, // 仅在编辑单条实例时回显真实 Token
+		"env":                  dbObj.Env,
+		"actionTimeoutSeconds": dbObj.ActionTimeoutSeconds,
 	}, "获取成功", c)
 }
 
@@ -51,6 +77,10 @@ func createJenkinsInstance(c *gin.Context) {
 	if obj.Name == "" || obj.URL == "" {
 		common.ReqBadFailWithMessage("实例名称和URL不可为空", c)
 		return
+	}
+
+	if obj.ApiToken == "" && obj.ReqApiToken != "" {
+		obj.ApiToken = obj.ReqApiToken
 	}
 
 	if err := obj.CreateOne(); err != nil {
@@ -78,6 +108,16 @@ func updateJenkinsInstance(c *gin.Context) {
 	if obj.ID == 0 {
 		common.ReqBadFailWithMessage("缺少实例ID", c)
 		return
+	}
+
+	// 安全保护：若未修改 token（保持掩码 ****** 或为空），则保留数据库中原有的 token，不进行覆盖
+	if obj.ReqApiToken != "" && obj.ReqApiToken != "******" {
+		obj.ApiToken = obj.ReqApiToken
+	} else if obj.ApiToken == "******" || obj.ApiToken == "" {
+		oldInst, err := models.GetJenkinsInstanceById(obj.ID)
+		if err == nil && oldInst != nil {
+			obj.ApiToken = oldInst.ApiToken
+		}
 	}
 
 	if err := obj.UpdateOne(); err != nil {

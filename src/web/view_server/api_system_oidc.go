@@ -152,7 +152,7 @@ func OidcCallback(c *gin.Context) {
 				Email:    claims.Email,
 				Enable:   1, // 正常启用
 				HomePath: "/dashboard/analysis",
-				Password: common.BcryptHash("123456"),
+				Password: common.BcryptHash(common.INITPWD),
 			}
 			// 插入数据库
 			if err := newUser.CreateOne(); err != nil {

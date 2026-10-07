@@ -89,6 +89,8 @@ const (
 	K8S_YAMLTASK_STATUS_PENDING = "pending"
 	K8S_YAMLTASK_STATUS_APPLIED = "applied"
 	K8S_YAMLTASK_STATUS_FAILED  = "failed"
+
+	INITPWD = "Dev@2027.."
 )
 
 var (

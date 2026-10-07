@@ -21,7 +21,9 @@ type CodeGitServer struct {
 	AuthType string `json:"authType" gorm:"type:varchar(50);comment:认证方式: token / password"`
 	Username string `json:"username" gorm:"type:varchar(100);comment:用户名(密码认证时使用)"`
 
-	Token string `json:"token" gorm:"type:varchar(500);comment:访问令牌(PAT),建议加密存储"`
+	Token    string `json:"-" gorm:"type:varchar(500);comment:访问令牌(PAT),建议加密存储"`
+	ReqToken string `json:"token,omitempty" gorm:"-"` // 仅用于接收前端 JSON 中的 token 传参，不存库，响应时自动忽略
+
 	// 网络与状态
 	SkipVerify bool `json:"skipVerify" gorm:"comment:是否跳过SSL证书验证(针对自签证书)"`
 
@@ -34,11 +36,17 @@ type CodeGitServer struct {
 
 // CreateOne 新增
 func (obj *CodeGitServer) CreateOne() error {
+	if obj.Token == "" && obj.ReqToken != "" {
+		obj.Token = obj.ReqToken
+	}
 	return Db.Create(obj).Error
 }
 
 // UpdateOne 更新
 func (obj *CodeGitServer) UpdateOne() error {
+	if obj.Token == "" && obj.ReqToken != "" {
+		obj.Token = obj.ReqToken
+	}
 	// 使用 Updates 可以只更新非零值字段；如果需要强制更新某个状态，使用 Select
 	return Db.Updates(obj).Error
 }
