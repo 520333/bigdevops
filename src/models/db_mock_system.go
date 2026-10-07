@@ -94,7 +94,7 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Name: "CiCdWorkList", Title: "工单列表", Icon: "ant-design:audit-outlined", Type: "1", Show: "1", OrderNo: 62, Component: "cicd/workorder/index", Path: "workorder"},
 				{Name: "CiCdDeployList", Title: "发布工单", Icon: "ant-design:send-outlined", Type: "1", Show: "1", OrderNo: 63, Component: "cicd/deploy/index", Path: "deploy"},
 				{Name: "CiCdServiceBaseline", Title: "服务基线", Icon: "ant-design:sliders-outlined", Type: "1", Show: "1", OrderNo: 64, Component: "cicd/baseline/index", Path: "baseline"},
-				{Name: "CiCdPipeline", Title: "流水线管理", Icon: "ant-design:partition-outlined", Type: "1", Show: "1", OrderNo: 65, Component: "cicd/pipeline/index", Path: "pipeline"},
+				{Name: "CiCdPipeline", Title: "流水线模板管理", Icon: "ant-design:partition-outlined", Type: "1", Show: "1", OrderNo: 65, Component: "cicd/pipeline/index", Path: "pipeline"},
 				//{Name: "CiCdEnvManagement", Title: "环境配置", Icon: "ant-design:cloud-server-outlined", Type: "1", Show: "1", OrderNo: 65, Component: "cicd/environment/index", Path: "environment"},
 			},
 		},
@@ -1067,6 +1067,7 @@ func EnsureIncrementalApis(sc *config.ServerConfig) {
 	apisToAdd := []SystemApi{
 		{Path: "/api/code/getCodeGitServerDetail", Method: "GET", Title: "[代码管理]获取Git服务器详情", Type: "1", Pid: codePid},
 		{Path: "/api/cicd/getJenkinsInstanceDetail", Method: "GET", Title: "[Jenkins]获取实例详情", Type: "1", Pid: cicdPid},
+		{Path: "/api/cicd/getJenkinsJobParameters", Method: "GET", Title: "[Jenkins]获取Job构建参数", Type: "1", Pid: cicdPid},
 	}
 
 	var createdApis []*SystemApi
