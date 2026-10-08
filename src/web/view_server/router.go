@@ -117,7 +117,7 @@ func ConfigRouter(r *gin.Engine) {
 		// ECS
 		sTreeApiGroup.POST("/bindEcsToStreeNode", bindEcsToStreeNode)
 		sTreeApiGroup.POST("/unBindEcsToStreeNode", unBindEcsToStreeNode)
-		sTreeApiGroup.GET("getStreeNodeEcsList/:id", getStreeNodeEcsList)
+		sTreeApiGroup.GET("/getStreeNodeEcsList/:id", getStreeNodeEcsList)
 		sTreeApiGroup.GET("/getResourceEcsUnbindList", getResourceEcsUnbindList)
 		sTreeApiGroup.GET("/getResourceEcsList", getResourceEcsList)
 		// ELB
@@ -444,6 +444,11 @@ func ConfigRouter(r *gin.Engine) {
 		JenkinsGroup.POST("/toggleJenkinsJobDeleteLock", toggleJenkinsJobDeleteLock)
 		JenkinsGroup.GET("/getJenkinsJobParameters", getJenkinsJobParameters)
 		JenkinsGroup.GET("/getJenkinsJobBuildHistory", getJenkinsJobBuildHistory)
+
+		// 数据权限管理路由
+		JenkinsGroup.GET("/getRoleJobPermissions", getRoleJobPermissions)
+		JenkinsGroup.POST("/saveRoleJobPermissions", saveRoleJobPermissions)
+		JenkinsGroup.GET("/getJobProjectOptions", getJobProjectOptions)
 
 		// Pipeline 模版管理路由
 		JenkinsGroup.GET("/getJenkinsPipelineList", getJenkinsPipelineList)

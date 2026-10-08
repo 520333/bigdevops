@@ -144,6 +144,7 @@ func MigrateTable() error {
 		&JenkinsEnvVar{},
 		&JenkinsBuildParam{},
 		&JenkinsUserToken{},
+		&JenkinsJobPermission{},
 
 		// git
 		&CodeGitServer{},

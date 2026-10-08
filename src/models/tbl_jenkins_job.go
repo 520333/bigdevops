@@ -27,6 +27,7 @@ type JenkinsJob struct {
 	CreateUserName string     `json:"createUserName" gorm:"column:create_user_name;type:varchar(64);comment:创建人"`
 	EnableDelete   int        `json:"enableDelete" gorm:"column:enable_delete;type:tinyint;default:2;comment:删除控制: 1-开启删除 2-禁止删除 默认为2"`
 	LastBuildTime  *time.Time `json:"lastBuildTime" gorm:"column:last_build_time;type:datetime;comment:最后构建时间"`
+	CanBuild       bool       `json:"canBuild" gorm:"-"` // 前端权限控制：是否具有触发构建权限
 }
 
 func (obj *JenkinsJob) AfterFind(tx *gorm.DB) (err error) {
@@ -79,8 +80,22 @@ type JenkinsJobQueryParam struct {
 }
 
 func GetJenkinsJobListByParam(param *JenkinsJobQueryParam) ([]*JenkinsJob, error) {
+	return GetJenkinsJobListByParamWithUser(param, nil, "")
+}
+
+// GetJenkinsJobListByParamWithUser 基于用户所属角色权限实施行级物理过滤，没权限的作业在数据库层直接无法查询
+func GetJenkinsJobListByParamWithUser(param *JenkinsJobQueryParam, user *SystemUser, superRoleName string) ([]*JenkinsJob, error) {
 	var objs []*JenkinsJob
 	query := Db.Where("instance_id = ?", param.InstanceID)
+
+	// 若提供了用户上下文，严格应用行级权限过滤
+	if user != nil {
+		var hasAccess bool
+		query, hasAccess = FilterJobsByPermission(query, user, superRoleName)
+		if !hasAccess {
+			return []*JenkinsJob{}, nil
+		}
+	}
 
 	if param.Name != "" {
 		query = query.Where("name LIKE ?", "%"+param.Name+"%")

@@ -315,27 +315,44 @@ func getJenkinsJobList(c *gin.Context) {
 		param.InstanceID = instanceId
 	}
 
-	forceSync := c.Query("sync") == "true" || c.Query("refresh") == "true"
+	// 获取当前登录用户及系统配置
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+	var currentUser *models.SystemUser
+	if userNameVal, ok := c.Get(common.GIN_CTX_JWT_USER_NAME); ok {
+		userName := fmt.Sprintf("%v", userNameVal)
+		currentUser, _ = models.GetUserByUsername(userName)
+	}
 
-	// 1. 如果请求显式要求同步，或数据库首次无数据，先从 Jenkins 远端拉取并同步
+	isSuper := models.IsUserSuperRole(currentUser, sc.SuperRoleName)
+	forceSync := (c.Query("sync") == "true" || c.Query("refresh") == "true") && isSuper
+
+	// 1. 如果请求显式要求同步且具备管理员权限，先从 Jenkins 远端拉取并同步
 	if forceSync {
 		_ = SyncJenkinsJobsToDB(c.Request.Context(), instanceId, client)
 	}
 
-	// 2. 从数据库提取条件结果
-	dbJobs, err := models.GetJenkinsJobListByParam(&param)
+	// 2. 从数据库提取条件结果 (严格应用角色行级物理隔离，无权限的作业在数据库层直接过滤无法看见)
+	dbJobs, err := models.GetJenkinsJobListByParamWithUser(&param, currentUser, sc.SuperRoleName)
 	if err != nil {
 		common.ReqBadFailWithMessage(fmt.Sprintf("获取 Job 列表失败: %v", err), c)
 		return
 	}
 
-	if len(dbJobs) == 0 && !forceSync {
+	if len(dbJobs) == 0 && !forceSync && isSuper {
 		_ = SyncJenkinsJobsToDB(c.Request.Context(), instanceId, client)
-		dbJobs, _ = models.GetJenkinsJobListByParam(&param)
-	} else if !forceSync {
+		dbJobs, _ = models.GetJenkinsJobListByParamWithUser(&param, currentUser, sc.SuperRoleName)
+	} else if !forceSync && isSuper {
 		go func(instId uint, cli *gojenkins.Jenkins) {
 			_ = SyncJenkinsJobsToDB(context.Background(), instId, cli)
 		}(instanceId, client)
+	}
+
+	for _, job := range dbJobs {
+		if isSuper {
+			job.CanBuild = true
+		} else {
+			job.CanBuild = models.CheckJobOperationPermission(currentUser, sc.SuperRoleName, job.ProjectName, job.DeployEnv, job.Name, true)
+		}
 	}
 
 	common.OkWithDetailed(gin.H{
@@ -1216,6 +1233,32 @@ func triggerJenkinsBuild(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
+
+	// 数据权限安全校验：判断当前用户所属角色是否被授予该项目、该部署环境的构建权限
+	if scVal, ok := c.Get(common.GIN_CTX_CONFIG_CONFIG); ok {
+		if sc, ok := scVal.(*config.ServerConfig); ok {
+			var dbUser *models.SystemUser
+			if operator != "" {
+				dbUser, _ = models.GetUserByUsername(operator)
+			}
+			targetProject := req.ProjectName
+			if targetProject == "" {
+				targetProject = req.Folder
+			}
+			targetEnv := ""
+			var localJob models.JenkinsJob
+			if err := models.Db.Where("instance_id = ? AND name = ?", req.InstanceID, req.JobName).First(&localJob).Error; err == nil {
+				if targetProject == "" {
+					targetProject = localJob.ProjectName
+				}
+				targetEnv = localJob.DeployEnv
+			}
+			if !models.CheckJobOperationPermission(dbUser, sc.SuperRoleName, targetProject, targetEnv, req.JobName, true) {
+				common.Req403WithMessage(fmt.Sprintf("权限拒绝：您所属角色无权对作业 [%s] 发起构建部署！", req.JobName), c)
+				return
+			}
+		}
+	}
 
 	inst, err := models.GetJenkinsInstanceById(req.InstanceID)
 	if err != nil || inst == nil {
