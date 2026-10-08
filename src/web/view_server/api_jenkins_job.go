@@ -515,18 +515,20 @@ func doCreateJenkinsJobCore(ctx context.Context, sc *config.ServerConfig, client
 	xml.EscapeText(&buf, []byte(script))
 	escapedScript := buf.String()
 
+	propertiesXml := GenerateJobPropertiesXml(script)
+
 	xmlConfig := fmt.Sprintf(`<?xml version='1.1' encoding='UTF-8'?>
 <flow-definition plugin="workflow-job">
   <description>Created via BigDevOps Baseline Architecture</description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
+  %s
   <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
     <script>%s</script>
     <sandbox>true</sandbox>
   </definition>
   <triggers/>
   <disabled>false</disabled>
-</flow-definition>`, escapedScript)
+</flow-definition>`, propertiesXml, escapedScript)
 
 	var err error
 	var jenkinsURL string
@@ -591,6 +593,58 @@ func doCreateJenkinsJobCore(ctx context.Context, sc *config.ServerConfig, client
 	return dbObj, nil
 }
 
+// replaceJenkinsScriptInConfig 安全更新 Jenkins XML 中的脚本内容与参数定义，实现实时生效无需首跑激活
+func replaceJenkinsScriptInConfig(oldConfig string, escapedScript string, rawScript string) string {
+	res := oldConfig
+
+	// 1. 若新脚本包含参数定义或防并发设置，智能同步/更新 <properties> 节点
+	newPropsXml := GenerateJobPropertiesXml(rawScript)
+	if strings.Contains(newPropsXml, "parameterDefinitions") || strings.Contains(newPropsXml, "DisableConcurrentBuildsJobProperty") {
+		propStart := strings.Index(res, "<properties>")
+		propEnd := strings.Index(res, "</properties>")
+		if propStart != -1 && propEnd != -1 && propEnd > propStart {
+			res = res[:propStart] + strings.TrimSpace(newPropsXml) + res[propEnd+len("</properties>"):]
+		} else {
+			selfCloseIdx := strings.Index(res, "<properties/>")
+			if selfCloseIdx != -1 {
+				res = res[:selfCloseIdx] + strings.TrimSpace(newPropsXml) + res[selfCloseIdx+len("<properties/>"):]
+			}
+		}
+	}
+
+	// 2. 替换 <script> 节点
+	startTag := "<script>"
+	endTag := "</script>"
+	startIdx := strings.Index(res, startTag)
+	endIdx := strings.Index(res, endTag)
+	if startIdx != -1 && endIdx != -1 && endIdx > startIdx {
+		return res[:startIdx+len(startTag)] + escapedScript + res[endIdx:]
+	}
+
+	// 3. 兜底：如果原有配置没有 <script> 标签，将解析的 properties 或原有 properties 移植入新配置模板
+	propertiesBlock := "<properties/>"
+	if strings.TrimSpace(newPropsXml) != "" && newPropsXml != "<properties/>" {
+		propertiesBlock = newPropsXml
+	} else {
+		propRegex := regexp.MustCompile(`(?s)<properties>.*?</properties>`)
+		if match := propRegex.FindString(oldConfig); match != "" {
+			propertiesBlock = match
+		}
+	}
+	return fmt.Sprintf(`<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job">
+  <description>Updated via BigDevOps Baseline Architecture</description>
+  <keepDependencies>false</keepDependencies>
+  %s
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
+    <script>%s</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>`, propertiesBlock, escapedScript)
+}
+
 // updateJenkinsJob 更新 Job (直接提交更新至远端配置不变动 DB 的 PipelineScript)
 func updateJenkinsJob(c *gin.Context) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
@@ -639,23 +693,29 @@ func updateJenkinsJob(c *gin.Context) {
 		var buf bytes.Buffer
 		xml.EscapeText(&buf, []byte(script))
 		escapedScript := buf.String()
+		propertiesXml := GenerateJobPropertiesXml(script)
 		xmlConfig := fmt.Sprintf(`<?xml version='1.1' encoding='UTF-8'?>
 <flow-definition plugin="workflow-job">
   <description>Updated via BigDevOps Baseline Architecture</description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
+  %s
   <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
     <script>%s</script>
     <sandbox>true</sandbox>
   </definition>
   <triggers/>
   <disabled>false</disabled>
-</flow-definition>`, escapedScript)
+</flow-definition>`, propertiesXml, escapedScript)
 
 		ctx := c.Request.Context()
 		job, err := getJenkinsJobHelper(ctx, client, fullJobName, folder)
 		if err == nil && job != nil {
-			if updateErr := job.UpdateConfig(ctx, xmlConfig); updateErr != nil {
+			targetXmlConfig := xmlConfig
+			oldConfig, getConfigErr := job.GetConfig(ctx)
+			if getConfigErr == nil && strings.TrimSpace(oldConfig) != "" {
+				targetXmlConfig = replaceJenkinsScriptInConfig(oldConfig, escapedScript, script)
+			}
+			if updateErr := job.UpdateConfig(ctx, targetXmlConfig); updateErr != nil {
 				sc.Logger.Error("向 Jenkins 写入新流水线配置失败", zap.Error(updateErr))
 				common.ReqBadFailWithMessage(fmt.Sprintf("向 Jenkins 写入新流水线失败: %v", updateErr), c)
 				return
@@ -1692,4 +1752,213 @@ func getJenkinsJobParameters(c *gin.Context) {
 
 	params := parseJenkinsXmlParams(configXML)
 	common.OkWithData(params, c)
+}
+
+// JobBuildHistoryItem 历史构建记录结构
+type JobBuildHistoryItem struct {
+	BuildNumber       int64                  `json:"buildNumber"`
+	Result            string                 `json:"result"`
+	Building          bool                   `json:"building"`
+	Timestamp         int64                  `json:"timestamp"`
+	Duration          int64                  `json:"duration"`
+	DurationFormatted string                 `json:"durationFormatted"`
+	TriggerUser       string                 `json:"triggerUser"`
+	Parameters        map[string]interface{} `json:"parameters"`
+	ParamList         []JobBuildParamKV      `json:"paramList"`
+}
+
+type JobBuildParamKV struct {
+	Name  string      `json:"name"`
+	Value interface{} `json:"value"`
+}
+
+func formatDurationMs(ms int64) string {
+	if ms <= 0 {
+		return "0s"
+	}
+	sec := ms / 1000
+	if sec < 60 {
+		return fmt.Sprintf("%ds", sec)
+	}
+	min := sec / 60
+	remSec := sec % 60
+	return fmt.Sprintf("%dm %ds", min, remSec)
+}
+
+// getJenkinsJobBuildHistory 查询指定 Job 的历史构建列表（含构建入参、耗时、触发人等）
+func getJenkinsJobBuildHistory(c *gin.Context) {
+	client, _, ok := getJenkinsClientFromCtx(c)
+	if !ok {
+		return
+	}
+
+	jobName := c.DefaultQuery("jobName", c.DefaultQuery("job_name", c.Query("name")))
+	folder := c.DefaultQuery("folder", c.Query("projectName"))
+	limitStr := c.DefaultQuery("limit", "20")
+	limit, _ := strconv.Atoi(limitStr)
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+
+	if jobName == "" {
+		common.ReqBadFailWithMessage("缺少必要的任务名称(jobName)", c)
+		return
+	}
+
+	ctx := c.Request.Context()
+	job, err := getJenkinsJobHelper(ctx, client, jobName, folder)
+	if err != nil || job == nil {
+		common.ReqBadFailWithMessage(fmt.Sprintf("无法定位 Jenkins 作业: %v", err), c)
+		return
+	}
+
+	type TreeAction struct {
+		Class      string `json:"_class"`
+		Parameters []struct {
+			Name  string      `json:"name"`
+			Value interface{} `json:"value"`
+		} `json:"parameters"`
+		Causes []struct {
+			ShortDescription string `json:"shortDescription"`
+			UserName         string `json:"userName"`
+			UserId           string `json:"userId"`
+		} `json:"causes"`
+	}
+
+	type TreeBuild struct {
+		Number    int64        `json:"number"`
+		Result    string       `json:"result"`
+		Timestamp int64        `json:"timestamp"`
+		Duration  float64      `json:"duration"`
+		Building  bool         `json:"building"`
+		Actions   []TreeAction `json:"actions"`
+	}
+
+	type TreeJobResp struct {
+		Builds []TreeBuild `json:"builds"`
+	}
+
+	var items []JobBuildHistoryItem
+
+	// 1. 优先通过 Jenkins tree 属性高效批量拉取
+	var treeResp TreeJobResp
+	query := map[string]string{
+		"tree": fmt.Sprintf("builds[number,result,timestamp,duration,building,actions[parameters[name,value],causes[shortDescription,userName,userId]]]{0,%d}", limit),
+	}
+	resp, err := client.Requester.GetJSON(ctx, job.Base, &treeResp, query)
+	if err == nil && resp != nil && resp.StatusCode == 200 && len(treeResp.Builds) > 0 {
+		for _, b := range treeResp.Builds {
+			item := JobBuildHistoryItem{
+				BuildNumber:       b.Number,
+				Result:            b.Result,
+				Building:          b.Building,
+				Timestamp:         b.Timestamp,
+				Duration:          int64(b.Duration),
+				DurationFormatted: formatDurationMs(int64(b.Duration)),
+				Parameters:        make(map[string]interface{}),
+				ParamList:         make([]JobBuildParamKV, 0),
+			}
+			if item.Building {
+				item.Result = "BUILDING"
+			} else if item.Result == "" {
+				item.Result = "SUCCESS"
+			}
+
+			for _, act := range b.Actions {
+				for _, p := range act.Parameters {
+					item.Parameters[p.Name] = p.Value
+					item.ParamList = append(item.ParamList, JobBuildParamKV{
+						Name:  p.Name,
+						Value: p.Value,
+					})
+				}
+				if item.TriggerUser == "" {
+					for _, cause := range act.Causes {
+						if cause.UserName != "" {
+							item.TriggerUser = cause.UserName
+							break
+						} else if cause.UserId != "" {
+							item.TriggerUser = cause.UserId
+							break
+						} else if cause.ShortDescription != "" {
+							item.TriggerUser = cause.ShortDescription
+							break
+						}
+					}
+				}
+			}
+			if item.TriggerUser == "" {
+				item.TriggerUser = "System / SCM"
+			}
+			items = append(items, item)
+		}
+	} else {
+		// 2. 兜底回退：逐个构建安全加载
+		var buildNums []int64
+		for _, b := range job.Raw.Builds {
+			buildNums = append(buildNums, b.Number)
+			if len(buildNums) >= limit {
+				break
+			}
+		}
+
+		for _, bNum := range buildNums {
+			bObj, bErr := getJenkinsBuildSafe(ctx, job, bNum)
+			if bErr != nil || bObj == nil {
+				continue
+			}
+
+			isRun := bObj.IsRunning(ctx)
+			resStr := bObj.GetResult()
+			if isRun {
+				resStr = "BUILDING"
+			}
+
+			dur := int64(bObj.GetDuration())
+			item := JobBuildHistoryItem{
+				BuildNumber:       bNum,
+				Result:            resStr,
+				Building:          isRun,
+				Timestamp:         bObj.GetTimestamp().UnixMilli(),
+				Duration:          dur,
+				DurationFormatted: formatDurationMs(dur),
+				Parameters:        make(map[string]interface{}),
+				ParamList:         make([]JobBuildParamKV, 0),
+			}
+
+			params := bObj.GetParameters()
+			for _, p := range params {
+				item.Parameters[p.Name] = p.Value
+				item.ParamList = append(item.ParamList, JobBuildParamKV{
+					Name:  p.Name,
+					Value: p.Value,
+				})
+			}
+
+			causes, _ := bObj.GetCauses(ctx)
+			for _, cItem := range causes {
+				if u, ok := cItem["userName"].(string); ok && u != "" {
+					item.TriggerUser = u
+					break
+				}
+				if u, ok := cItem["userId"].(string); ok && u != "" {
+					item.TriggerUser = u
+					break
+				}
+				if desc, ok := cItem["shortDescription"].(string); ok && desc != "" {
+					item.TriggerUser = desc
+					break
+				}
+			}
+			if item.TriggerUser == "" {
+				item.TriggerUser = "System / SCM"
+			}
+			items = append(items, item)
+		}
+	}
+
+	common.OkWithData(gin.H{
+		"items": items,
+		"total": len(items),
+	}, c)
 }

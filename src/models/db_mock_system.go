@@ -1068,6 +1068,7 @@ func EnsureIncrementalApis(sc *config.ServerConfig) {
 		{Path: "/api/code/getCodeGitServerDetail", Method: "GET", Title: "[代码管理]获取Git服务器详情", Type: "1", Pid: codePid},
 		{Path: "/api/cicd/getJenkinsInstanceDetail", Method: "GET", Title: "[Jenkins]获取实例详情", Type: "1", Pid: cicdPid},
 		{Path: "/api/cicd/getJenkinsJobParameters", Method: "GET", Title: "[Jenkins]获取Job构建参数", Type: "1", Pid: cicdPid},
+		{Path: "/api/cicd/getJenkinsJobBuildHistory", Method: "GET", Title: "[Jenkins]获取历史构建与参数", Type: "1", Pid: cicdPid},
 	}
 
 	var createdApis []*SystemApi

@@ -443,6 +443,7 @@ func ConfigRouter(r *gin.Engine) {
 		JenkinsGroup.GET("/getJenkinsJobStageView", getJenkinsJobStageView)
 		JenkinsGroup.POST("/toggleJenkinsJobDeleteLock", toggleJenkinsJobDeleteLock)
 		JenkinsGroup.GET("/getJenkinsJobParameters", getJenkinsJobParameters)
+		JenkinsGroup.GET("/getJenkinsJobBuildHistory", getJenkinsJobBuildHistory)
 
 		// Pipeline 模版管理路由
 		JenkinsGroup.GET("/getJenkinsPipelineList", getJenkinsPipelineList)
