@@ -50,25 +50,33 @@ go get -u github.com/swaggo/files
 
 # 每次新增/修改了 API 注解后，重新运行指令更新文档：
 swag init -g cmd/server/main.go -o docs
-
 ```
+
 ## agent grpc相关
+```shell
 cd src/proto
 protoc --go_out=. --go-grpc_out=. *.proto
+```
 
-# websocket
+## websocket
+```shell
 go get github.com/gorilla/websocket
+```
 
-# jenkins 对接相关
+## jenkins 对接相关
+```shell
 go get github.com/bndr/gojenkins
+```
 
-# OIDC
+## OIDC
+```shell
 go get github.com/coreos/go-oidc/v3/oidc
 go get golang.org/x/oauth2
+```
 
 
 # 构建命令
-```bash
+```shell
 # 1. 使用通用 Dockerfile 构建 server 镜像
 docker build -t bigdevops-server:latest --build-arg APP_NAME=server .
 docker build -t bigdevops-agent:latest --build-arg APP_NAME=agent .
