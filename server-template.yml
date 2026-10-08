@@ -4,31 +4,40 @@ log_level: INFO
 log_file_path: json.log
 grpc_server_config:
   addr: 0.0.0.0:8083
-jwt:
-  signing_key: dawn
-  expires_time: 3h # 过期时间
-  buffer_time: 2h # 缓冲时间 在此期间刷新页面自动刷新token
-  issuer: dawn # 签发者
-alert_manager_api: http://192.168.50.200:9093
-# CREATE DATABASE IF NOT EXISTS bigdevops default charset utf8 COLLATE utf8_general_ci;
-# GRANT all privileges on *.* to root@'%' identified by '123456' with grant option;
-# flush privileges;
-# DROP DATABASE IF EXISTS bigdevops; CREATE DATABASE IF NOT EXISTS bigdevops DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-############ 对接keycloak单点登录
+jwt:
+  signing_key: your_jwt_secret_key
+  expires_time: 4h # Token 过期时间
+  buffer_time: 2h  # 缓冲时间，在此期间刷新页面自动无感平滑续签 Token
+  issuer: dawn     # 签发者
+
+alert_manager_api: http://192.168.50.200:9093
+enable_swagger: false # 是否开启 Swagger 接口文档页面 (/swagger/index.html)
+
+# 前端访问域名/地址 (用于工单回调通知与邮件链接跳转)
+front_domain: "http://localhost:3100"
+
+############ 对接 Keycloak / OIDC 单点登录
 oidc:
+  enable: true
   issuer: http://192.168.50.100:8080/realms/SSO
   client_id: bigdevops
-  client_secret: tEQUqQ414a3gcDfCESV03dr1UzSyKphv
+  client_secret: your_keycloak_client_secret
   redirect_url: http://192.168.10.240:3100/#/oauth/callback
-  enable: true
 
-############ MinIO OSS 对象存储配置
+############ 对接钉钉企业单点登录
+dingtalk_sso:
+  enable: false
+  client_id: "your_dingtalk_app_key"
+  client_secret: "your_dingtalk_app_secret"
+  redirect_uri: "http://192.168.10.240:3100/#/oauth/dingtalk"
+
+############ MinIO / S3 OSS 对象存储配置 (头像、工单附件等)
 oss:
   enable: true
   endpoint: 192.168.50.100:9000
-  access_key: oSc0Q5tSVJQK37I6apUl
-  secret_key: h8NhkI1BvTvnWlbgc0xdr4tDnKxIjPdjkOUgzTqt
+  access_key: your_minio_access_key
+  secret_key: your_minio_secret_key
   use_ssl: false
   bucket_name: bigdevops-avatars
   url_prefix: http://192.168.50.100:9000/bigdevops-avatars
@@ -36,15 +45,14 @@ oss:
 ############ JFrog Artifactory 制品与配置仓库配置
 artifactory:
   enable: true
-  base_url: "http://192.168.50.100:8081/artifactory"
+  base_url: "https://artifactory.example.com/artifactory"
   username: "admin"
-  password: "your-password-or-access-token"
-
+  password: "your_artifactory_password"
 
 mysql:
   dsn: "root:123456@tcp(192.168.50.100:3306)/bigdevops?charset=utf8mb4&parseTime=True&loc=Local"
 
-# 超管角色名称
+# 超管角色名称 (Casbin 策略中具有全量权限的角色标识)
 super_role_name: super
 
 # 自动工单机器人
@@ -57,51 +65,46 @@ work_order_auto_action:
   auto_template_name_pipeline: "流水线开通申请"
   enable: false
 
+# 作业平台后台执行引擎
 job_exec:
-  #  enable: true
+  enable: true
   execTimeoutSeconds: 5
   run_interval_seconds: 15
 
+# K8s 多集群后台状态同步巡检
+k8s_cluster:
+  enable: false
+  run_interval_seconds: 15
+
+# CI/CD 流水线与构建状态后台同步引擎
+ci_cd:
+  enable: true
+  run_interval_seconds: 15
+
+# 公有云资产定时同步 (ECS、RDS、DNS)
 public_cloud_sync:
-  # 从公有云同步到本地间隔 单位秒
+  enable: false
   run_interval_seconds: 3600
-  #  enable: true
   godaddy_dns:
-    access_key_id: xxx
-    access_key_secret: xxx
-    enable: true
+    access_key_id: your_godaddy_key
+    access_key_secret: your_godaddy_secret
+    enable: false
     domains:
-      - "xxx.com"
-      - "xxx.net"
-    dynadot_dns:    # 暂不支持
-      access_key_id: xxx
-      access_key_secret: xxx
+      - "example.com"
   ali_cloud:
     - region_id: "cn-hangzhou"
-      access_key_id: "xxx"
-      access_key_secret: "xxx"
-      enable: true
-      account_name: "xxx"
-    - region_id: "us-west-1"
-      access_key_id: "xxx"
-      access_key_secret: "xxx"
-      enable: true
-      account_name: "xxx"
-
+      access_key_id: "your_ali_ak"
+      access_key_secret: "your_ali_sk"
+      enable: false
+      account_name: "阿里云生产账号"
   aws_cloud:
     - region_id: "ap-east-1"
-      access_key_id: "xxx"
-      secret_access_key: "xxx"
-      enable: true
-      account_name: "xxx"
+      access_key_id: "your_aws_ak"
+      secret_access_key: "your_aws_sk"
+      enable: false
+      account_name: "AWS亚太账号"
 
-    - region_id: "ap-south-1"
-      access_key_id: "xxx"
-      secret_access_key: "xxx"
-      enable: true
-      account_name: "xxx"
-
-
+# Prometheus 监控计算与服务树 HTTP-SD 发现配置
 monitor_compute:
   enable: true
   exec_timeout_seconds: 5
@@ -109,21 +112,19 @@ monitor_compute:
   http_sd_api: http://192.168.50.1:8080/noAuth/getLeafStreeNodeBindIps
   alert_web_hook_addr: http://192.168.50.1:8085/receive
 
-#### IM工具
+#### IM 机器人告警与通知工具
 im:
   feishu:
     enabled: true
-    webhook: "https://open.feishu.cn/open-apis/bot/v2/hook"
-    secret: "xxx"
-    tenant_access_token_api: "https://open.feishu.cn/open-apis/im/v1/messages"
-    app_id: xxx
-    app_secret: xxx
-
+    webhook: "https://open.feishu.cn/open-apis/bot/v2/hook/your_feishu_token"
+    secret: "your_feishu_secret"
+    app_id: your_feishu_app_id
+    app_secret: your_feishu_app_secret
     request_timeout_seconds: 5
   dingding:
     enabled: false
-    webhook: "https://oapi.dingtalk.com/robot/send?access_token=..."
-    secret: "SECxxxx"
+    webhook: "https://oapi.dingtalk.com/robot/send?access_token=your_dingtalk_token"
+    secret: "your_dingtalk_secret"
   qywx:
     enabled: false
-    webhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."
+    webhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=your_qywx_key"
