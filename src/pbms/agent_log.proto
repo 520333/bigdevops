@@ -1,0 +1,26 @@
+syntax = "proto3";
+option go_package = "./;pbms";
+
+package log;
+
+// 服务端向 Agent 主动发起的日志拉取请求
+message LogPullRequest {
+    string logType = 1;       // 类型: "bin" (宿主机文件) 或 "docker" (容器日志)
+    string logPath = 2;       // 针对 bin: 待拉取的日志文件绝对路径 (如 /data/logs/app.log)
+    string containerName = 3; // 针对 docker: 容器名称或 ID
+    int32  tailLines = 4;     // 初始展示行数 (默认 200)
+    bool   follow = 5;        // 是否持续实时尾随 (tail -f)
+}
+
+// Agent 实时向服务端回送的流式日志数据块
+message LogChunkResponse {
+    bytes  content = 1;       // 日志内容块
+    bool   isError = 2;       // 是否发生错误
+    string errorMsg = 3;      // 错误提示
+}
+
+// Agent 提供的日志拉取服务
+service AgentLogService {
+    // 服务端主动拉取: Agent 接收拉取参数后，以 Server-Streaming 形式按需持续回送日志
+    rpc PullRealtimeLog(LogPullRequest) returns (stream LogChunkResponse);
+}

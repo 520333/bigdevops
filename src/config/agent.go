@@ -11,6 +11,7 @@ type AgentConfig struct {
 	RpcServerAddr         string `yaml:"rpc_server_addr"`
 	RpcCallTimeoutSeconds int    `yaml:"rpc_call_timeout_seconds"`
 	HttpAddr              string `yaml:"http_addr"`
+	GrpcAddr              string `yaml:"grpc_addr"`
 	LogLevel              string `yaml:"log_level"`
 	LogFilePath           string `yaml:"log_file_path"`
 
@@ -31,6 +32,9 @@ func LoadAgent(filename string) (*AgentConfig, error) {
 	err = yaml.Unmarshal(content, cfg)
 	if err != nil {
 		return nil, err
+	}
+	if cfg.GrpcAddr == "" {
+		cfg.GrpcAddr = ":9091"
 	}
 
 	return cfg, err

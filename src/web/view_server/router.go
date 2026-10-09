@@ -439,6 +439,7 @@ func ConfigRouter(r *gin.Engine) {
 		JenkinsGroup.POST("/triggerJenkinsBuild", triggerJenkinsBuild)
 		JenkinsGroup.POST("/stopJenkinsBuild", stopJenkinsBuild)
 		JenkinsGroup.GET("/getJenkinsBuildLogs", getJenkinsBuildLogs)
+		JenkinsGroup.GET("/wsBaselineRealtimeLogs", wsBaselineRealtimeLogs) // 服务基线实时日志 (bin/docker/k8s)
 		JenkinsGroup.GET("/getJenkinsJobRemotePipeline", getJenkinsJobRemotePipeline)
 		JenkinsGroup.GET("/getJenkinsJobStageView", getJenkinsJobStageView)
 		JenkinsGroup.POST("/toggleJenkinsJobDeleteLock", toggleJenkinsJobDeleteLock)

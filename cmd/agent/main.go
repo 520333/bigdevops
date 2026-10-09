@@ -82,6 +82,22 @@ func main() {
 		}
 	})
 
+	// 启动 Agent 本地 gRPC 服务 (支持服务端主动按需拉取日志)
+	group.Go(func() error {
+		errChan := make(chan error, 1)
+		go func() {
+			errChan <- agent.StartAgentGrpcServer(sc)
+		}()
+		select {
+		case err := <-errChan:
+			logger.Error("[agent grpc server 报错]", zap.Error(err))
+			return err
+		case <-ctxAll.Done():
+			logger.Info("agent grpc server 收到退出信号")
+			return nil
+		}
+	})
+
 	// TODO 这里添加任务
 	{
 		if sc.InfoCollect.Enable {

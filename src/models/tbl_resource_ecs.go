@@ -194,15 +194,23 @@ func GetResourceEcsByIp(ip string) (*ResourceEcs, error) {
 func GetResourceEcsBySnOrIP(sn string, ip string) (*ResourceEcs, error) {
 	var ecs ResourceEcs
 
-	// 使用精准的等于号或者 LIKE 兼容格式
-	err := Db.Where("instance_id = ?", sn).
-		Or("private_ip_address LIKE ?", "%"+ip+"%"). // 兼容各种序列化格式
-		First(&ecs).Error
+	// 1. 优先使用 sn (InstanceId) 精确查找
+	if sn != "" {
+		if err := Db.Where("instance_id = ?", sn).First(&ecs).Error; err == nil {
+			return &ecs, nil
+		}
+	}
 
-	if err != nil {
+	// 2. 如果 sn 未命中且 ip 不为空，按内网IP/公网IP检索 (防空IP误匹配)
+	if ip != "" {
+		err := Db.Where("private_ip_address LIKE ? OR public_ip_addresses LIKE ?", "%"+ip+"%", "%"+ip+"%").First(&ecs).Error
+		if err == nil {
+			return &ecs, nil
+		}
 		return nil, err
 	}
-	return &ecs, nil
+
+	return nil, gorm.ErrRecordNotFound
 }
 
 func (obj *ResourceEcs) FillFrontAllData() {
