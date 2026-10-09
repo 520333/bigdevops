@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -164,6 +165,21 @@ func podConvert(p *v1.Pod) *OnePod {
 	}
 }
 
+// isK8sConnError 判断底层 K8s 请求是否属于网络连接不可达、超时或连接拒绝等集群连接异常
+func isK8sConnError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "context deadline exceeded") ||
+		strings.Contains(msg, "Client.Timeout") ||
+		strings.Contains(msg, "connection refused") ||
+		strings.Contains(msg, "i/o timeout") ||
+		strings.Contains(msg, "dial tcp") ||
+		strings.Contains(msg, "no route to host") ||
+		strings.Contains(msg, "network is unreachable")
+}
+
 // getClusterClientsetHelper 获取 K8s ClientSet 辅助函数
 func getClusterClientsetHelper(c *gin.Context, clusterName string) (*kubernetes.Clientset, *dynamic.DynamicClient, *models.K8sCluster, error) {
 	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
@@ -177,18 +193,12 @@ func getClusterClientsetHelper(c *gin.Context, clusterName string) (*kubernetes.
 	kSet := kc.GetClusterClientSetById(dbCluster.ID)
 	dSet := kc.GetClusterDynamicClientById(dbCluster.ID)
 
-	if kSet == nil || dSet == nil {
-		restConfig, clientSet, _, err := common.GenK8sClientSetByKubeconfigContent(dbCluster.KubeConfigContent, dbCluster.ActionTimeoutSeconds)
-		if err != nil {
-			return nil, nil, dbCluster, err
-		}
-		dyClient, err := dynamic.NewForConfig(restConfig)
-		if err != nil {
-			return nil, nil, dbCluster, err
-		}
-		kSet = clientSet
-		dSet = dyClient
+	// 若未在内存缓存中，或最近一次集群探活探测失败（连接不可达/超时/凭据异常），直接返回统一报错，避免网络阻塞与超时
+	if kSet == nil || dSet == nil || !kc.GetClusterProbeResultById(dbCluster.ID) {
+		sc.Logger.Error("获取k8s集群ClientSet失败或探活异常", zap.Uint("cluster_id", dbCluster.ID), zap.String("clusterName", clusterName))
+		return nil, nil, dbCluster, errors.New("获取集群客户端句柄失败，请检查集群连接状态")
 	}
+
 	return kSet, dSet, dbCluster, nil
 }
 
@@ -211,7 +221,7 @@ func getK8sNamespaceList(c *gin.Context) {
 	kSet, _, dbCluster, err := getClusterClientsetHelper(c, clusterName)
 	if err != nil {
 		sc.Logger.Error("获取集群 ClientSet 失败", zap.String("clusterName", clusterName), zap.Error(err))
-		common.FailWithMessage("获取集群客户端失败: "+err.Error(), c)
+		common.FailWithMessage(err.Error(), c)
 		return
 	}
 
@@ -221,6 +231,10 @@ func getK8sNamespaceList(c *gin.Context) {
 	nsList, err := kSet.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		sc.Logger.Error("查询命名空间列表失败", zap.String("clusterName", clusterName), zap.Error(err))
+		if isK8sConnError(err) {
+			common.FailWithMessage("获取集群客户端句柄失败，请检查集群连接状态", c)
+			return
+		}
 		common.FailWithMessage("查询命名空间列表失败: "+err.Error(), c)
 		return
 	}
@@ -255,7 +269,7 @@ func getK8sPodList(c *gin.Context) {
 	kSet, _, dbCluster, err := getClusterClientsetHelper(c, clusterName)
 	if err != nil {
 		sc.Logger.Error("获取集群 ClientSet 失败", zap.String("clusterName", clusterName), zap.Error(err))
-		common.FailWithMessage("获取集群客户端失败: "+err.Error(), c)
+		common.FailWithMessage(err.Error(), c)
 		return
 	}
 
@@ -265,6 +279,10 @@ func getK8sPodList(c *gin.Context) {
 	podList, err := kSet.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		sc.Logger.Error("获取 Pod 列表失败", zap.String("clusterName", clusterName), zap.String("namespace", namespace), zap.Error(err))
+		if isK8sConnError(err) {
+			common.FailWithMessage("获取集群客户端句柄失败，请检查集群连接状态", c)
+			return
+		}
 		common.FailWithMessage("获取 Pod 列表失败: "+err.Error(), c)
 		return
 	}

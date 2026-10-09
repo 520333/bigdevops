@@ -101,7 +101,7 @@ func getK8sConfigMapList(c *gin.Context) {
 
 	kSet, _, dbCluster, err := getClusterClientsetHelper(c, clusterName)
 	if err != nil {
-		common.FailWithMessage("获取集群客户端失败: "+err.Error(), c)
+		common.FailWithMessage(err.Error(), c)
 		return
 	}
 
@@ -111,6 +111,10 @@ func getK8sConfigMapList(c *gin.Context) {
 	cmList, err := kSet.CoreV1().ConfigMaps(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		sc.Logger.Error("获取 ConfigMap 列表失败", zap.Error(err))
+		if isK8sConnError(err) {
+			common.FailWithMessage("获取集群客户端句柄失败，请检查集群连接状态", c)
+			return
+		}
 		common.FailWithMessage("获取 ConfigMap 列表失败: "+err.Error(), c)
 		return
 	}
@@ -453,7 +457,7 @@ func getK8sSecretList(c *gin.Context) {
 
 	kSet, _, dbCluster, err := getClusterClientsetHelper(c, clusterName)
 	if err != nil {
-		common.FailWithMessage("获取集群客户端失败: "+err.Error(), c)
+		common.FailWithMessage(err.Error(), c)
 		return
 	}
 
@@ -463,6 +467,10 @@ func getK8sSecretList(c *gin.Context) {
 	secList, err := kSet.CoreV1().Secrets(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		sc.Logger.Error("获取 Secret 列表失败", zap.Error(err))
+		if isK8sConnError(err) {
+			common.FailWithMessage("获取集群客户端句柄失败，请检查集群连接状态", c)
+			return
+		}
 		common.FailWithMessage("获取 Secret 列表失败: "+err.Error(), c)
 		return
 	}

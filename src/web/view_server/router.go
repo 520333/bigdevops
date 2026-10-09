@@ -464,6 +464,16 @@ func ConfigRouter(r *gin.Engine) {
 		JenkinsGroup.DELETE("/deleteJenkinsEnv", deleteJenkinsEnv)
 	}
 
+	// Nacos 实例与配置中心路由
+	nacosApiGroup := afterLoginApiGroup.Group("/nacos")
+	{
+		nacosApiGroup.GET("/getInstanceList", getNacosInstanceList)
+		nacosApiGroup.GET("/getInstanceDetail", getNacosInstanceDetail)
+		nacosApiGroup.POST("/createInstance", createNacosInstance)
+		nacosApiGroup.POST("/updateInstance", updateNacosInstance)
+		nacosApiGroup.DELETE("/deleteInstance", deleteNacosInstance)
+		nacosApiGroup.POST("/testInstanceConnection", testNacosInstanceConnection)
+	}
 }
 
 func getNowTs(c *gin.Context) {

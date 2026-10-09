@@ -91,11 +91,17 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 			Parent: &SystemMenu{Name: "CiCdManagement", Title: "持续交付", Icon: "ant-design:rocket-filled", Type: "0", Show: "1", OrderNo: 60, Component: "LAYOUT", Path: "/cicd", Redirect: "/cicd/baseline"},
 			Children: []*SystemMenu{
 				{Name: "JenkinsInstanceManagement", Title: "实例管理", Icon: "ant-design:cloud-server-outlined", Type: "1", Show: "1", OrderNo: 61, Component: "cicd/instance/index", Path: "instance"},
-				{Name: "CiCdWorkList", Title: "工单列表", Icon: "ant-design:audit-outlined", Type: "1", Show: "1", OrderNo: 62, Component: "cicd/workorder/index", Path: "workorder"},
-				{Name: "CiCdDeployList", Title: "发布工单", Icon: "ant-design:send-outlined", Type: "1", Show: "1", OrderNo: 63, Component: "cicd/deploy/index", Path: "deploy"},
 				{Name: "CiCdServiceBaseline", Title: "服务基线", Icon: "ant-design:sliders-outlined", Type: "1", Show: "1", OrderNo: 64, Component: "cicd/baseline/index", Path: "baseline"},
 				{Name: "CiCdPipeline", Title: "流水线模板管理", Icon: "ant-design:partition-outlined", Type: "1", Show: "1", OrderNo: 65, Component: "cicd/pipeline/index", Path: "pipeline"},
 				//{Name: "CiCdEnvManagement", Title: "环境配置", Icon: "ant-design:cloud-server-outlined", Type: "1", Show: "1", OrderNo: 65, Component: "cicd/environment/index", Path: "environment"},
+			},
+		},
+
+		// 配置中心
+		{
+			Parent: &SystemMenu{Name: "ConfigCenter", Title: "配置中心", Icon: "ant-design:control-outlined", Type: "0", Show: "1", OrderNo: 66, Component: "LAYOUT", Path: "/configCenter", Redirect: "/configCenter/instance"},
+			Children: []*SystemMenu{
+				{Name: "NacosInstanceManagement", Title: "实例管理", Icon: "ant-design:cloud-server-outlined", Type: "1", Show: "1", OrderNo: 67, Component: "configCenter/instance/index", Path: "instance"},
 			},
 		},
 
@@ -103,9 +109,9 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 		{
 			Parent: &SystemMenu{Name: "CodeManagement", Title: "代码管理", Icon: "ant-design:gitlab-filled", Type: "0", Show: "1", OrderNo: 70, Component: "LAYOUT", Path: "/code", Redirect: "/code/repo"},
 			Children: []*SystemMenu{
-				{Name: "CodeRepoManagement", Title: "仓库管理", Icon: "ant-design:folder-open-outlined", Type: "1", Show: "1", OrderNo: 71, Component: "code/repo/index", Path: "repo"},
-				{Name: "CodeMergeManagement", Title: "合并请求", Icon: "ant-design:merge-cells-outlined", Type: "1", Show: "1", OrderNo: 72, Component: "code/merge/index", Path: "merge"},
-				{Name: "CodeServerManagement", Title: "实例管理", Icon: "ant-design:code-outlined", Type: "1", Show: "1", OrderNo: 73, Component: "code/server/index", Path: "server"},
+				{Name: "CodeServerManagement", Title: "实例管理", Icon: "ant-design:code-outlined", Type: "1", Show: "1", OrderNo: 71, Component: "code/server/index", Path: "server"},
+				{Name: "CodeRepoManagement", Title: "仓库管理", Icon: "ant-design:folder-open-outlined", Type: "1", Show: "1", OrderNo: 72, Component: "code/repo/index", Path: "repo"},
+				{Name: "CodeMergeManagement", Title: "合并请求", Icon: "ant-design:merge-cells-outlined", Type: "1", Show: "1", OrderNo: 73, Component: "code/merge/index", Path: "merge"},
 				{Name: "CodeUserManagement", Title: "Git用户管理", Icon: "ant-design:usergroup-add-outlined", Type: "1", Show: "1", OrderNo: 74, Component: "code/user/index", Path: "user"},
 				{Name: "CodeNamespaceManagement", Title: "命名空间管理", Icon: "ant-design:tags-outlined", Type: "1", Show: "1", OrderNo: 75, Component: "code/namespace/index", Path: "namespace"},
 			},
@@ -119,11 +125,11 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Name: "DeployStat", Title: "部署统计", Icon: "ant-design:dot-chart-outlined", Type: "1", Show: "1", OrderNo: 82, Component: "dora/deployStat/index", Path: "deployStat"},
 			},
 		},
-		// 制品与配置库
+		// 制品与配置中心
 		{
-			Parent: &SystemMenu{Name: "ArtifactoryManagement", Title: "制品与配置库", Icon: "ant-design:folder-open-outlined", Type: "0", Show: "1", OrderNo: 85, Component: "LAYOUT", Path: "/artifactory", Redirect: "/artifactory/manage"},
+			Parent: &SystemMenu{Name: "ArtifactoryManagement", Title: "制品中心", Icon: "ant-design:folder-open-outlined", Type: "0", Show: "1", OrderNo: 85, Component: "LAYOUT", Path: "/artifactory", Redirect: "/artifactory/manage"},
 			Children: []*SystemMenu{
-				{Name: "ArtifactoryManageIndex", Title: "制品与配置在线管理", Icon: "ant-design:code-outlined", Type: "1", Show: "1", OrderNo: 86, Component: "artifactory/index", Path: "manage"},
+				{Name: "ArtifactoryManageIndex", Title: "制品与配置管理", Icon: "ant-design:code-outlined", Type: "1", Show: "1", OrderNo: 86, Component: "artifactory/index", Path: "manage"},
 			},
 		},
 		// 系统管理
@@ -518,6 +524,18 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Path: "/api/cicd/getRoleJobPermissions", Method: "GET", Title: "[Jenkins 权限]获取角色基线权限", Type: "1"},
 				{Path: "/api/cicd/saveRoleJobPermissions", Method: "POST", Title: "[Jenkins 权限]保存角色基线权限", Type: "1"},
 				{Path: "/api/cicd/getJobProjectOptions", Method: "GET", Title: "[Jenkins 权限]获取可选项目与环境元数据", Type: "1"},
+			},
+		},
+
+		{
+			Parent: &SystemApi{Path: "/api/nacos", Method: "GET", Title: "Nacos配置中心", Type: "0"},
+			Children: []*SystemApi{
+				{Path: "/api/nacos/getInstanceList", Method: "GET", Title: "[Nacos]获取实例列表", Type: "1"},
+				{Path: "/api/nacos/getInstanceDetail", Method: "GET", Title: "[Nacos]获取实例详情", Type: "1"},
+				{Path: "/api/nacos/createInstance", Method: "POST", Title: "[Nacos]创建实例", Type: "1"},
+				{Path: "/api/nacos/updateInstance", Method: "POST", Title: "[Nacos]更新实例", Type: "1"},
+				{Path: "/api/nacos/deleteInstance", Method: "DELETE", Title: "[Nacos]删除实例", Type: "1"},
+				{Path: "/api/nacos/testInstanceConnection", Method: "POST", Title: "[Nacos]测试连通性", Type: "1"},
 			},
 		},
 

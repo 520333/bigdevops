@@ -146,6 +146,9 @@ func MigrateTable() error {
 		&JenkinsUserToken{},
 		&JenkinsJobPermission{},
 
+		// nacos
+		&NacosInstance{},
+
 		// git
 		&CodeGitServer{},
 	)

@@ -361,8 +361,8 @@ func getK8sNodeList(c *gin.Context) {
 	// 3. 获取集群 ClientSet 及 MetricsClientSet
 	kc := c.MustGet(common.GIN_CTX_K8S_CACHE).(*cache.K8sClusterCache)
 	kSet := kc.GetClusterClientSetById(dbObj.ID)
-	if kSet == nil {
-		sc.Logger.Error("根据id获取k8s集群ClientSet失败", zap.Uint("cluster_id", dbObj.ID))
+	if kSet == nil || !kc.GetClusterProbeResultById(dbObj.ID) {
+		sc.Logger.Error("根据id获取k8s集群ClientSet失败或探活异常", zap.Uint("cluster_id", dbObj.ID))
 		common.FailWithMessage("获取集群客户端句柄失败，请检查集群连接状态", c)
 		return
 	}
@@ -373,6 +373,10 @@ func getK8sNodeList(c *gin.Context) {
 	nodes, err := kSet.CoreV1().Nodes().List(ctx1, metav1.ListOptions{})
 	if err != nil {
 		sc.Logger.Error("根据k8s集群的kset获取集群错误", zap.Error(err))
+		if isK8sConnError(err) {
+			common.FailWithMessage("获取集群客户端句柄失败，请检查集群连接状态", c)
+			return
+		}
 		common.FailWithMessage(err.Error(), c)
 		return
 	}
