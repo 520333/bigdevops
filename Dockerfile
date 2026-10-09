@@ -38,8 +38,11 @@ RUN go build -ldflags="-s -w" -o /build/app ./cmd/${APP_NAME}
 # ==========================================
 FROM alpine:3.20 AS runner
 
-# 设置时区和安装基础运行时依赖
+ARG APP_NAME=server
+
+# 设置时区和安装运行时依赖：仅在构建 agent 时安装 docker-cli/bash/python3，确保 server 镜像保持极致轻量
 RUN apk add --no-cache ca-certificates tzdata \
+    && if [ "$APP_NAME" = "agent" ]; then apk add --no-cache bash python3 docker-cli; fi \
     && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && echo "Asia/Shanghai" > /etc/timezone
 
@@ -49,7 +52,6 @@ WORKDIR /app
 COPY --from=builder /build/app /app/app
 
 # 默认拷贝对应服务的配置文件（如果存在）
-ARG APP_NAME=server
 COPY ${APP_NAME}.yml* /app/
 
 # 暴露常用的服务端口
