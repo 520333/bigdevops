@@ -23,8 +23,10 @@ services:
     restart: always
     ports:
       - "8082:8082"
+      - "9091:9091" # gRPC 按需拉取日志端口
     volumes:
       - ./agent.yml:/app/agent.yml
+      - /var/run/docker.sock:/var/run/docker.sock # 挂载宿主机 Docker 套接字，用于拉取容器日志
     environment:
       - TZ=Asia/Shanghai
 

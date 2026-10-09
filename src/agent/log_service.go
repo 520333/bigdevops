@@ -115,7 +115,11 @@ func (s *AgentLogServer) PullRealtimeLog(req *pbms.LogPullRequest, stream pbms.A
 
 	if err := cmd.Start(); err != nil {
 		s.sc.Logger.Error("启动日志子进程失败", zap.Error(err))
-		return stream.Send(&pbms.LogChunkResponse{IsError: true, ErrorMsg: err.Error()})
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "docker") && strings.Contains(errMsg, "not found") {
+			errMsg = "未在系统 PATH 中找到 docker 命令。若 Agent 运行在容器内，请在 compose 中挂载 /var/run/docker.sock 及 /usr/bin/docker，或使用安装了 docker-cli 的镜像"
+		}
+		return stream.Send(&pbms.LogChunkResponse{IsError: true, ErrorMsg: errMsg})
 	}
 
 	// 确保在退出、报错或 Context 取消时杀掉子进程

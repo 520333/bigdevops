@@ -24,8 +24,8 @@ RUN go build -ldflags="-s -w" -o /build/agent ./cmd/agent
 # 2. 运行阶段
 FROM alpine:3.20 AS runner
 
-# Agent 可能执行 Python 或 Bash 任务脚本（参考 agent.yml 中的 python_bin_path / bash_bin_path）
-RUN apk add --no-cache ca-certificates tzdata bash python3 \
+# Agent 可能执行 Python 或 Bash 任务脚本，以及拉取容器日志所需的 docker-cli
+RUN apk add --no-cache ca-certificates tzdata bash python3 docker-cli \
     && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && echo "Asia/Shanghai" > /etc/timezone
 
