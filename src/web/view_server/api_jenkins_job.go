@@ -256,6 +256,7 @@ func SyncJenkinsJobsToDB(ctx context.Context, instanceId uint, client *gojenkins
 			GitRepo:        existing.GitRepo,
 			GitBranch:      existing.GitBranch,
 			Lang:           existing.Lang,
+			LogPath:        existing.LogPath,
 			CreateUserName: existing.CreateUserName,
 			EnableDelete: func() int {
 				if existing.EnableDelete == 1 {
@@ -275,6 +276,9 @@ func SyncJenkinsJobsToDB(ctx context.Context, instanceId uint, client *gojenkins
 		}
 		if existing.GitBranch != "" {
 			jobObj.GitBranch = existing.GitBranch
+		}
+		if existing.LogPath != "" {
+			jobObj.LogPath = existing.LogPath
 		}
 		if jobObj.Lang == "" {
 			jobObj.Lang = "Java"
@@ -411,6 +415,7 @@ type createOrUpdateJobReq struct {
 	GitRepo        string      `json:"gitRepo"`     // 仓库全息链接
 	GitBranch      string      `json:"gitBranch"`   // 编译部署选定分支
 	Lang           string      `json:"lang"`
+	LogPath        string      `json:"logPath"`        // 二进制进程日志绝对路径
 	PipelineScript string      `json:"pipelineScript"` // 本字段不进数据库
 	CreateUserName string      `json:"createUserName"`
 	EnableDelete   int         `json:"enableDelete"` // 1 开启删除 2 禁止删除 默认为2
@@ -593,6 +598,7 @@ func doCreateJenkinsJobCore(ctx context.Context, sc *config.ServerConfig, client
 		GitBranch:      branch,
 		URL:            jenkinsURL,
 		Lang:           lang,
+		LogPath:        req.LogPath,
 		Count:          0,
 		Status:         "NOT_BUILT",
 		CreateUserName: req.CreateUserName,
@@ -794,6 +800,7 @@ func updateJenkinsJob(c *gin.Context) {
 			GitRepo:        req.GitRepo,
 			GitBranch:      req.GitBranch,
 			Lang:           req.Lang,
+			LogPath:        req.LogPath,
 			CreateUserName: req.CreateUserName,
 			EnableDelete:   enableDelete,
 		}
@@ -810,6 +817,7 @@ func updateJenkinsJob(c *gin.Context) {
 		if req.Lang != "" {
 			dbJob.Lang = req.Lang
 		}
+		dbJob.LogPath = req.LogPath
 		if req.CreateUserName != "" {
 			dbJob.CreateUserName = req.CreateUserName
 		}

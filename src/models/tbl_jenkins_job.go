@@ -22,6 +22,7 @@ type JenkinsJob struct {
 	GitBranch      string     `json:"gitBranch" gorm:"column:git_branch;type:varchar(64);default:'main';comment:最后GIT分支(构建时传参)"`
 	URL            string     `json:"url" gorm:"type:varchar(255);comment:该job的jenkins地址"`
 	Lang           string     `json:"lang" gorm:"type:varchar(32);default:'Java';comment:该job是什么技术栈"`
+	LogPath        string     `json:"logPath" gorm:"column:log_path;type:varchar(255);default:'';comment:二进制进程日志绝对路径"`
 	Count          int64      `json:"count" gorm:"column:count;default:0;comment:最后构建号"`
 	Status         string     `json:"status" gorm:"column:status;type:varchar(32);default:'NOT_BUILT';comment:同步jenkins真实的job状态"`
 	CreateUserName string     `json:"createUserName" gorm:"column:create_user_name;type:varchar(64);comment:创建人"`
@@ -183,6 +184,9 @@ func SaveOrUpdateJenkinsJob(job *JenkinsJob) error {
 			"git_branch":    job.GitBranch,
 			"lang":          job.Lang,
 			"enable_delete": enableDelete,
+		}
+		if job.LogPath != "" || existing.LogPath == "" {
+			updates["log_path"] = job.LogPath
 		}
 		if job.CreateUserName != "" {
 			updates["create_user_name"] = job.CreateUserName
