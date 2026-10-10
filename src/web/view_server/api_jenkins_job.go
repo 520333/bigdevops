@@ -48,26 +48,40 @@ func getJenkinsJobHelper(ctx context.Context, client *gojenkins.Jenkins, jobName
 	}
 
 	fullPath := jobName
-	if parent != "" && !strings.HasPrefix(jobName, parent+"/") && jobName != parent {
+	if parent != "" && !strings.HasPrefix(jobName, parent+"/") {
 		fullPath = parent + "/" + jobName
 	}
 
 	var job *gojenkins.Job
 	var err error
+	var realName string
+	var parentIDs []string
 	if !strings.Contains(fullPath, "/") {
+		realName = fullPath
 		job, err = client.GetJob(ctx, fullPath)
 	} else {
 		parts := strings.Split(fullPath, "/")
-		realName := parts[len(parts)-1]
-		parentIDs := parts[:len(parts)-1]
+		realName = parts[len(parts)-1]
+		parentIDs = parts[:len(parts)-1]
 		job, err = client.GetJob(ctx, realName, parentIDs...)
 	}
 
-	if (err != nil || job == nil) && !strings.Contains(jobName, "/") {
+	// 如果获取到的对象是一个 Folder (例如父文件夹名称与Job同名，或者根目录下存在同名文件夹)，尝试获取该Folder内部的同名Job
+	if job != nil && isJenkinsFolder(job.Raw.Class) {
+		if innerJob, innerErr := client.GetJob(ctx, realName, append(parentIDs, realName)...); innerErr == nil && innerJob != nil {
+			job = innerJob
+			err = nil
+		}
+	}
+
+	if (err != nil || job == nil || (job != nil && isJenkinsFolder(job.Raw.Class))) && !strings.Contains(jobName, "/") {
 		topJobs, tErr := client.GetAllJobs(ctx)
 		if tErr == nil {
 			allJobs := getAllJobsRecursive(ctx, topJobs, "")
 			for _, j := range allJobs {
+				if isJenkinsFolder(j.Raw.Class) {
+					continue
+				}
 				parts := strings.Split(j.Raw.Name, "/")
 				shortName := parts[len(parts)-1]
 				if shortName == jobName || j.Raw.Name == jobName {
@@ -97,7 +111,7 @@ func deleteJenkinsJobHelper(ctx context.Context, client *gojenkins.Jenkins, jobN
 		parent = strings.Trim(strings.TrimSpace(folder[0]), "/")
 	}
 	fullPath := jobName
-	if parent != "" && !strings.HasPrefix(jobName, parent+"/") && jobName != parent {
+	if parent != "" && !strings.HasPrefix(jobName, parent+"/") {
 		fullPath = parent + "/" + jobName
 	}
 

@@ -507,6 +507,7 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Path: "/api/cicd/triggerJenkinsBuild", Method: "POST", Title: "[Jenkins]触发构建", Type: "1"},
 				{Path: "/api/cicd/stopJenkinsBuild", Method: "POST", Title: "[Jenkins]停止构建", Type: "1"},
 				{Path: "/api/cicd/getJenkinsBuildLogs", Method: "GET", Title: "[Jenkins]获取构建日志", Type: "1"},
+				{Path: "/api/cicd/wsBaselineRealtimeLogs", Method: "GET", Title: "[Jenkins]服务基线实时日志", Type: "1"},
 				{Path: "/api/cicd/getJenkinsJobRemotePipeline", Method: "GET", Title: "[Jenkins]获取远程Pipeline定义", Type: "1"},
 				{Path: "/api/cicd/getJenkinsJobStageView", Method: "GET", Title: "[Jenkins]获取Stage视图", Type: "1"},
 				{Path: "/api/cicd/toggleJenkinsJobDeleteLock", Method: "POST", Title: "[Jenkins]切换删除锁", Type: "1"},
