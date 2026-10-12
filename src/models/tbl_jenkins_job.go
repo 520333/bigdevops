@@ -102,7 +102,7 @@ func GetJenkinsJobListByParamWithUser(param *JenkinsJobQueryParam, user *SystemU
 		query = query.Where("name LIKE ?", "%"+param.Name+"%")
 	}
 	if param.ProjectName != "" {
-		query = query.Where("project_name LIKE ?", "%"+param.ProjectName+"%")
+		query = query.Where("project_name = ?", param.ProjectName)
 	}
 	if param.Status != "" {
 		query = query.Where("status = ? OR status LIKE ?", param.Status, "%"+param.Status+"%")
