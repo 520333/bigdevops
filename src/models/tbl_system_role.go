@@ -76,6 +76,12 @@ func (obj *SystemRole) UpdateApis(apis []*SystemApi) error {
 	})
 }
 
+func (obj *SystemRole) UpdateUsers(users []*SystemUser) error {
+	return Db.Transaction(func(tx *gorm.DB) error {
+		return tx.Model(obj).Association("Users").Replace(users)
+	})
+}
+
 func (obj *SystemRole) DeleteOne() error {
 	return Db.Select(clause.Associations).Unscoped().Delete(obj).Error
 }

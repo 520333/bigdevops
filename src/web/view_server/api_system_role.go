@@ -286,3 +286,38 @@ func deleteRole(c *gin.Context) {
 	}
 	common.OkWithMessage("删除成功", c)
 }
+
+// @Summary      设置角色成员
+// @Description  设置角色成员用户列表 接口
+// @Tags         system-role
+// @Accept       json
+// @Produce      json
+// @Router       /system/setRoleUsers [post]
+func setRoleUsers(c *gin.Context) {
+	var req struct {
+		RoleID  int   `json:"roleId" binding:"required"`
+		UserIds []int `json:"userIds"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.ReqBadFailWithMessage("请求参数错误: "+err.Error(), c)
+		return
+	}
+
+	dbRole, err := models.GetRoleById(req.RoleID)
+	if err != nil {
+		common.ReqBadFailWithMessage("根据 ID 查找角色失败", c)
+		return
+	}
+
+	var users []*models.SystemUser
+	if len(req.UserIds) > 0 {
+		models.Db.Where("id IN ?", req.UserIds).Find(&users)
+	}
+
+	if err := dbRole.UpdateUsers(users); err != nil {
+		common.FailWithMessage("更新角色成员失败: "+err.Error(), c)
+		return
+	}
+
+	common.OkWithMessage("设置角色成员成功", c)
+}

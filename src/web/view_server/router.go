@@ -74,6 +74,7 @@ func ConfigRouter(r *gin.Engine) {
 		systemApiGroup.POST("/updateRole", updateRole)
 		systemApiGroup.DELETE("/deleteRole/:id", deleteRole)
 		systemApiGroup.POST("/setRoleStatus", setRoleStatus)
+		systemApiGroup.POST("/setRoleUsers", setRoleUsers)
 
 		// api 路由
 		systemApiGroup.GET("/getApiList", getApiList)
