@@ -214,8 +214,13 @@ func renderPipelineScript(script, gitRepo, branch, deployType, deployEnv string,
 		reGit := regexp.MustCompile(`(?i)string\s+defaultValue:\s*['"][^'"]*['"],\s*name:\s*['"](GIT仓库|gitRepo|git_repo)['"]`)
 		script = reGit.ReplaceAllString(script, fmt.Sprintf("string defaultValue: '%s', name: '$1'", gitRepo))
 
-		reUrl := regexp.MustCompile(`url:\s*['"][^'"]*['"]`)
-		script = reUrl.ReplaceAllString(script, fmt.Sprintf("url: '%s'", gitRepo))
+		reUrl := regexp.MustCompile(`url:\s*['"]([^'"]*)['"]`)
+		script = reUrl.ReplaceAllStringFunc(script, func(m string) string {
+			if strings.Contains(m, "${") {
+				return m
+			}
+			return fmt.Sprintf("url: '%s'", gitRepo)
+		})
 
 		reLsRemote := regexp.MustCompile(`git ls-remote -t -h [^\s"'\\]+`)
 		script = reLsRemote.ReplaceAllString(script, fmt.Sprintf("git ls-remote -t -h %s", gitRepo))
@@ -226,8 +231,13 @@ func renderPipelineScript(script, gitRepo, branch, deployType, deployEnv string,
 		reBranch := regexp.MustCompile(`(?i)string\s+defaultValue:\s*['"][^'"]*['"],\s*name:\s*['"](分支名|GIT分支|gitBranch|branch)['"]`)
 		script = reBranch.ReplaceAllString(script, fmt.Sprintf("string defaultValue: '%s', name: '$1'", branch))
 
-		reBranchKey := regexp.MustCompile(`branch:\s*['"][^'"]*['"]`)
-		script = reBranchKey.ReplaceAllString(script, fmt.Sprintf("branch: '%s'", branch))
+		reBranchKey := regexp.MustCompile(`branch:\s*['"]([^'"]*)['"]`)
+		script = reBranchKey.ReplaceAllStringFunc(script, func(m string) string {
+			if strings.Contains(m, "${") {
+				return m
+			}
+			return fmt.Sprintf("branch: '%s'", branch)
+		})
 	}
 
 	// 3. 同步目标主机
