@@ -164,10 +164,10 @@ func MockUserRegister(sc *config.ServerConfig) {
 	err := Db.Model(&SystemUser{}).Where("username = ?", "admin").Count(&count).Error
 	if err == nil && count > 0 {
 		sc.Logger.Info("检测到数据库已完成初始化，跳过 Mock 数据注入 🛡️")
-		EnsureJenkinsPipelineMenu(sc)
-		EnsureAccountSettingMenu(sc)
-		EnsureAuditLogMenu(sc)
-		EnsureIncrementalApis(sc)
+		//EnsureJenkinsPipelineMenu(sc)
+		//EnsureAccountSettingMenu(sc)
+		//EnsureAuditLogMenu(sc)
+		//EnsureIncrementalApis(sc)
 		return
 	}
 	// 1. 系统基础数据（依赖顺序：最优先执行，返回超管用户供后续模块绑定关系）
