@@ -2,8 +2,10 @@ package view_server
 
 import (
 	"bigdevops/src/common"
+	"bigdevops/src/config"
 	"bigdevops/src/models"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -88,34 +90,178 @@ func saveRoleJobPermissions(c *gin.Context) {
 	common.OkWithMessage("角色服务基线权限保存成功！", c)
 }
 
-// getJobProjectOptions 获取现有可授权的项目空间及环境元数据，供管理端选择勾选
+// getJobProjectOptions 获取现有可授权的项目空间及环境元数据，供管理端选择勾选或前端筛选 (基于权限过滤)
 func getJobProjectOptions(c *gin.Context) {
+	var currentUser *models.SystemUser
+	var superRoleName string
+	if scVal, exists := c.Get(common.GIN_CTX_CONFIG_CONFIG); exists {
+		if sc, ok := scVal.(*config.ServerConfig); ok && sc != nil {
+			superRoleName = sc.SuperRoleName
+		}
+	}
+	if userNameVal, ok := c.Get(common.GIN_CTX_JWT_USER_NAME); ok {
+		userName := fmt.Sprintf("%v", userNameVal)
+		currentUser, _ = models.GetUserByUsername(userName)
+	}
+
+	isSuper := models.IsUserSuperRole(currentUser, superRoleName)
+	forceAll := (c.Query("all") == "true") && isSuper
+
 	var projects []string
 	var envs []string
 
-	models.Db.Model(&models.JenkinsJob{}).
-		Where("project_name != '' AND project_name IS NOT NULL").
-		Distinct("project_name").
-		Pluck("project_name", &projects)
+	if isSuper || forceAll {
+		// 超级管理员：可看全部项目与环境
+		models.Db.Model(&models.JenkinsJob{}).
+			Where("project_name != '' AND project_name IS NOT NULL").
+			Distinct("project_name").
+			Order("project_name asc").
+			Pluck("project_name", &projects)
 
-	models.Db.Model(&models.JenkinsJob{}).
-		Where("deploy_env != '' AND deploy_env IS NOT NULL").
-		Distinct("deploy_env").
-		Pluck("deploy_env", &envs)
+		models.Db.Model(&models.JenkinsJob{}).
+			Where("deploy_env != '' AND deploy_env IS NOT NULL").
+			Distinct("deploy_env").
+			Pluck("deploy_env", &envs)
 
-	// 补充内置常见标准环境
-	standardEnvs := []string{"dev", "test", "stage", "uat", "pre", "prod"}
+		standardEnvs := []string{"dev", "test", "stage", "uat", "pre", "prod"}
+		envSet := make(map[string]bool)
+		for _, e := range envs {
+			if strings.TrimSpace(e) != "" {
+				envSet[e] = true
+			}
+		}
+		for _, se := range standardEnvs {
+			if !envSet[se] {
+				envs = append(envs, se)
+			}
+		}
+		sort.Strings(projects)
+		sort.Strings(envs)
+
+		common.OkWithData(gin.H{
+			"projects": projects,
+			"envs":     envs,
+		}, c)
+		return
+	}
+
+	// 非超级管理员：严格根据用户角色绑定的基线数据权限过滤
+	if currentUser == nil || len(currentUser.Roles) == 0 {
+		common.OkWithData(gin.H{
+			"projects": []string{},
+			"envs":     []string{},
+		}, c)
+		return
+	}
+
+	var roleIDs []uint
+	for _, r := range currentUser.Roles {
+		if r != nil && r.ID > 0 {
+			roleIDs = append(roleIDs, r.ID)
+		}
+	}
+	if len(roleIDs) == 0 {
+		common.OkWithData(gin.H{
+			"projects": []string{},
+			"envs":     []string{},
+		}, c)
+		return
+	}
+
+	perms, err := models.GetPermissionsByRoleIDs(roleIDs)
+	if err != nil || len(perms) == 0 {
+		common.OkWithData(gin.H{
+			"projects": []string{},
+			"envs":     []string{},
+		}, c)
+		return
+	}
+
+	// 检查是否有全局通配符权限 ProjectName = "*"
+	hasGlobalProj := false
+	for _, p := range perms {
+		if strings.TrimSpace(p.ProjectName) == "*" {
+			hasGlobalProj = true
+			break
+		}
+	}
+
+	if hasGlobalProj {
+		models.Db.Model(&models.JenkinsJob{}).
+			Where("project_name != '' AND project_name IS NOT NULL").
+			Distinct("project_name").
+			Pluck("project_name", &projects)
+	} else {
+		// 结合从数据库中根据该用户数据权限物理过滤出的可用 Job 项目，以及权限规则中显式授权的有效项目
+		jobQuery := models.Db.Model(&models.JenkinsJob{})
+		jobQuery, hasAccess := models.FilterJobsByPermission(jobQuery, currentUser, superRoleName)
+		projSet := make(map[string]bool)
+
+		if hasAccess {
+			var jobProjects []string
+			jobQuery.Where("project_name != '' AND project_name IS NOT NULL").
+				Distinct("project_name").
+				Pluck("project_name", &jobProjects)
+			for _, jp := range jobProjects {
+				jp = strings.TrimSpace(jp)
+				if jp != "" {
+					projSet[jp] = true
+				}
+			}
+		}
+
+		for _, p := range perms {
+			proj := strings.TrimSpace(p.ProjectName)
+			if proj != "" && proj != "*" {
+				projSet[proj] = true
+			}
+		}
+
+		for p := range projSet {
+			projects = append(projects, p)
+		}
+	}
+
+	// 环境过滤：从权限规则与用户可见 Job 中提取
 	envSet := make(map[string]bool)
-	for _, e := range envs {
-		if strings.TrimSpace(e) != "" {
-			envSet[e] = true
+	hasGlobalEnv := false
+	for _, p := range perms {
+		for _, e := range strings.Split(p.DeployEnv, ",") {
+			e = strings.TrimSpace(e)
+			if e == "*" {
+				hasGlobalEnv = true
+			} else if e != "" {
+				envSet[e] = true
+			}
 		}
 	}
-	for _, se := range standardEnvs {
-		if !envSet[se] {
-			envs = append(envs, se)
+
+	if hasGlobalEnv {
+		models.Db.Model(&models.JenkinsJob{}).
+			Where("deploy_env != '' AND deploy_env IS NOT NULL").
+			Distinct("deploy_env").
+			Pluck("deploy_env", &envs)
+		standardEnvs := []string{"dev", "test", "stage", "uat", "pre", "prod"}
+		for _, se := range standardEnvs {
+			if !envSet[se] {
+				envSet[se] = true
+				envs = append(envs, se)
+			}
+		}
+	} else {
+		for e := range envSet {
+			envs = append(envs, e)
 		}
 	}
+
+	if projects == nil {
+		projects = []string{}
+	}
+	if envs == nil {
+		envs = []string{}
+	}
+	sort.Strings(projects)
+	sort.Strings(envs)
 
 	common.OkWithData(gin.H{
 		"projects": projects,
