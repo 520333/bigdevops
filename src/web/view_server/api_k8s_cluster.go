@@ -93,6 +93,8 @@ func getK8sClusterList(c *gin.Context) {
 		obj.LastProbSuccess = kc.GetClusterProbeResultById(obj.ID)
 		obj.LastProbErrMsg = kc.GetClusterProbeErrMsgById(obj.ID)
 		obj.FillFrontAllData()
+		// 敏感信息安全脱敏：集群列表严禁透传明文 KubeConfigContent
+		obj.KubeConfigContent = ""
 	}
 
 	common.OkWithDetailed(gin.H{

@@ -121,6 +121,7 @@ func ConfigRouter(r *gin.Engine) {
 		sTreeApiGroup.GET("/getStreeNodeEcsList/:id", getStreeNodeEcsList)
 		sTreeApiGroup.GET("/getResourceEcsUnbindList", getResourceEcsUnbindList)
 		sTreeApiGroup.GET("/getResourceEcsList", getResourceEcsList)
+		sTreeApiGroup.GET("/getEcsForSelect", getEcsForSelect)
 		// ELB
 		sTreeApiGroup.GET("/getResourceElbUnbindList", getResourceElbUnbindList)
 		sTreeApiGroup.POST("/bindElbToStreeNode", bindElbToStreeNode)

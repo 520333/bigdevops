@@ -296,3 +296,34 @@ func getResourceEcsList(c *gin.Context) {
 		"total": len(allIds),
 	}, "ok", c)
 }
+
+// @Summary      获取用于前端 Select 组件的 ECS 主机 Label/Value 列表 (脱敏精简)
+// @Description  仅返回主机名与IP组合的 Label 及 IP Value，不返回底层安全组、磁盘、网络等资产细节
+// @Tags         resource-ecs
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "成功响应"
+// @Router       /stree/getEcsForSelect [get]
+// @Security     Bearer
+func getEcsForSelect(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+	objs, err := models.GetResourceEcsAll()
+	if err != nil {
+		sc.Logger.Error("获取 ECS 主机列表错误", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("获取主机列表错误：%v", err.Error()), c)
+		return
+	}
+
+	var res []common.CommonSelectOneItem
+	for _, obj := range objs {
+		obj := obj
+		obj.FillFrontAllData()
+		if obj.Value != "" {
+			res = append(res, common.CommonSelectOneItem{
+				Label: obj.Label,
+				Value: obj.Value,
+			})
+		}
+	}
+	common.OkWithDetailed(res, "ok", c)
+}
