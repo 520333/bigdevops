@@ -649,7 +649,27 @@ func replaceJenkinsScriptInConfig(oldConfig string, escapedScript string, rawScr
 		}
 	}
 
-	// 2. 替换 <script> 节点
+	// 2. 精确定位并替换 <definition> 中的流水线主 <script> 节点
+	defStart := strings.Index(res, "<definition ")
+	if defStart == -1 {
+		defStart = strings.Index(res, "<definition>")
+	}
+	if defStart != -1 {
+		defEnd := strings.Index(res[defStart:], "</definition>")
+		if defEnd != -1 {
+			defBlock := res[defStart : defStart+defEnd+len("</definition>")]
+			startTag := "<script>"
+			endTag := "</script>"
+			sIdx := strings.Index(defBlock, startTag)
+			eIdx := strings.LastIndex(defBlock, endTag)
+			if sIdx != -1 && eIdx != -1 && eIdx > sIdx {
+				newDefBlock := defBlock[:sIdx+len(startTag)] + escapedScript + defBlock[eIdx:]
+				return res[:defStart] + newDefBlock + res[defStart+defEnd+len("</definition>"):]
+			}
+		}
+	}
+
+	// 兜底：如果原有配置没有 definition 标签或 definition 中没有 script，尝试全局找 <script>
 	startTag := "<script>"
 	endTag := "</script>"
 	startIdx := strings.Index(res, startTag)
