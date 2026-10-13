@@ -1839,6 +1839,15 @@ func getJenkinsJobParameters(c *gin.Context) {
 	common.OkWithData(params, c)
 }
 
+// JobCommitItem 单次构建关联的代码提交信息
+type JobCommitItem struct {
+	CommitId string `json:"commitId"`
+	ShortId  string `json:"shortId"`
+	Message  string `json:"message"`
+	Author   string `json:"author"`
+	Date     string `json:"date"`
+}
+
 // JobBuildHistoryItem 历史构建记录结构
 type JobBuildHistoryItem struct {
 	BuildNumber       int64                  `json:"buildNumber"`
@@ -1850,6 +1859,8 @@ type JobBuildHistoryItem struct {
 	TriggerUser       string                 `json:"triggerUser"`
 	Parameters        map[string]interface{} `json:"parameters"`
 	ParamList         []JobBuildParamKV      `json:"paramList"`
+	CommitCount       int                    `json:"commitCount"`
+	Commits           []JobCommitItem        `json:"commits"`
 }
 
 type JobBuildParamKV struct {
@@ -1870,7 +1881,31 @@ func formatDurationMs(ms int64) string {
 	return fmt.Sprintf("%dm %ds", min, remSec)
 }
 
-// getJenkinsJobBuildHistory 查询指定 Job 的历史构建列表（含构建入参、耗时、触发人等）
+// formatJenkinsCommitDateToBeijingTime 将各种格式的时间字符串（如 Git 格式 2026-09-22 10:30:05 +0800 或 ISO 格式）格式化为标准北京时间字符串
+func formatJenkinsCommitDateToBeijingTime(rawDate string) string {
+	rawDate = strings.TrimSpace(rawDate)
+	if rawDate == "" {
+		return ""
+	}
+	cstSh := time.FixedZone("CST", 8*3600)
+	formats := []string{
+		"2006-01-02 15:04:05 -0700",
+		"2006-01-02 15:04:05 -07:00",
+		"2006-01-02 15:04:05 MST",
+		time.RFC3339,
+		time.RFC3339Nano,
+		"2006-01-02 15:04:05",
+		"2006-01-02T15:04:05",
+	}
+	for _, layout := range formats {
+		if t, err := time.Parse(layout, rawDate); err == nil {
+			return t.In(cstSh).Format("2006-01-02 15:04:05")
+		}
+	}
+	return rawDate
+}
+
+// getJenkinsJobBuildHistory 查询指定 Job 的历史构建列表（含构建入参、耗时、触发人、Commits等）
 func getJenkinsJobBuildHistory(c *gin.Context) {
 	client, _, ok := getJenkinsClientFromCtx(c)
 	if !ok {
@@ -1897,6 +1932,20 @@ func getJenkinsJobBuildHistory(c *gin.Context) {
 		return
 	}
 
+	type TreeChangeSetItem struct {
+		CommitId string `json:"commitId"`
+		Msg      string `json:"msg"`
+		Comment  string `json:"comment"`
+		Date     string `json:"date"`
+		Author   struct {
+			FullName string `json:"fullName"`
+		} `json:"author"`
+	}
+
+	type TreeChangeSet struct {
+		Items []TreeChangeSetItem `json:"items"`
+	}
+
 	type TreeAction struct {
 		Class      string `json:"_class"`
 		Parameters []struct {
@@ -1911,12 +1960,14 @@ func getJenkinsJobBuildHistory(c *gin.Context) {
 	}
 
 	type TreeBuild struct {
-		Number    int64        `json:"number"`
-		Result    string       `json:"result"`
-		Timestamp int64        `json:"timestamp"`
-		Duration  float64      `json:"duration"`
-		Building  bool         `json:"building"`
-		Actions   []TreeAction `json:"actions"`
+		Number     int64           `json:"number"`
+		Result     string          `json:"result"`
+		Timestamp  int64           `json:"timestamp"`
+		Duration   float64         `json:"duration"`
+		Building   bool            `json:"building"`
+		Actions    []TreeAction    `json:"actions"`
+		ChangeSets []TreeChangeSet `json:"changeSets"`
+		ChangeSet  TreeChangeSet   `json:"changeSet"`
 	}
 
 	type TreeJobResp struct {
@@ -1928,7 +1979,7 @@ func getJenkinsJobBuildHistory(c *gin.Context) {
 	// 1. 优先通过 Jenkins tree 属性高效批量拉取
 	var treeResp TreeJobResp
 	query := map[string]string{
-		"tree": fmt.Sprintf("builds[number,result,timestamp,duration,building,actions[parameters[name,value],causes[shortDescription,userName,userId]]]{0,%d}", limit),
+		"tree": fmt.Sprintf("builds[number,result,timestamp,duration,building,changeSets[items[commitId,msg,comment,date,author[fullName]]],changeSet[items[commitId,msg,comment,date,author[fullName]]],actions[parameters[name,value],causes[shortDescription,userName,userId]]]{0,%d}", limit),
 	}
 	resp, err := client.Requester.GetJSON(ctx, job.Base, &treeResp, query)
 	if err == nil && resp != nil && resp.StatusCode == 200 && len(treeResp.Builds) > 0 {
@@ -1942,12 +1993,51 @@ func getJenkinsJobBuildHistory(c *gin.Context) {
 				DurationFormatted: formatDurationMs(int64(b.Duration)),
 				Parameters:        make(map[string]interface{}),
 				ParamList:         make([]JobBuildParamKV, 0),
+				Commits:           make([]JobCommitItem, 0),
 			}
 			if item.Building {
 				item.Result = "BUILDING"
 			} else if item.Result == "" {
 				item.Result = "SUCCESS"
 			}
+
+			// 解析关联的 Commit 提交历史
+			var commitList []JobCommitItem
+			parseItems := func(cItems []TreeChangeSetItem) {
+				for _, ci := range cItems {
+					cId := strings.TrimSpace(ci.CommitId)
+					if cId == "" {
+						continue
+					}
+					shortId := cId
+					if len(shortId) > 7 {
+						shortId = shortId[:7]
+					}
+					msg := strings.TrimSpace(ci.Msg)
+					if msg == "" {
+						msg = strings.TrimSpace(ci.Comment)
+					}
+					if idx := strings.Index(msg, "\n"); idx != -1 {
+						msg = strings.TrimSpace(msg[:idx])
+					}
+					commitList = append(commitList, JobCommitItem{
+						CommitId: cId,
+						ShortId:  shortId,
+						Message:  msg,
+						Author:   ci.Author.FullName,
+						Date:     formatJenkinsCommitDateToBeijingTime(ci.Date),
+					})
+				}
+			}
+
+			for _, cs := range b.ChangeSets {
+				parseItems(cs.Items)
+			}
+			if len(commitList) == 0 && len(b.ChangeSet.Items) > 0 {
+				parseItems(b.ChangeSet.Items)
+			}
+			item.Commits = commitList
+			item.CommitCount = len(commitList)
 
 			for _, act := range b.Actions {
 				for _, p := range act.Parameters {
@@ -2009,7 +2099,44 @@ func getJenkinsJobBuildHistory(c *gin.Context) {
 				DurationFormatted: formatDurationMs(dur),
 				Parameters:        make(map[string]interface{}),
 				ParamList:         make([]JobBuildParamKV, 0),
+				Commits:           make([]JobCommitItem, 0),
 			}
+
+			// 解析单个构建的 ChangeSet
+			var commitList []JobCommitItem
+			for _, csItem := range bObj.Raw.ChangeSet.Items {
+				cId := strings.TrimSpace(csItem.CommitID)
+				if cId == "" {
+					cId = strings.TrimSpace(csItem.ID)
+				}
+				if cId == "" {
+					continue
+				}
+				shortId := cId
+				if len(shortId) > 7 {
+					shortId = shortId[:7]
+				}
+				msg := strings.TrimSpace(csItem.Msg)
+				if msg == "" {
+					msg = strings.TrimSpace(csItem.Comment)
+				}
+				if idx := strings.Index(msg, "\n"); idx != -1 {
+					msg = strings.TrimSpace(msg[:idx])
+				}
+				author := ""
+				if csItem.Author.FullName != "" {
+					author = csItem.Author.FullName
+				}
+				commitList = append(commitList, JobCommitItem{
+					CommitId: cId,
+					ShortId:  shortId,
+					Message:  msg,
+					Author:   author,
+					Date:     formatJenkinsCommitDateToBeijingTime(csItem.Date),
+				})
+			}
+			item.Commits = commitList
+			item.CommitCount = len(commitList)
 
 			params := bObj.GetParameters()
 			for _, p := range params {
