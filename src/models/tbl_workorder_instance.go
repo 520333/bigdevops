@@ -20,7 +20,7 @@ type WorkOrderInstanceComment struct {
 type WorkOrderInstance struct {
 	Model
 	// 前端用户填写字段
-	Title             string     `json:"title,omitempty" gorm:"uniqueIndex;type:varchar(100);comment:工单实例名称"`
+	Title             string     `json:"title,omitempty" gorm:"type:varchar(100);comment:工单实例名称"`
 	ActualApiJsonData string     `json:"actualApiJsonData" gorm:"type:text;comment:用户填写的动态表单数据(JSON串)"`
 	DesireFinishTime  *time.Time `json:"desireFinishTime" gorm:"type:datetime;default:null;comment:期望完成时间"`
 	TemplateId        uint       `json:"templateId"`

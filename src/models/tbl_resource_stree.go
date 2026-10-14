@@ -12,7 +12,7 @@ import (
 
 type StreeNode struct {
 	Model
-	Title  string `json:"title" gorm:"type:varchar(50);uniqueIndex;comment:名称"`
+	Title  string `json:"title" gorm:"type:varchar(50);comment:名称"`
 	Pid    uint   `json:"pId" gorm:"comment:父级ID 树用的"`
 	Level  int    `json:"level" gorm:"comment:层级"`
 	IsLeaf bool   `json:"isLeaf" gorm:";comment:类型 0=否 1=是"`
