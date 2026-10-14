@@ -43,18 +43,18 @@ type ArtifactoryClient struct {
 }
 
 func NewArtifactoryClient(sc *config.ServerConfig) (*ArtifactoryClient, error) {
-	if sc.ArtifactoryC == nil || !sc.ArtifactoryC.Enable {
+	if sc.ArtifactC == nil || sc.ArtifactC.Artifactory == nil || !sc.ArtifactC.Artifactory.Enable {
 		return nil, fmt.Errorf("Artifactory 服务未启用，请在配置文件 server.yml 中配置 artifactory 部分")
 	}
 
-	baseURL := strings.TrimRight(sc.ArtifactoryC.BaseURL, "/")
+	baseURL := strings.TrimRight(sc.ArtifactC.Artifactory.BaseURL, "/")
 	if !strings.HasSuffix(baseURL, "/artifactory") && !strings.Contains(baseURL, "/artifactory/") {
 		baseURL = baseURL + "/artifactory"
 	}
 	return &ArtifactoryClient{
 		BaseURL:  baseURL,
-		Username: sc.ArtifactoryC.Username,
-		Password: sc.ArtifactoryC.Password,
+		Username: sc.ArtifactC.Artifactory.Username,
+		Password: sc.ArtifactC.Artifactory.Password,
 		Client:   &http.Client{Timeout: 30 * time.Second},
 		Logger:   sc.Logger,
 	}, nil
@@ -105,6 +105,53 @@ func (c *ArtifactoryClient) GetRepositories() ([]ArtifactoryRepoInfo, error) {
 	}
 
 	return repos, nil
+}
+
+// CreateRepository 创建 Artifactory 本地仓库/项目 (Local Repository)
+func (c *ArtifactoryClient) CreateRepository(repoKey, packageType, description string) error {
+	repoKey = strings.TrimSpace(repoKey)
+	if repoKey == "" {
+		return fmt.Errorf("仓库/项目 Key 不能为空")
+	}
+	if packageType == "" {
+		packageType = "generic"
+	}
+
+	url := fmt.Sprintf("%s/api/repositories/%s", c.BaseURL, repoKey)
+	payload := map[string]interface{}{
+		"key":         repoKey,
+		"rclass":      "local",
+		"packageType": packageType,
+		"description": description,
+	}
+	if packageType == "generic" {
+		payload["repoLayoutRef"] = "simple-default"
+	}
+
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("序列化创建仓库参数失败: %w", err)
+	}
+
+	req, err := http.NewRequest("PUT", url, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return fmt.Errorf("创建请求失败: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	c.SetAuth(req)
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return fmt.Errorf("调用 Artifactory API 失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("创建仓库失败 [HTTP %d]: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
 }
 
 type ArtifactoryChecksums struct {

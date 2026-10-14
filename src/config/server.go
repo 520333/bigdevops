@@ -31,8 +31,9 @@ type ServerConfig struct {
 	OIDC                            *KeycloakOIDC        `yaml:"oidc"`
 	DingTalkSSOC                    *DingTalkSSOConfig   `yaml:"dingtalk_sso"`
 	OSSC                            *OSSConfig           `yaml:"oss"`
-	ArtifactoryC                    *ArtifactoryConfig   `yaml:"artifactory"`
-	EnableSwagger                   bool                 `yaml:"enable_swagger"`
+	ArtifactC                       *ArtifactConfig      `yaml:"artifact"`
+	//ArtifactoryC                    *ArtifactoryConfig   `yaml:"artifactory"`
+	EnableSwagger bool `yaml:"enable_swagger"`
 }
 
 type DingTalkSSOConfig struct {
@@ -42,9 +43,23 @@ type DingTalkSSOConfig struct {
 	RedirectURI  string `yaml:"redirect_uri"`  // 前端回调地址
 }
 
+// ArtifactConfig 制品中心统一管理结构
+type ArtifactConfig struct {
+	Artifactory *ArtifactoryConfig `yaml:"artifactory"`
+	Harbor      *HarborConfig      `yaml:"harbor"`
+}
+
 type ArtifactoryConfig struct {
 	Enable   bool   `yaml:"enable"`
 	BaseURL  string `yaml:"base_url"` // 如: http://artifactory.example.com/artifactory
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
+// HarborConfig 容器镜像仓库
+type HarborConfig struct {
+	Enable   bool   `yaml:"enable"`
+	BaseURL  string `yaml:"base_url"` // 如: https://harbor.cathayquantum.net
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
 }

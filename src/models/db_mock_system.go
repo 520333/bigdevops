@@ -125,13 +125,16 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Name: "DeployStat", Title: "部署统计", Icon: "ant-design:dot-chart-outlined", Type: "1", Show: "1", OrderNo: 82, Component: "dora/deployStat/index", Path: "deployStat"},
 			},
 		},
+
 		// 制品与配置中心
 		{
 			Parent: &SystemMenu{Name: "ArtifactoryManagement", Title: "制品中心", Icon: "ant-design:folder-open-outlined", Type: "0", Show: "1", OrderNo: 85, Component: "LAYOUT", Path: "/artifactory", Redirect: "/artifactory/manage"},
 			Children: []*SystemMenu{
 				{Name: "ArtifactoryManageIndex", Title: "制品与配置管理", Icon: "ant-design:code-outlined", Type: "1", Show: "1", OrderNo: 86, Component: "artifactory/index", Path: "manage"},
+				{Name: "HarborIndex", Title: "镜像仓库(Harbor)", Icon: "ant-design:code-outlined", Type: "1", Show: "1", OrderNo: 87, Component: "artifactory/harbor/index", Path: "harbor"},
 			},
 		},
+
 		// 系统管理
 		{
 			Parent: &SystemMenu{Name: "System", Title: "系统管理", Icon: "ant-design:setting-outlined", Type: "0", Show: "1", OrderNo: 90, Component: "LAYOUT", Path: "/system", Redirect: "/system/changePassword"},
@@ -200,6 +203,7 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Path: "/api/system/updateRole", Method: "POST", Title: "[角色模块]更新角色", Type: "1"},
 				{Path: "/api/system/deleteRole/:id", Method: "DELETE", Title: "[角色模块]删除角色", Type: "1"},
 				{Path: "/api/system/setRoleStatus", Method: "POST", Title: "[角色模块]设置角色状态", Type: "1"},
+				{Path: "/api/system/setRoleUsers", Method: "POST", Title: "[角色模块]设置角色用户", Type: "1"},
 				{Path: "/api/system/getApiList", Method: "GET", Title: "[接口模块]获取API列表", Type: "1"},
 				{Path: "/api/system/getApiListAll", Method: "GET", Title: "[接口模块]获取全量API", Type: "1"},
 				{Path: "/api/system/createApi", Method: "POST", Title: "[接口模块]创建API", Type: "1"},
@@ -230,6 +234,7 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Path: "/api/stree/getStreeNodeEcsList/:id", Method: "GET", Title: "[cmdb云主机]获取节点已绑定ECS列表", Type: "1"},
 				{Path: "/api/stree/getResourceEcsUnbindList", Method: "GET", Title: "[cmdb云主机]获取节点未绑定ECS列表", Type: "1"},
 				{Path: "/api/stree/getResourceEcsList", Method: "GET", Title: "[cmdb云主机]获取节点ECS列表", Type: "1"},
+				{Path: "/api/stree/getEcsForSelect", Method: "GET", Title: "[cmdb云主机]获取主机下拉选择", Type: "1"},
 				{Path: "/api/stree/getResourceElbUnbindList", Method: "GET", Title: "[cmdb负载均衡]获取未绑定ELB", Type: "1"},
 				{Path: "/api/stree/bindElbToStreeNode", Method: "POST", Title: "[cmdb负载均衡]节点绑定ELB", Type: "1"},
 				{Path: "/api/stree/unBindElbToStreeNode", Method: "POST", Title: "[cmdb负载均衡]节点解绑ELB", Type: "1"},
@@ -387,6 +392,7 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 			Parent: &SystemApi{Path: "/api/k8s", Method: "GET", Title: "容器集群模块", Type: "0"},
 			Children: []*SystemApi{
 				{Path: "/api/k8s/getK8sClusterList", Method: "GET", Title: "[k8s集群]获取集群列表", Type: "1"},
+				{Path: "/api/k8s/getK8sClusterDetail", Method: "GET", Title: "[k8s集群]获取集群详情", Type: "1"},
 				{Path: "/api/k8s/createK8sCluster", Method: "POST", Title: "[k8s集群]创建集群", Type: "1"},
 				{Path: "/api/k8s/updateK8sCluster", Method: "POST", Title: "[k8s集群]更新集群", Type: "1"},
 				{Path: "/api/k8s/deleteK8sCluster/:id", Method: "DELETE", Title: "[k8s集群]删除集群", Type: "1"},
@@ -541,9 +547,10 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 		},
 
 		{
-			Parent: &SystemApi{Path: "/api/artifactory", Method: "GET", Title: "Artifactory制品与配置库", Type: "0"},
+			Parent: &SystemApi{Path: "/api/artifactory", Method: "GET", Title: "制品中心", Type: "0"},
 			Children: []*SystemApi{
 				{Path: "/api/artifactory/repos", Method: "GET", Title: "[Artifactory]获取全量仓库列表", Type: "1"},
+				{Path: "/api/artifactory/createRepo", Method: "POST", Title: "[Artifactory]创建仓库/项目", Type: "1"},
 				{Path: "/api/artifactory/info", Method: "GET", Title: "[Artifactory]获取文件构件元数据", Type: "1"},
 				{Path: "/api/artifactory/tree", Method: "GET", Title: "[Artifactory]获取文件树", Type: "1"},
 				{Path: "/api/artifactory/content", Method: "GET", Title: "[Artifactory]读取文本内容", Type: "1"},
@@ -551,8 +558,15 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Path: "/api/artifactory/upload", Method: "POST", Title: "[Artifactory]上传文件构件", Type: "1"},
 				{Path: "/api/artifactory/delete", Method: "POST", Title: "[Artifactory]删除文件构件", Type: "1"},
 				{Path: "/api/artifactory/download", Method: "GET", Title: "[Artifactory]下载文件构件", Type: "1"},
+				{Path: "/api/harbor/config", Method: "GET", Title: "[Harbor]获取配置信息", Type: "1"},
+				{Path: "/api/harbor/projects", Method: "GET", Title: "[Harbor]获取项目列表", Type: "1"},
+				{Path: "/api/harbor/createProject", Method: "POST", Title: "[Harbor]创建项目", Type: "1"},
+				{Path: "/api/harbor/repositories", Method: "GET", Title: "[Harbor]获取镜像仓库列表", Type: "1"},
+				{Path: "/api/harbor/artifacts", Method: "GET", Title: "[Harbor]获取镜像版本列表", Type: "1"},
+				{Path: "/api/harbor/deleteArtifact", Method: "POST", Title: "[Harbor]删除镜像版本", Type: "1"},
 			},
 		},
+
 		{
 			Parent: &SystemApi{Path: "/dashboard", Method: "GET", Title: "工作台", Type: "0"},
 			Children: []*SystemApi{

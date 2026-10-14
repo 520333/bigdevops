@@ -87,7 +87,10 @@ func GetJenkinsJobListByParam(param *JenkinsJobQueryParam) ([]*JenkinsJob, error
 // GetJenkinsJobListByParamWithUser 基于用户所属角色权限实施行级物理过滤，没权限的作业在数据库层直接无法查询
 func GetJenkinsJobListByParamWithUser(param *JenkinsJobQueryParam, user *SystemUser, superRoleName string) ([]*JenkinsJob, error) {
 	var objs []*JenkinsJob
-	query := Db.Where("instance_id = ?", param.InstanceID)
+	query := Db.Model(&JenkinsJob{})
+	if param != nil && param.InstanceID > 0 {
+		query = query.Where("instance_id = ?", param.InstanceID)
+	}
 
 	// 若提供了用户上下文，严格应用行级权限过滤
 	if user != nil {

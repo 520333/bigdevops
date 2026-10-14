@@ -43,6 +43,42 @@ func getArtifactoryRepositories(c *gin.Context) {
 	common.OkWithData(repos, c)
 }
 
+type createArtifactoryRepoReq struct {
+	RepoKey     string `json:"repoKey" binding:"required"`
+	PackageType string `json:"packageType"`
+	Description string `json:"description"`
+}
+
+// @Summary      创建 Artifactory 仓库/项目
+// @Tags         artifactory
+// @Accept       json
+// @Produce      json
+// @Param        body body createArtifactoryRepoReq true "创建仓库请求体"
+// @Router       /artifactory/createRepo [post]
+func createArtifactoryRepository(c *gin.Context) {
+	sc := c.MustGet(common.GIN_CTX_CONFIG_CONFIG).(*config.ServerConfig)
+	client, err := common.NewArtifactoryClient(sc)
+	if err != nil {
+		common.ReqBadFailWithMessage(err.Error(), c)
+		return
+	}
+
+	var req createArtifactoryRepoReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.ReqBadFailWithMessage(fmt.Sprintf("参数错误: %v", err.Error()), c)
+		return
+	}
+
+	err = client.CreateRepository(req.RepoKey, req.PackageType, req.Description)
+	if err != nil {
+		sc.Logger.Error("[Artifactory] 创建仓库失败", zap.Error(err))
+		common.ReqBadFailWithMessage(fmt.Sprintf("创建仓库失败: %v", err.Error()), c)
+		return
+	}
+
+	common.OkWithMessage("创建仓库/项目成功", c)
+}
+
 // @Summary      获取指定文件/构件的详细元数据与统计信息
 // @Tags         artifactory
 // @Accept       json

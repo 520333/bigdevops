@@ -101,6 +101,7 @@ func ConfigRouter(r *gin.Engine) {
 	artifactoryApiGroup := afterLoginApiGroup.Group("/artifactory")
 	{
 		artifactoryApiGroup.GET("/repos", getArtifactoryRepositories)
+		artifactoryApiGroup.POST("/createRepo", createArtifactoryRepository)
 		artifactoryApiGroup.GET("/info", getArtifactoryFileInfo)
 		artifactoryApiGroup.GET("/tree", getArtifactoryFileTree)
 		artifactoryApiGroup.GET("/content", getArtifactoryFileContent)
@@ -108,6 +109,16 @@ func ConfigRouter(r *gin.Engine) {
 		artifactoryApiGroup.POST("/upload", uploadArtifactoryFile)
 		artifactoryApiGroup.POST("/delete", deleteArtifactoryFile)
 		artifactoryApiGroup.GET("/download", downloadArtifactoryFile)
+	}
+
+	harborApiGroup := afterLoginApiGroup.Group("/harbor")
+	{
+		harborApiGroup.GET("/config", getHarborConfig)
+		harborApiGroup.GET("/projects", getHarborProjects)
+		harborApiGroup.POST("/createProject", createHarborProject)
+		harborApiGroup.GET("/repositories", getHarborRepositories)
+		harborApiGroup.GET("/artifacts", getHarborArtifacts)
+		harborApiGroup.POST("/deleteArtifact", deleteHarborArtifact)
 	}
 
 	sTreeApiGroup := afterLoginApiGroup.Group("/stree")

@@ -322,9 +322,17 @@ func SyncJenkinsJobsToDB(ctx context.Context, instanceId uint, client *gojenkins
 
 // getJenkinsJobList 获取 Job 列表接口 (基于全功能模糊及特定条件查询)
 func getJenkinsJobList(c *gin.Context) {
-	client, instanceId, ok := getJenkinsClientFromCtx(c)
-	if !ok {
-		return
+	instanceIdStr := c.DefaultQuery("instanceId", c.DefaultQuery("instance_id", ""))
+	var client *gojenkins.Jenkins
+	var instanceId uint
+
+	if instanceIdStr != "" {
+		id, _ := strconv.Atoi(instanceIdStr)
+		instanceId = uint(id)
+		if jcVal, ok := c.Get(common.GIN_CTX_JENKINS_CACHE); ok {
+			jenkinsCache := jcVal.(*cache.JenkinsCache)
+			client = jenkinsCache.GetJenkinsClientById(instanceId)
+		}
 	}
 
 	var param models.JenkinsJobQueryParam
@@ -345,7 +353,7 @@ func getJenkinsJobList(c *gin.Context) {
 	forceSync := (c.Query("sync") == "true" || c.Query("refresh") == "true") && isSuper
 
 	// 1. 如果请求显式要求同步且具备管理员权限，先从 Jenkins 远端拉取并同步
-	if forceSync {
+	if forceSync && client != nil {
 		_ = SyncJenkinsJobsToDB(c.Request.Context(), instanceId, client)
 	}
 
@@ -356,10 +364,10 @@ func getJenkinsJobList(c *gin.Context) {
 		return
 	}
 
-	if len(dbJobs) == 0 && !forceSync && isSuper {
+	if len(dbJobs) == 0 && !forceSync && isSuper && client != nil {
 		_ = SyncJenkinsJobsToDB(c.Request.Context(), instanceId, client)
 		dbJobs, _ = models.GetJenkinsJobListByParamWithUser(&param, currentUser, sc.SuperRoleName)
-	} else if !forceSync && isSuper {
+	} else if !forceSync && isSuper && client != nil {
 		go func(instId uint, cli *gojenkins.Jenkins) {
 			_ = SyncJenkinsJobsToDB(context.Background(), instId, cli)
 		}(instanceId, client)
