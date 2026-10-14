@@ -44,6 +44,12 @@ func ConfigRouter(r *gin.Engine) {
 		afterLoginApiGroup.GET("/getUserInfo", getUserAfterLogin)
 		afterLoginApiGroup.GET("/getPermCode", getPermCode)
 	}
+
+	dashboardApiGroup := afterLoginApiGroup.Group("/dashboard")
+	{
+		dashboardApiGroup.GET("/getOverviewData", getDashboardOverviewData)
+	}
+
 	systemApiGroup := afterLoginApiGroup.Group("/system")
 	{
 		// 账号路由

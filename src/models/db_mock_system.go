@@ -553,6 +553,12 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Path: "/api/artifactory/download", Method: "GET", Title: "[Artifactory]下载文件构件", Type: "1"},
 			},
 		},
+		{
+			Parent: &SystemApi{Path: "/dashboard", Method: "GET", Title: "工作台", Type: "0"},
+			Children: []*SystemApi{
+				{Path: "/api/dashboard/getOverviewData", Method: "GET", Title: "[工作台]获取总览数据", Type: "1"},
+			},
+		},
 
 		{
 			Parent: &SystemApi{Path: "/api", Method: "GET", Title: "所有api权限", Type: "0"},
@@ -1071,7 +1077,7 @@ func EnsureAuditLogMenu(sc *config.ServerConfig) {
 
 // EnsureIncrementalApis 确保增量新增的 API 权限已自动注入并同步至角色与 Casbin
 func EnsureIncrementalApis(sc *config.ServerConfig) {
-	var codeParentApi, cicdParentApi, k8sParentApi SystemApi
+	var codeParentApi, cicdParentApi, k8sParentApi, dashboardParentApi SystemApi
 	codePid := 0
 	if err := Db.Where("path = ? AND type = ?", "/api/code", "0").First(&codeParentApi).Error; err == nil && codeParentApi.ID > 0 {
 		codePid = int(codeParentApi.ID)
@@ -1085,12 +1091,31 @@ func EnsureIncrementalApis(sc *config.ServerConfig) {
 		k8sPid = int(k8sParentApi.ID)
 	}
 
+	dashboardPid := 0
+	if err := Db.Where("path = ? AND type = ?", "/dashboard", "0").First(&dashboardParentApi).Error; err == nil && dashboardParentApi.ID > 0 {
+		dashboardPid = int(dashboardParentApi.ID)
+	} else {
+		parentObj := SystemApi{
+			Path:   "/dashboard",
+			Method: "GET",
+			Title:  "工作台",
+			Type:   "0",
+		}
+		if err := Db.Create(&parentObj).Error; err == nil {
+			dashboardPid = int(parentObj.ID)
+			if sc != nil && sc.Logger != nil {
+				sc.Logger.Info("自动注册接口模块：/dashboard 工作台 成功 🚀")
+			}
+		}
+	}
+
 	apisToAdd := []SystemApi{
 		{Path: "/api/code/getCodeGitServerDetail", Method: "GET", Title: "[代码管理]获取Git服务器详情", Type: "1", Pid: codePid},
 		{Path: "/api/cicd/getJenkinsInstanceDetail", Method: "GET", Title: "[Jenkins]获取实例详情", Type: "1", Pid: cicdPid},
 		{Path: "/api/cicd/getJenkinsJobParameters", Method: "GET", Title: "[Jenkins]获取Job构建参数", Type: "1", Pid: cicdPid},
 		{Path: "/api/cicd/getJenkinsJobBuildHistory", Method: "GET", Title: "[Jenkins]获取历史构建与参数", Type: "1", Pid: cicdPid},
 		{Path: "/api/k8s/getK8sClusterDetail", Method: "GET", Title: "[k8s集群]获取集群详情", Type: "1", Pid: k8sPid},
+		{Path: "/api/dashboard/getOverviewData", Method: "GET", Title: "[工作台]获取总览数据", Type: "1", Pid: dashboardPid},
 	}
 
 	var createdApis []*SystemApi
@@ -1113,12 +1138,20 @@ func EnsureIncrementalApis(sc *config.ServerConfig) {
 		}
 	}
 
-	// 为管理和运维类角色自动分配这些新接口权限
+	// 为各角色自动分配这些新接口权限
 	var roles []SystemRole
 	if Db.Find(&roles).Error == nil {
 		for _, r := range roles {
-			// 普通用户 user 排除
+			// 普通用户 user 拥有工作台基础总览权限，排除管理类接口
 			if r.RoleValue == "user" {
+				for _, api := range createdApis {
+					if api.Path == "/api/dashboard/getOverviewData" {
+						_ = Db.Model(&r).Association("Apis").Append(api)
+						if CasbinEnforcer != nil && r.RoleValue != "" {
+							_, _ = CasbinEnforcer.AddPolicy(r.RoleValue, api.Path, api.Method)
+						}
+					}
+				}
 				continue
 			}
 
