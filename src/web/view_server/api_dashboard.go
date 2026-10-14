@@ -293,9 +293,19 @@ func getDashboardOverviewData(c *gin.Context) {
 		}
 	}
 
-	// 6. 最近发布动态 (取最近有构建时间的 JenkinsJob)
+	// 6. 最近发布动态 (普通用户仅展示其有权限的项目动态；管理员展示全平台动态)
 	var recentJobs []*models.JenkinsJob
-	models.Db.Model(&models.JenkinsJob{}).Order("last_build_time desc, updated_at desc").Limit(5).Find(&recentJobs)
+	recentJobQuery := models.Db.Model(&models.JenkinsJob{})
+	if !isAdmin {
+		var hasAccess bool
+		recentJobQuery, hasAccess = models.FilterJobsByPermission(recentJobQuery, dbUser, sc.SuperRoleName)
+		if !hasAccess {
+			recentJobQuery = nil
+		}
+	}
+	if recentJobQuery != nil {
+		recentJobQuery.Order("last_build_time desc, updated_at desc").Limit(5).Find(&recentJobs)
+	}
 	for _, j := range recentJobs {
 		statusText := "已就绪"
 		iconColor := "#1890ff"
