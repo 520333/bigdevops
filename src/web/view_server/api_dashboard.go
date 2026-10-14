@@ -242,10 +242,14 @@ func getDashboardOverviewData(c *gin.Context) {
 
 	} else {
 		// =================== 普通研发人员视角 (Me-Centric 以我为主) ===================
+		// 基于当前用户所属角色的数据权限，精确计算其有权访问与构建的服务基线条数
 		var myJobsCount int64
-		models.Db.Model(&models.JenkinsJob{}).Where("create_user_name LIKE ?", "%"+dbUser.Username+"%").Count(&myJobsCount)
-		if myJobsCount == 0 {
-			models.Db.Model(&models.JenkinsJob{}).Count(&myJobsCount)
+		jobQuery := models.Db.Model(&models.JenkinsJob{})
+		filteredQuery, hasAccess := models.FilterJobsByPermission(jobQuery, dbUser, sc.SuperRoleName)
+		if hasAccess {
+			filteredQuery.Count(&myJobsCount)
+		} else {
+			myJobsCount = 0
 		}
 
 		resp.Cards = []DashboardCardItem{
