@@ -103,6 +103,36 @@ func getK8sClusterList(c *gin.Context) {
 	}, "ok", c)
 }
 
+// @Summary      获取K8s集群单条详情(用于编辑回显)
+// @Description  获取K8s集群单条详情 接口
+// @Tags         k8s-cluster
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} common.BaseResp "获取K8s集群单条详情 响应结果"
+// @Router       /k8s/getK8sClusterDetail [get]
+// @Security     Bearer
+func getK8sClusterDetail(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Query("id"))
+	if id <= 0 {
+		common.FailWithMessage("缺少集群ID", c)
+		return
+	}
+
+	dbObj, err := models.GetK8sClusterById(id)
+	if err != nil {
+		common.FailWithMessage("集群不存在", c)
+		return
+	}
+
+	kc := c.MustGet(common.GIN_CTX_K8S_CACHE).(*cache.K8sClusterCache)
+	dbObj.LastProbSuccess = kc.GetClusterProbeResultById(dbObj.ID)
+	dbObj.LastProbErrMsg = kc.GetClusterProbeErrMsgById(dbObj.ID)
+	dbObj.FillFrontAllData()
+	// 保留真实 KubeConfigContent 供前端编辑抽屉精准回显
+
+	common.OkWithDetailed(dbObj, "获取成功", c)
+}
+
 // @Summary      创建/注册K8s集群
 // @Description  创建/注册K8s集群 接口
 // @Tags         k8s-cluster
@@ -176,6 +206,12 @@ func updateK8sCluster(c *gin.Context) {
 		return
 	}
 	reqObj.UserID = dbOld.UserID
+
+	// 🚀 安全保护（参考 Git 实例与 Jenkins 实例模式）：若未提供新的 Kubeconfig（即为空），则保留数据库中原有的配置，防止因未编辑导致误清空或报错
+	if reqObj.KubeConfigContent == "" {
+		reqObj.KubeConfigContent = dbOld.KubeConfigContent
+	}
+
 	err = reqObj.FillDefaultData()
 	if err != nil {
 		sc.Logger.Error("更新集群配置解析错误", zap.Error(err))

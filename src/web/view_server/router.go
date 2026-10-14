@@ -264,6 +264,7 @@ func ConfigRouter(r *gin.Engine) {
 	K8sGroup := afterLoginApiGroup.Group("/k8s")
 	{
 		K8sGroup.GET("/getK8sClusterList", getK8sClusterList)
+		K8sGroup.GET("/getK8sClusterDetail", getK8sClusterDetail)
 		K8sGroup.GET("/getClusterForSelect", getClusterForSelect)
 		K8sGroup.POST("/createK8sCluster", createK8sCluster)
 		K8sGroup.POST("/updateK8sCluster", updateK8sCluster)

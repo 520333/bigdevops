@@ -1071,7 +1071,7 @@ func EnsureAuditLogMenu(sc *config.ServerConfig) {
 
 // EnsureIncrementalApis 确保增量新增的 API 权限已自动注入并同步至角色与 Casbin
 func EnsureIncrementalApis(sc *config.ServerConfig) {
-	var codeParentApi, cicdParentApi SystemApi
+	var codeParentApi, cicdParentApi, k8sParentApi SystemApi
 	codePid := 0
 	if err := Db.Where("path = ? AND type = ?", "/api/code", "0").First(&codeParentApi).Error; err == nil && codeParentApi.ID > 0 {
 		codePid = int(codeParentApi.ID)
@@ -1080,12 +1080,17 @@ func EnsureIncrementalApis(sc *config.ServerConfig) {
 	if err := Db.Where("path = ? AND type = ?", "/api/cicd", "0").First(&cicdParentApi).Error; err == nil && cicdParentApi.ID > 0 {
 		cicdPid = int(cicdParentApi.ID)
 	}
+	k8sPid := 0
+	if err := Db.Where("path = ? AND type = ?", "/api/k8s", "0").First(&k8sParentApi).Error; err == nil && k8sParentApi.ID > 0 {
+		k8sPid = int(k8sParentApi.ID)
+	}
 
 	apisToAdd := []SystemApi{
 		{Path: "/api/code/getCodeGitServerDetail", Method: "GET", Title: "[代码管理]获取Git服务器详情", Type: "1", Pid: codePid},
 		{Path: "/api/cicd/getJenkinsInstanceDetail", Method: "GET", Title: "[Jenkins]获取实例详情", Type: "1", Pid: cicdPid},
 		{Path: "/api/cicd/getJenkinsJobParameters", Method: "GET", Title: "[Jenkins]获取Job构建参数", Type: "1", Pid: cicdPid},
 		{Path: "/api/cicd/getJenkinsJobBuildHistory", Method: "GET", Title: "[Jenkins]获取历史构建与参数", Type: "1", Pid: cicdPid},
+		{Path: "/api/k8s/getK8sClusterDetail", Method: "GET", Title: "[k8s集群]获取集群详情", Type: "1", Pid: k8sPid},
 	}
 
 	var createdApis []*SystemApi

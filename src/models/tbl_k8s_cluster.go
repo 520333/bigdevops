@@ -22,19 +22,19 @@ type K8sCluster struct {
 	Env                  string `json:"env,omitempty" gorm:"comment:集群环境信息 prod|stage|test"`
 	Version              string `json:"version,omitempty" gorm:"comment:集群版本"`              // 不需要用户填入 解析kubeconfig发起serverVersion请求
 	ApiServerAddr        string `json:"apiServerAddr,omitempty" gorm:"comment:apiServer地址"` // 不需要用户填入 解析kubeconfig
-	KubeConfigContent    string `json:"kubeConfigContent" gorm:"comment:kubeconfig配置文件"`
+	KubeConfigContent    string `json:"kubeConfigContent,omitempty" gorm:"comment:kubeconfig配置文件"`
 	ActionTimeoutSeconds int    `json:"actionTimeoutSeconds" gorm:"comment:超时时间秒数"`
 
-	Key string `json:"key" gorm:"-"` // 前端表格使用
+	Key string `json:"key,omitempty" gorm:"-"` // 前端表格使用
 
-	CreateUserName string `json:"createUserName" gorm:"-"`
+	CreateUserName string `json:"createUserName,omitempty" gorm:"-"`
 
-	LastProbSuccess  bool              `json:"lastProbSuccess" gorm:"-"`
-	LastProbErrMsg   string            `json:"LastProbErrMsg" gorm:"-"`
-	LabelsFront      string            `json:"labelsFront" gorm:"-"`
-	AnnotationsFront string            `json:"annotationsFront" gorm:"-"`
-	LabelsM          map[string]string `json:"labelsM" gorm:"-"`
-	AnnotationsM     map[string]string `json:"annotationsM" gorm:"-"`
+	LastProbSuccess  bool              `json:"lastProbSuccess,omitempty" gorm:"-"`
+	LastProbErrMsg   string            `json:"LastProbErrMsg,omitempty" gorm:"-"`
+	LabelsFront      string            `json:"labelsFront,omitempty" gorm:"-"`
+	AnnotationsFront string            `json:"annotationsFront,omitempty" gorm:"-"`
+	LabelsM          map[string]string `json:"labelsM,omitempty" gorm:"-"`
+	AnnotationsM     map[string]string `json:"annotationsM,omitempty" gorm:"-"`
 	Label            string            `json:"label" gorm:"-"`
 	Value            string            `json:"value" gorm:"-"`
 }
