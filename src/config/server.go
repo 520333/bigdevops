@@ -33,7 +33,8 @@ type ServerConfig struct {
 	OSSC                            *OSSConfig           `yaml:"oss"`
 	ArtifactC                       *ArtifactConfig      `yaml:"artifact"`
 	//ArtifactoryC                    *ArtifactoryConfig   `yaml:"artifactory"`
-	EnableSwagger bool `yaml:"enable_swagger"`
+	ArcheryC      *ArcheryConfig `yaml:"archery"`
+	EnableSwagger bool           `yaml:"enable_swagger"`
 }
 
 type DingTalkSSOConfig struct {
@@ -41,6 +42,14 @@ type DingTalkSSOConfig struct {
 	ClientID     string `yaml:"client_id"`     // AppKey
 	ClientSecret string `yaml:"client_secret"` // AppSecret
 	RedirectURI  string `yaml:"redirect_uri"`  // 前端回调地址
+}
+
+// ArcheryConfig SQL审核与变更平台配置
+type ArcheryConfig struct {
+	Enable   bool   `yaml:"enable"`
+	BaseURL  string `yaml:"base_url"` // 如: https://archery.cathayquantum.net 或 http://192.168.50.100:9123
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 }
 
 // ArtifactConfig 制品中心统一管理结构

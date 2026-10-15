@@ -153,10 +153,12 @@ func syncKeycloakUsers(c *gin.Context) {
 			enableStatus = 0
 		}
 
+		keycloakMobile := extractMobile(ku)
+
 		// 检查本地数据库是否已存在该账号
 		existingUser, getErr := models.GetUserByUsername(username)
 		if getErr == nil && existingUser != nil && existingUser.ID > 0 {
-			// 已存在：增量同步更新信息（更新姓名、邮箱、启用状态）
+			// 已存在同名账号：增量同步更新信息（更新姓名、邮箱、启用状态）
 			updates := map[string]interface{}{}
 			if realName != "" && existingUser.RealName != realName {
 				updates["real_name"] = realName
@@ -164,8 +166,39 @@ func syncKeycloakUsers(c *gin.Context) {
 			if ku.Email != "" && existingUser.Email != ku.Email {
 				updates["email"] = ku.Email
 			}
+			if keycloakMobile != "" && existingUser.Mobile != keycloakMobile {
+				updates["mobile"] = keycloakMobile
+			}
 			if existingUser.Enable != enableStatus {
 				updates["enable"] = enableStatus
+			}
+
+			// 【自动认领与双向融合】：若当前正式域账号尚未绑定钉钉，检查是否存在先登钉钉产生的孤立临时账号（如 083307555223900180 庄孝宝）
+			if existingUser.DingTalkUserId == "" && realName != "" {
+				var dupUsers []models.SystemUser
+				// 匹配相同真实姓名且带有钉钉绑定的临时用户 (排除自身)
+				if models.Db.Where("id != ? AND real_name = ? AND (ding_talk_user_id IS NOT NULL AND ding_talk_user_id != '')", existingUser.ID, realName).Find(&dupUsers).Error == nil && len(dupUsers) > 0 {
+					dup := dupUsers[0]
+					updates["ding_talk_user_id"] = dup.DingTalkUserId
+					if dup.DingTalkUnionId != "" {
+						updates["ding_talk_union_id"] = dup.DingTalkUnionId
+					}
+					if existingUser.Mobile == "" && dup.Mobile != "" {
+						updates["mobile"] = dup.Mobile
+					}
+					if existingUser.Avatar == "" && dup.Avatar != "" {
+						updates["avatar"] = dup.Avatar
+					}
+					// 清理被合并的临时钉钉账号与其角色关联，避免生成重复冗余账号
+					_ = models.Db.Model(&dup).Association("Roles").Clear()
+					_ = models.Db.Delete(&dup)
+					sc.Logger.Info("同步Keycloak时检测到正式账号，已自动融合清理孤立的钉钉临时账号",
+						zap.String("formal_username", username),
+						zap.String("merged_temp_username", dup.Username),
+						zap.String("real_name", realName),
+						zap.String("ding_talk_user_id", dup.DingTalkUserId),
+					)
+				}
 			}
 
 			if len(updates) > 0 {
@@ -173,20 +206,72 @@ func syncKeycloakUsers(c *gin.Context) {
 				updatedCount++
 			}
 		} else {
-			// 不存在：自动开户新建
-			newUser := &models.SystemUser{
-				Username: username,
-				RealName: realName,
-				Email:    ku.Email,
-				Enable:   enableStatus,
-				HomePath: "/dashboard/analysis",
-				Password: common.BcryptHash(common.INITPWD), // 初始临时密码
+			// 本地尚无该 username 账号，检查是否该员工此前曾通过钉钉直接登录过 (避免先登钉钉再同步Keycloak产生两个号)
+			var candidateUser models.SystemUser
+			matched := false
+
+			// ① 优先通过手机号匹配（Keycloak 手机号与钉钉手机号一致）
+			if keycloakMobile != "" {
+				if models.Db.Where("mobile = ?", keycloakMobile).First(&candidateUser).Error == nil {
+					matched = true
+				}
 			}
-			if cErr := newUser.CreateOne(); cErr == nil {
-				createdCount++
-				// 分配默认普通角色
-				if defaultRole != nil {
-					_ = models.Db.Model(newUser).Association("Roles").Append(defaultRole)
+
+			// ② 其次通过企业真实邮箱匹配已有账号
+			if !matched && ku.Email != "" && !strings.Contains(ku.Email, "@dingtalk.local") {
+				if models.Db.Where("email = ?", ku.Email).First(&candidateUser).Error == nil {
+					matched = true
+				}
+			}
+
+			// ③ 再次：若本地存在姓名完全一致且已绑定钉钉的临时账号（如 083307555223900180 庄孝宝）
+			if !matched && realName != "" {
+				if models.Db.Where("real_name = ? AND (ding_talk_user_id IS NOT NULL AND ding_talk_user_id != '')", realName).First(&candidateUser).Error == nil {
+					matched = true
+				}
+			}
+
+			if matched {
+				// 将此前由钉钉登录生成的临时账号，平滑升级为正式 Keycloak 域账号（如将 083307555223900180 更新为 dawn）
+				updates := map[string]interface{}{
+					"username": username,
+				}
+				if realName != "" && candidateUser.RealName != realName {
+					updates["real_name"] = realName
+				}
+				if ku.Email != "" && candidateUser.Email != ku.Email {
+					updates["email"] = ku.Email
+				}
+				if keycloakMobile != "" && candidateUser.Mobile != keycloakMobile {
+					updates["mobile"] = keycloakMobile
+				}
+				if candidateUser.Enable != enableStatus {
+					updates["enable"] = enableStatus
+				}
+				_ = models.Db.Model(&candidateUser).Updates(updates)
+				updatedCount++
+				sc.Logger.Info("同步Keycloak时成功将钉钉登录生成的临时账号升级为正式域账号",
+					zap.String("old_username", candidateUser.Username),
+					zap.String("formal_username", username),
+					zap.String("real_name", realName),
+				)
+			} else {
+				// 真正的新账号：自动开户新建
+				newUser := &models.SystemUser{
+					Username: username,
+					RealName: realName,
+					Email:    ku.Email,
+					Mobile:   keycloakMobile,
+					Enable:   enableStatus,
+					HomePath: "/dashboard/analysis",
+					Password: common.BcryptHash(common.INITPWD), // 初始临时密码
+				}
+				if cErr := newUser.CreateOne(); cErr == nil {
+					createdCount++
+					// 分配默认普通角色
+					if defaultRole != nil {
+						_ = models.Db.Model(newUser).Association("Roles").Append(defaultRole)
+					}
 				}
 			}
 		}
@@ -329,4 +414,34 @@ func extractDisplayName(ku KeycloakUserItem) string {
 
 	// 3. 兜底为登录名
 	return strings.TrimSpace(ku.Username)
+}
+
+// extractMobile 从 Keycloak 用户 attributes 中提取手机号码
+func extractMobile(ku KeycloakUserItem) string {
+	if ku.Attributes != nil {
+		attrKeys := []string{"mobile", "phone", "phoneNumber", "telephone", "mobile_phone"}
+		for _, key := range attrKeys {
+			if val, ok := ku.Attributes[key]; ok && val != nil {
+				switch v := val.(type) {
+				case []interface{}:
+					if len(v) > 0 {
+						if s := strings.TrimSpace(fmt.Sprintf("%v", v[0])); s != "" && s != "<nil>" {
+							return s
+						}
+					}
+				case []string:
+					if len(v) > 0 {
+						if s := strings.TrimSpace(v[0]); s != "" {
+							return s
+						}
+					}
+				case string:
+					if s := strings.TrimSpace(v); s != "" {
+						return s
+					}
+				}
+			}
+		}
+	}
+	return ""
 }

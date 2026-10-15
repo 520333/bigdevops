@@ -121,6 +121,20 @@ func ConfigRouter(r *gin.Engine) {
 		harborApiGroup.POST("/deleteArtifact", deleteHarborArtifact)
 	}
 
+	archeryApiGroup := afterLoginApiGroup.Group("/archery")
+	{
+		archeryApiGroup.GET("/config", getArcheryConfig)
+		archeryApiGroup.GET("/instances", getArcheryInstances)
+		archeryApiGroup.GET("/groups", getArcheryGroups)
+		archeryApiGroup.GET("/databases", getArcheryDatabases)
+		archeryApiGroup.POST("/sqlCheck", checkArcherySql)
+		archeryApiGroup.GET("/workflows", getArcheryWorkflows)
+		archeryApiGroup.POST("/createWorkflow", createArcheryWorkflow)
+		archeryApiGroup.POST("/audit", auditArcheryWorkflow)
+		archeryApiGroup.POST("/execute", executeArcheryWorkflow)
+		archeryApiGroup.GET("/logs", getArcheryWorkflowLogs)
+	}
+
 	sTreeApiGroup := afterLoginApiGroup.Group("/stree")
 	{
 		sTreeApiGroup.GET("/getStreeNodeList", getStreeNodeList)

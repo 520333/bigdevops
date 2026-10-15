@@ -42,6 +42,7 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Name: "WorkOrderCreate", Title: "工单填写", Icon: "ant-design:form-outlined", Type: "1", Show: "0", OrderNo: 25, Component: "workorder/ticket/create", Path: "create"},
 				{Name: "WorkOrderSearch", Title: "我的工单", Icon: "ant-design:profile-outlined", Type: "1", Show: "1", OrderNo: 26, Component: "workorder/ticket/search", Path: "search"},
 				{Name: "WorkOrderDetail", Title: "工单详情", Icon: "ant-design:file-text-outlined", Type: "1", Show: "0", OrderNo: 27, Component: "workorder/detail/index", Path: "detail"},
+				{Name: "WorkOrderArchery", Title: "SQL工单 (Archery)", Icon: "ant-design:console-sql-outlined", Type: "1", Show: "1", OrderNo: 28, Component: "workorder/archery/index", Path: "archery"},
 			},
 		},
 
@@ -275,6 +276,12 @@ func mockSystemData(sc *config.ServerConfig) *SystemUser {
 				{Path: "/api/workorder/getNotificationList", Method: "GET", Title: "[工单模块]获取顶部通知/待办", Type: "1"},
 				{Path: "/api/workorder/markNotifyRead", Method: "POST", Title: "[工单模块]标记通知已读", Type: "1"},
 				{Path: "/api/workorder/clearNotifyTab", Method: "POST", Title: "[工单模块]清空通知列表", Type: "1"},
+				{Path: "/api/archery/config", Method: "GET", Title: "[Archery]获取配置信息", Type: "1"},
+				{Path: "/api/archery/instances", Method: "GET", Title: "[Archery]获取实例列表", Type: "1"},
+				{Path: "/api/archery/databases", Method: "GET", Title: "[Archery]获取数据库列表", Type: "1"},
+				{Path: "/api/archery/sqlCheck", Method: "POST", Title: "[Archery]SQL检测预审核", Type: "1"},
+				{Path: "/api/archery/workflows", Method: "GET", Title: "[Archery]获取SQL工单列表", Type: "1"},
+				{Path: "/api/archery/createWorkflow", Method: "POST", Title: "[Archery]提交SQL工单", Type: "1"},
 			},
 		},
 
