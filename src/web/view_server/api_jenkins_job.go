@@ -239,11 +239,17 @@ func SyncJenkinsJobsToDB(ctx context.Context, instanceId uint, client *gojenkins
 	for _, j := range allJobs {
 		var count int64 = j.Raw.LastBuild.Number
 		var lastBuildTime *time.Time
+		status := mapJenkinsColorToStatus(j.Raw.Color)
 		if lb, lbErr := j.GetLastBuild(ctx); lbErr == nil && lb != nil {
 			t := lb.GetTimestamp()
 			lastBuildTime = &t
 			if count == 0 {
 				count = lb.GetBuildNumber()
+			}
+			if lb.IsRunning(ctx) {
+				status = "BUILDING"
+			} else if res := lb.GetResult(); res != "" {
+				status = res
 			}
 		}
 		folder, shortJobName, _ := parseFolderAndJobName("", j.Raw.Name)
@@ -263,7 +269,7 @@ func SyncJenkinsJobsToDB(ctx context.Context, instanceId uint, client *gojenkins
 			Name:           shortJobName,
 			ProjectName:    folder, // Group名称 / 项目名称与文件夹呼应
 			Count:          count,
-			Status:         mapJenkinsColorToStatus(j.Raw.Color),
+			Status:         status,
 			URL:            j.Raw.URL,
 			DeployType:     existing.DeployType,
 			DeployEnv:      existing.DeployEnv,
@@ -374,6 +380,28 @@ func getJenkinsJobList(c *gin.Context) {
 	}
 
 	for _, job := range dbJobs {
+		if job.Status == "BUILDING" && client != nil {
+			goJob, jErr := getJenkinsJobHelper(c.Request.Context(), client, job.Name, job.ProjectName)
+			if jErr == nil && goJob != nil {
+				if lb, lbErr := goJob.GetLastBuild(c.Request.Context()); lbErr == nil && lb != nil {
+					if !lb.IsRunning(c.Request.Context()) {
+						res := lb.GetResult()
+						if res == "" {
+							res = "SUCCESS"
+						}
+						job.Status = res
+						job.Count = lb.GetBuildNumber()
+						t := lb.GetTimestamp()
+						job.LastBuildTime = &t
+						_ = models.Db.Model(&models.JenkinsJob{}).Where("id = ?", job.ID).Updates(map[string]interface{}{
+							"status":          res,
+							"count":           job.Count,
+							"last_build_time": job.LastBuildTime,
+						}).Error
+					}
+				}
+			}
+		}
 		if isSuper {
 			job.CanBuild = true
 		} else {
@@ -1663,7 +1691,8 @@ func getJenkinsJobStageView(c *gin.Context) {
 
 	var describe StageViewDescribe
 	wfEndpoint := fmt.Sprintf("%s/wfapi/describe", strings.TrimRight(job.Base, "/"))
-	if build, err := job.GetLastBuild(ctx); err == nil && build != nil {
+	buildNum, _ := strconv.ParseInt(c.DefaultQuery("buildNumber", c.Query("build_number")), 10, 64)
+	if build, err := getJenkinsBuildSafe(ctx, job, buildNum); err == nil && build != nil {
 		wfEndpoint = fmt.Sprintf("%s/wfapi/describe", strings.TrimRight(build.Base, "/"))
 	}
 

@@ -128,3 +128,9 @@ im:
   qywx:
     enabled: false
     webhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=your_qywx_key"
+
+archery:
+  enable: true
+  base_url: "http://192.168.50.100:9123"
+  username: "admin"
+  password: "hk88889999"
