@@ -201,15 +201,46 @@ func getArcheryWorkflows(c *gin.Context) {
 		pageSize = 20
 	}
 
+	// 方案2：按所属资源组隔离 (超级管理员具备全量工单透视权限)
+	currentUsername := c.GetString(common.GIN_CTX_JWT_USER_NAME)
+	isPrivileged := false
+	var allowedGroupIds []int
+
+	if currentUsername != "" {
+		if dbUser, errUser := models.GetUserByUsername(currentUsername); errUser == nil && dbUser != nil {
+			for _, r := range dbUser.Roles {
+				rv := strings.ToLower(r.RoleValue)
+				if rv == "super" || rv == "admin" || rv == "bot_super" {
+					isPrivileged = true
+					break
+				}
+			}
+		}
+
+		if !isPrivileged {
+			archeryUser, errUser := client.GetUserDetail(currentUsername)
+			if errUser == nil && archeryUser != nil {
+				if archeryUser.IsSuperuser {
+					isPrivileged = true
+				} else {
+					allowedGroupIds = archeryUser.ResourceGroup
+				}
+			}
+		}
+	}
+
 	filter := common.ArcheryWorkflowFilter{
-		Page:       page,
-		PageSize:   pageSize,
-		Search:     search,
-		Status:     status,
-		InstanceId: instanceId,
-		GroupId:    groupId,
-		StartTime:  startTime,
-		EndTime:    endTime,
+		Page:            page,
+		PageSize:        pageSize,
+		Search:          search,
+		Status:          status,
+		InstanceId:      instanceId,
+		GroupId:         groupId,
+		StartTime:       startTime,
+		EndTime:         endTime,
+		AllowedGroupIds: allowedGroupIds,
+		CurrentUser:     currentUsername,
+		IsPrivileged:    isPrivileged,
 	}
 
 	resp, err := client.GetWorkflows(filter)

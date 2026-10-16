@@ -487,51 +487,51 @@ func (c *ArcheryClient) GetGroups() ([]ArcheryGroupItem, error) {
 
 // ArcheryWorkflowFilter 工单查询多维过滤参数
 type ArcheryWorkflowFilter struct {
-	Page       int    `json:"page"`
-	PageSize   int    `json:"pageSize"`
-	Search     string `json:"search"`
-	Status     string `json:"status"`
-	InstanceId int    `json:"instanceId"`
-	GroupId    int    `json:"groupId"`
-	StartTime  string `json:"startTime"`
-	EndTime    string `json:"endTime"`
+	Page            int    `json:"page"`
+	PageSize        int    `json:"pageSize"`
+	Search          string `json:"search"`
+	Status          string `json:"status"`
+	InstanceId      int    `json:"instanceId"`
+	GroupId         int    `json:"groupId"`
+	StartTime       string `json:"startTime"`
+	EndTime         string `json:"endTime"`
+	AllowedGroupIds []int  `json:"allowedGroupIds"` // 权限过滤：用户允许查看的资源组ID列表 (为空表示不限组)
+	CurrentUser     string `json:"currentUser"`     // 权限过滤：当前登录用户名 (用户可以查看自己发起的工单)
+	IsPrivileged    bool   `json:"isPrivileged"`    // 是否超级管理员权限
 }
 
-// buildFilterQuery 构造 Archery DRF 兼容的查询过滤参数
-func (c *ArcheryClient) buildFilterQuery(f ArcheryWorkflowFilter) string {
-	var q []string
-	if f.Search != "" {
-		q = append(q, fmt.Sprintf("workflow__workflow_name__icontains=%s", url.QueryEscape(f.Search)))
-	}
-	if f.Status != "" {
-		q = append(q, fmt.Sprintf("workflow__status=%s", url.QueryEscape(f.Status)))
-	}
-	if f.InstanceId > 0 {
-		q = append(q, fmt.Sprintf("workflow__instance_id=%d", f.InstanceId))
-	}
-	if f.StartTime != "" {
-		st := strings.Replace(f.StartTime, " ", "T", 1)
-		q = append(q, fmt.Sprintf("workflow__create_time__gte=%s", url.QueryEscape(st)))
-	}
-	if f.EndTime != "" {
-		et := strings.Replace(f.EndTime, " ", "T", 1)
-		if len(et) == 10 {
-			if t, err := time.Parse("2006-01-02", et); err == nil {
-				et = t.AddDate(0, 0, 1).Format("2006-01-02")
-			}
-		}
-		q = append(q, fmt.Sprintf("workflow__create_time__lt=%s", url.QueryEscape(et)))
-	}
-	if len(q) > 0 {
-		return "&" + strings.Join(q, "&")
-	}
-	return ""
+var (
+	globalWfCacheLock sync.RWMutex
+	globalWfCache     []ArcheryWorkflowItem
+	globalWfCacheExp  time.Time
+)
+
+// InvalidateArcheryWorkflowCache 使得工单全局内存缓存失效 (在创建工单/审核工单/执行工单后触发)
+func InvalidateArcheryWorkflowCache() {
+	globalWfCacheLock.Lock()
+	globalWfCacheExp = time.Time{}
+	globalWfCache = nil
+	globalWfCacheLock.Unlock()
 }
 
-// fetchWorkflowPage 内部拉取 Archery 指定页
-func (c *ArcheryClient) fetchWorkflowPage(page, size int, extraQuery string) (*ArcheryWorkflowListResp, error) {
-	reqUrl := fmt.Sprintf("%s/api/v1/workflow/?page=%d&size=%d%s", c.BaseURL, page, size, extraQuery)
+// GetAllWorkflows 获取全量工单列表（带 15 秒内存缓存，保证毫秒级响应并解决 Django 无法按 group_id 过滤的限制）
+func (c *ArcheryClient) GetAllWorkflows() ([]ArcheryWorkflowItem, error) {
+	globalWfCacheLock.RLock()
+	if time.Now().Before(globalWfCacheExp) && globalWfCache != nil {
+		items := globalWfCache
+		globalWfCacheLock.RUnlock()
+		return items, nil
+	}
+	globalWfCacheLock.RUnlock()
 
+	globalWfCacheLock.Lock()
+	defer globalWfCacheLock.Unlock()
+
+	if time.Now().Before(globalWfCacheExp) && globalWfCache != nil {
+		return globalWfCache, nil
+	}
+
+	reqUrl := fmt.Sprintf("%s/api/v1/workflow/?size=10000", c.BaseURL)
 	req, err := http.NewRequest("GET", reqUrl, nil)
 	if err != nil {
 		return nil, err
@@ -542,26 +542,111 @@ func (c *ArcheryClient) fetchWorkflowPage(page, size int, extraQuery string) (*A
 
 	resp, err := c.Client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("获取工单列表失败: %w", err)
+		return nil, fmt.Errorf("拉取工单全量列表失败: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("获取工单列表失败 [HTTP %d]: %s", resp.StatusCode, string(respBody))
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("拉取工单全量列表失败 [HTTP %d]: %s", resp.StatusCode, string(body))
 	}
 
 	var listResp ArcheryWorkflowListResp
 	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
-		return nil, fmt.Errorf("解析工单列表失败: %w", err)
+		return nil, fmt.Errorf("解析全量工单失败: %w", err)
 	}
 
-	return &listResp, nil
+	globalWfCache = listResp.Results
+	globalWfCacheExp = time.Now().Add(15 * time.Second)
+	return globalWfCache, nil
 }
 
-// GetWorkflows 获取工单列表（支持多维度过滤、精准倒序映射）
-// 筛选维度支持：状态(status)、实例(instanceId)、组(groupId)、时间跨度(startTime/endTime)、搜索关键词(search)
+// GetWorkflows 获取工单列表（支持多维度过滤、权限隔离、倒序排序、精准分页）
+// 方案2：非超级管理员只能看到其所属资源组(AllowedGroupIds)下的工单，以及自己发起的工单
 func (c *ArcheryClient) GetWorkflows(filter ArcheryWorkflowFilter) (*ArcheryWorkflowListResp, error) {
+	all, err := c.GetAllWorkflows()
+	if err != nil {
+		return nil, err
+	}
+
+	allowedMap := make(map[int]bool)
+	for _, gid := range filter.AllowedGroupIds {
+		allowedMap[gid] = true
+	}
+
+	var filtered []ArcheryWorkflowItem
+	searchLower := strings.ToLower(strings.TrimSpace(filter.Search))
+
+	for _, item := range all {
+		wf := item.Workflow
+
+		// 1. 数据权限隔离检查 (非超级管理员)
+		if !filter.IsPrivileged {
+			hasPerm := false
+			// 允许查看所属资源组的工单
+			if len(allowedMap) > 0 && allowedMap[wf.GroupId] {
+				hasPerm = true
+			}
+			// 允许查看自己发起的工单
+			if filter.CurrentUser != "" && strings.EqualFold(wf.Engineer, filter.CurrentUser) {
+				hasPerm = true
+			}
+			if !hasPerm {
+				continue
+			}
+		}
+
+		// 2. 组筛选 (前端下拉框筛选)
+		if filter.GroupId > 0 && wf.GroupId != filter.GroupId {
+			continue
+		}
+
+		// 3. 实例筛选
+		if filter.InstanceId > 0 && wf.Instance != filter.InstanceId {
+			continue
+		}
+
+		// 4. 状态筛选
+		if filter.Status != "" && wf.Status != filter.Status {
+			continue
+		}
+
+		// 5. 关键词搜索 (匹配工单名、数据库名、发起人)
+		if searchLower != "" {
+			matchName := strings.Contains(strings.ToLower(wf.WorkflowName), searchLower)
+			matchDb := strings.Contains(strings.ToLower(wf.DbName), searchLower)
+			matchEng := strings.Contains(strings.ToLower(wf.Engineer), searchLower)
+			if !matchName && !matchDb && !matchEng {
+				continue
+			}
+		}
+
+		// 6. 时间范围筛选
+		if filter.StartTime != "" {
+			st := strings.Replace(filter.StartTime, "T", " ", 1)
+			if wf.CreateTime < st {
+				continue
+			}
+		}
+		if filter.EndTime != "" {
+			et := strings.Replace(filter.EndTime, "T", " ", 1)
+			if len(et) == 10 {
+				et = et + " 23:59:59"
+			}
+			if wf.CreateTime > et {
+				continue
+			}
+		}
+
+		filtered = append(filtered, item)
+	}
+
+	// 7. 倒序排序：按工单 ID 降序排列，最新工单排最前面
+	sort.Slice(filtered, func(i, j int) bool {
+		return filtered[i].ID > filtered[j].ID
+	})
+
+	total := len(filtered)
 	page := filter.Page
 	if page < 1 {
 		page = 1
@@ -571,88 +656,22 @@ func (c *ArcheryClient) GetWorkflows(filter ArcheryWorkflowFilter) (*ArcheryWork
 		pageSize = 20
 	}
 
-	extraQuery := c.buildFilterQuery(filter)
-
-	// 1. 先探查总数量 (使用 size=1 最小化网络传输)
-	probe, err := c.fetchWorkflowPage(1, 1, extraQuery)
-	if err != nil {
-		return nil, err
-	}
-	total := probe.Count
-	if total == 0 {
-		return &ArcheryWorkflowListResp{Count: 0, Results: []ArcheryWorkflowItem{}}, nil
+	start := (page - 1) * pageSize
+	if start >= total {
+		return &ArcheryWorkflowListResp{
+			Count:   total,
+			Results: []ArcheryWorkflowItem{},
+		}, nil
 	}
 
-	// 2. 计算按时间倒序（最新工单在第 1 页）在 Archery 正序数据源中的切片范围
-	startDesc := (page - 1) * pageSize
-	if startDesc >= total {
-		return &ArcheryWorkflowListResp{Count: total, Results: []ArcheryWorkflowItem{}}, nil
-	}
-	endDesc := startDesc + pageSize
-	if endDesc > total {
-		endDesc = total
-	}
-
-	// 映射为 Archery 正序索引 (0-indexed: [startAsc, endAsc))
-	startAsc := total - endDesc
-	endAsc := total - startDesc
-
-	// 计算覆盖该区间所需的 Archery 页号 (1-indexed)
-	p1 := (startAsc / pageSize) + 1
-	p2 := ((endAsc - 1) / pageSize) + 1
-
-	var combined []ArcheryWorkflowItem
-	offsetP1 := (p1 - 1) * pageSize
-
-	resp1, err := c.fetchWorkflowPage(p1, pageSize, extraQuery)
-	if err != nil {
-		return nil, err
-	}
-	combined = append(combined, resp1.Results...)
-
-	if p2 > p1 {
-		resp2, err := c.fetchWorkflowPage(p2, pageSize, extraQuery)
-		if err == nil {
-			combined = append(combined, resp2.Results...)
-		}
-	}
-
-	// 在 combined 中提取对应切片
-	sliceStart := startAsc - offsetP1
-	sliceEnd := endAsc - offsetP1
-
-	if sliceStart < 0 {
-		sliceStart = 0
-	}
-	if sliceEnd > len(combined) {
-		sliceEnd = len(combined)
-	}
-	if sliceStart > sliceEnd {
-		sliceStart = sliceEnd
-	}
-
-	selected := combined[sliceStart:sliceEnd]
-
-	// 翻转为降序，使最新工单排在最前面
-	reversed := make([]ArcheryWorkflowItem, len(selected))
-	for i, item := range selected {
-		reversed[len(selected)-1-i] = item
-	}
-
-	// 若传入了 groupId，做内存精准比对过滤
-	if filter.GroupId > 0 {
-		var filtered []ArcheryWorkflowItem
-		for _, it := range reversed {
-			if it.Workflow.GroupId == filter.GroupId {
-				filtered = append(filtered, it)
-			}
-		}
-		reversed = filtered
+	end := start + pageSize
+	if end > total {
+		end = total
 	}
 
 	return &ArcheryWorkflowListResp{
 		Count:   total,
-		Results: reversed,
+		Results: filtered[start:end],
 	}, nil
 }
 
@@ -739,6 +758,7 @@ func (c *ArcheryClient) CreateWorkflow(req ArcheryCreateWorkflowReq) (int, error
 	if wfID == 0 {
 		wfID = res.ID
 	}
+	InvalidateArcheryWorkflowCache()
 	return wfID, nil
 }
 
@@ -793,6 +813,7 @@ func (c *ArcheryClient) AuditWorkflow(workflowId int, auditType, auditRemark, en
 	if msg == "" {
 		msg = string(respBody)
 	}
+	InvalidateArcheryWorkflowCache()
 	return msg, nil
 }
 
@@ -842,6 +863,7 @@ func (c *ArcheryClient) ExecuteWorkflow(workflowId int, mode, engineer string) (
 	if msg == "" {
 		msg = string(respBody)
 	}
+	InvalidateArcheryWorkflowCache()
 	return msg, nil
 }
 
