@@ -621,10 +621,18 @@ func (c *ArcheryClient) GetWorkflows(filter ArcheryWorkflowFilter) (*ArcheryWork
 			}
 		}
 
-		// 6. 时间范围筛选
+		// 6. 时间范围筛选 (标准化比较格式，消除 ISO 8601 'T' 分隔符与 ASCII 比较异常)
+		wfTimeClean := strings.Replace(wf.CreateTime, "T", " ", 1)
+		if len(wfTimeClean) > 19 {
+			wfTimeClean = wfTimeClean[:19]
+		}
+
 		if filter.StartTime != "" {
 			st := strings.Replace(filter.StartTime, "T", " ", 1)
-			if wf.CreateTime < st {
+			if len(st) == 10 {
+				st = st + " 00:00:00"
+			}
+			if wfTimeClean < st {
 				continue
 			}
 		}
@@ -633,7 +641,7 @@ func (c *ArcheryClient) GetWorkflows(filter ArcheryWorkflowFilter) (*ArcheryWork
 			if len(et) == 10 {
 				et = et + " 23:59:59"
 			}
-			if wf.CreateTime > et {
+			if wfTimeClean > et {
 				continue
 			}
 		}
