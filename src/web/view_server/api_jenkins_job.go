@@ -409,6 +409,29 @@ func getJenkinsJobList(c *gin.Context) {
 		}
 	}
 
+	// 批量将构建人 username 映射为用户的昵称/真实姓名 (RealName) 展示
+	var uNames []string
+	for _, job := range dbJobs {
+		if job.CreateUserName != "" {
+			uNames = append(uNames, job.CreateUserName)
+		}
+	}
+	if len(uNames) > 0 {
+		var uList []models.SystemUser
+		_ = models.Db.Select("username, real_name").Where("username IN ?", uNames).Find(&uList).Error
+		nickMap := make(map[string]string)
+		for _, u := range uList {
+			if u.RealName != "" {
+				nickMap[u.Username] = u.RealName
+			}
+		}
+		for _, job := range dbJobs {
+			if nick, ok := nickMap[job.CreateUserName]; ok && nick != "" {
+				job.CreateUserName = nick
+			}
+		}
+	}
+
 	common.OkWithDetailed(gin.H{
 		"items": dbJobs,
 		"total": len(dbJobs),

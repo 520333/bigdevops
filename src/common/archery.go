@@ -916,9 +916,20 @@ func (c *ArcheryClient) GetWorkflowLogs(workflowId int) ([]ArcheryWorkflowLogIte
 	return logResp.Results, nil
 }
 
-// GetWorkflowDetail 获取单个工单详情 (GET /api/v1/workflow/<id>/)
+// GetWorkflowDetail 获取单个工单详情 (优先从内存全量工单匹配，备用请求 /api/v1/workflow/?workflow_id=<id>)
 func (c *ArcheryClient) GetWorkflowDetail(workflowId int) (*ArcheryWorkflowItem, error) {
-	reqUrl := fmt.Sprintf("%s/api/v1/workflow/%d/", c.BaseURL, workflowId)
+	// 1. 优先从内存缓存/全量工单列表中极速匹配 (0ms)
+	all, err := c.GetAllWorkflows()
+	if err == nil {
+		for _, it := range all {
+			if it.ID == workflowId || it.WorkflowId == workflowId || it.Workflow.ID == workflowId {
+				return &it, nil
+			}
+		}
+	}
+
+	// 2. 备用兜底：请求 /api/v1/workflow/?workflow_id=<id> (Archery DRF 不支持 /workflow/<id>/ 直接路由)
+	reqUrl := fmt.Sprintf("%s/api/v1/workflow/?workflow_id=%d", c.BaseURL, workflowId)
 	req, err := http.NewRequest("GET", reqUrl, nil)
 	if err != nil {
 		return nil, err
@@ -938,27 +949,37 @@ func (c *ArcheryClient) GetWorkflowDetail(workflowId int) (*ArcheryWorkflowItem,
 		return nil, fmt.Errorf("获取工单详情失败 [HTTP %d]: %s", resp.StatusCode, string(respBody))
 	}
 
-	var item ArcheryWorkflowItem
-	if err := json.NewDecoder(resp.Body).Decode(&item); err != nil {
+	var listResp ArcheryWorkflowListResp
+	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
 		return nil, fmt.Errorf("解析工单详情失败: %w", err)
 	}
+	if len(listResp.Results) == 0 {
+		return nil, fmt.Errorf("工单不存在 [ID %d]", workflowId)
+	}
 
-	return &item, nil
+	return &listResp.Results[0], nil
 }
 
 // IsProductionWorkflow 判断工单是否属于生产环境
+// 优先以所属资源组 (GroupName) 为权威基准，避免因工单标题叫「测试1」而产生误判
 func (c *ArcheryClient) IsProductionWorkflow(wf *ArcheryWorkflowDetail) bool {
 	if wf == nil {
 		return false
 	}
-	combined := strings.ToLower(fmt.Sprintf("%s %s %s %s", wf.GroupName, wf.WorkflowName, wf.DbName, wf.AuditAuthGroups))
-	// 包含明确的生产标识关键字
-	if strings.Contains(combined, "prod") || strings.Contains(combined, "prd") || strings.Contains(combined, "生产") || strings.Contains(combined, "release") || strings.Contains(combined, "online") {
+
+	// 1. 优先以资源组名称判断 (环境是以资源组隔离划分的，如: "花花卡-生产环境" vs "花花卡-测试环境")
+	groupName := strings.ToLower(wf.GroupName)
+	if strings.Contains(groupName, "prod") || strings.Contains(groupName, "prd") || strings.Contains(groupName, "生产") || strings.Contains(groupName, "release") || strings.Contains(groupName, "online") {
 		return true
 	}
-	// 明确包含测试标识关键字
-	if strings.Contains(combined, "test") || strings.Contains(combined, "dev") || strings.Contains(combined, "uat") || strings.Contains(combined, "qa") || strings.Contains(combined, "测试") || strings.Contains(combined, "开发") {
+	if strings.Contains(groupName, "test") || strings.Contains(groupName, "dev") || strings.Contains(groupName, "uat") || strings.Contains(groupName, "qa") || strings.Contains(groupName, "测试") || strings.Contains(groupName, "开发") {
 		return false
+	}
+
+	// 2. 补充检查数据库名、实例及审核组
+	combined := strings.ToLower(fmt.Sprintf("%s %s %s", wf.DbName, wf.AuditAuthGroups, wf.WorkflowName))
+	if strings.Contains(combined, "prod") || strings.Contains(combined, "prd") || strings.Contains(combined, "生产") || strings.Contains(combined, "release") || strings.Contains(combined, "online") {
+		return true
 	}
 	return false
 }
