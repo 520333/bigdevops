@@ -3,8 +3,10 @@ package view_server
 import (
 	"bigdevops/src/common"
 	"bigdevops/src/config"
+	"bigdevops/src/models"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -49,6 +51,47 @@ func getArcheryInstances(c *gin.Context) {
 		sc.Logger.Error("[Archery] 获取数据库实例列表失败", zap.Error(err))
 		common.ReqBadFailWithMessage(fmt.Sprintf("获取数据库实例失败: %v", err.Error()), c)
 		return
+	}
+
+	// 针对当前登录用户进行实例数据权限隔离：
+	// 仅返回该用户所属资源组关联的实例，杜绝跨组越权查看其他业务/生产实例
+	currentUsername := c.GetString(common.GIN_CTX_JWT_USER_NAME)
+	if currentUsername != "" {
+		isPrivileged := false
+		if dbUser, errUser := models.GetUserByUsername(currentUsername); errUser == nil && dbUser != nil {
+			for _, r := range dbUser.Roles {
+				rv := strings.ToLower(r.RoleValue)
+				if rv == "super" || rv == "admin" || rv == "bot_super" {
+					isPrivileged = true
+					break
+				}
+			}
+		}
+
+		if !isPrivileged {
+			archeryUser, errUser := client.GetUserDetail(currentUsername)
+			if errUser == nil && archeryUser != nil && !archeryUser.IsSuperuser {
+				allowedMap := make(map[int]bool)
+				for _, gid := range archeryUser.ResourceGroup {
+					allowedMap[gid] = true
+				}
+				var filtered []common.ArcheryInstance
+				for _, inst := range instances {
+					hasAccess := false
+					for _, rg := range inst.ResourceGroup {
+						if allowedMap[rg] {
+							hasAccess = true
+							break
+						}
+					}
+					if hasAccess {
+						filtered = append(filtered, inst)
+					}
+				}
+				common.OkWithData(filtered, c)
+				return
+			}
+		}
 	}
 
 	common.OkWithData(instances, c)
@@ -202,6 +245,40 @@ func getArcheryGroups(c *gin.Context) {
 		return
 	}
 
+	// 针对当前登录用户进行所属资源组数据权限隔离：
+	// 若当前用户在 Archery 中配置了专属的 resource_group，且不是超级管理员，则严格对其可见组进行过滤
+	currentUsername := c.GetString(common.GIN_CTX_JWT_USER_NAME)
+	if currentUsername != "" {
+		isPrivileged := false
+		if dbUser, errUser := models.GetUserByUsername(currentUsername); errUser == nil && dbUser != nil {
+			for _, r := range dbUser.Roles {
+				rv := strings.ToLower(r.RoleValue)
+				if rv == "super" || rv == "admin" || rv == "bot_super" {
+					isPrivileged = true
+					break
+				}
+			}
+		}
+
+		if !isPrivileged {
+			archeryUser, errUser := client.GetUserDetail(currentUsername)
+			if errUser == nil && archeryUser != nil && !archeryUser.IsSuperuser {
+				allowedMap := make(map[int]bool)
+				for _, gid := range archeryUser.ResourceGroup {
+					allowedMap[gid] = true
+				}
+				var filtered []common.ArcheryGroupItem
+				for _, g := range groups {
+					if allowedMap[g.ID] {
+						filtered = append(filtered, g)
+					}
+				}
+				common.OkWithData(filtered, c)
+				return
+			}
+		}
+	}
+
 	common.OkWithData(groups, c)
 }
 
@@ -273,12 +350,41 @@ func auditArcheryWorkflow(c *gin.Context) {
 		return
 	}
 
+	currentUsername := c.GetString(common.GIN_CTX_JWT_USER_NAME)
 	engineer := req.Engineer
 	if engineer == "" {
-		engineer = c.GetString(common.GIN_CTX_JWT_USER_NAME)
+		engineer = currentUsername
 	}
 	if engineer == "" && sc.ArcheryC != nil {
 		engineer = sc.ArcheryC.Username
+	}
+
+	// 环境分级与自批合规校验：
+	// - 测试/开发环境：允许发起人自批自测闭环；
+	// - 生产环境 (Prod)：仅允许非发起人（DBA / 运维 / 超管）审批放行，严禁发起人自行审批通过。
+	if req.AuditType == "pass" {
+		wfItem, errWf := client.GetWorkflowDetail(req.WorkflowId)
+		if errWf == nil && wfItem != nil {
+			isProd := client.IsProductionWorkflow(&wfItem.Workflow)
+			// 发起人账号与当前操作人账号一致（发起人尝试自批）
+			if isProd && strings.EqualFold(wfItem.Workflow.Engineer, currentUsername) {
+				// 检查当前用户是否具备超级管理员特权角色 (super / admin / bot_super)
+				isPrivileged := false
+				if dbUser, errUser := models.GetUserByUsername(currentUsername); errUser == nil && dbUser != nil {
+					for _, r := range dbUser.Roles {
+						rv := strings.ToLower(r.RoleValue)
+						if rv == "super" || rv == "admin" || rv == "bot_super" {
+							isPrivileged = true
+							break
+						}
+					}
+				}
+				if !isPrivileged {
+					common.ReqBadFailWithMessage("【合规拦截】生产环境工单严禁发起人自行审批，请由 DBA 或指定审核人复核！", c)
+					return
+				}
+			}
+		}
 	}
 
 	msg, err := client.AuditWorkflow(req.WorkflowId, req.AuditType, req.AuditRemark, engineer)

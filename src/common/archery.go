@@ -893,3 +893,98 @@ func (c *ArcheryClient) GetWorkflowLogs(workflowId int) ([]ArcheryWorkflowLogIte
 
 	return logResp.Results, nil
 }
+
+// GetWorkflowDetail 获取单个工单详情 (GET /api/v1/workflow/<id>/)
+func (c *ArcheryClient) GetWorkflowDetail(workflowId int) (*ArcheryWorkflowItem, error) {
+	reqUrl := fmt.Sprintf("%s/api/v1/workflow/%d/", c.BaseURL, workflowId)
+	req, err := http.NewRequest("GET", reqUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.SetAuth(req); err != nil {
+		return nil, err
+	}
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("获取工单详情失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("获取工单详情失败 [HTTP %d]: %s", resp.StatusCode, string(respBody))
+	}
+
+	var item ArcheryWorkflowItem
+	if err := json.NewDecoder(resp.Body).Decode(&item); err != nil {
+		return nil, fmt.Errorf("解析工单详情失败: %w", err)
+	}
+
+	return &item, nil
+}
+
+// IsProductionWorkflow 判断工单是否属于生产环境
+func (c *ArcheryClient) IsProductionWorkflow(wf *ArcheryWorkflowDetail) bool {
+	if wf == nil {
+		return false
+	}
+	combined := strings.ToLower(fmt.Sprintf("%s %s %s %s", wf.GroupName, wf.WorkflowName, wf.DbName, wf.AuditAuthGroups))
+	// 包含明确的生产标识关键字
+	if strings.Contains(combined, "prod") || strings.Contains(combined, "prd") || strings.Contains(combined, "生产") || strings.Contains(combined, "release") || strings.Contains(combined, "online") {
+		return true
+	}
+	// 明确包含测试标识关键字
+	if strings.Contains(combined, "test") || strings.Contains(combined, "dev") || strings.Contains(combined, "uat") || strings.Contains(combined, "qa") || strings.Contains(combined, "测试") || strings.Contains(combined, "开发") {
+		return false
+	}
+	return false
+}
+
+// ArcheryUserDetail Archery 用户信息与资源组关联
+type ArcheryUserDetail struct {
+	ID            int    `json:"id"`
+	Username      string `json:"username"`
+	IsSuperuser   bool   `json:"is_superuser"`
+	ResourceGroup []int  `json:"resource_group"`
+}
+
+// GetUserDetail 获取 Archery 中指定用户的详情及关联的资源组列表
+func (c *ArcheryClient) GetUserDetail(username string) (*ArcheryUserDetail, error) {
+	if username == "" {
+		return nil, fmt.Errorf("username 不能为空")
+	}
+	reqUrl := fmt.Sprintf("%s/api/v1/user/?username=%s", c.BaseURL, url.QueryEscape(username))
+	req, err := http.NewRequest("GET", reqUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.SetAuth(req); err != nil {
+		return nil, err
+	}
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("获取 Archery 用户详情失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("获取 Archery 用户详情失败 [HTTP %d]: %s", resp.StatusCode, string(respBody))
+	}
+
+	var res struct {
+		Count   int                 `json:"count"`
+		Results []ArcheryUserDetail `json:"results"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, fmt.Errorf("解析 Archery 用户详情响应失败: %w", err)
+	}
+
+	if len(res.Results) == 0 {
+		return nil, nil
+	}
+
+	return &res.Results[0], nil
+}
