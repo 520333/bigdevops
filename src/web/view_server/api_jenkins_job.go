@@ -264,60 +264,67 @@ func SyncJenkinsJobsToDB(ctx context.Context, instanceId uint, client *gojenkins
 		}
 		_ = q.First(&existing).Error
 
+		if existing.ID > 0 {
+			// 【关键安全保护】：已有基线记录只更新 Jenkins 运行态字段（状态、构建号、构建时间、URL），
+			// 绝对不覆盖或清空用户在平台配置的 deploy_type, deploy_env, git_repo, git_branch, lang, log_path 等业务元数据！
+			updates := map[string]interface{}{
+				"status": status,
+				"url":    j.Raw.URL,
+			}
+			if count > 0 {
+				updates["count"] = count
+			}
+			if lastBuildTime != nil {
+				updates["last_build_time"] = lastBuildTime
+			}
+			_ = models.Db.Model(&models.JenkinsJob{}).Where("id = ?", existing.ID).Updates(updates).Error
+			continue
+		}
+
+		// 远端全新发现的 Job，作为新记录插入
 		jobObj := &models.JenkinsJob{
-			InstanceID:     instanceId,
-			Name:           shortJobName,
-			ProjectName:    folder, // Group名称 / 项目名称与文件夹呼应
-			Count:          count,
-			Status:         status,
-			URL:            j.Raw.URL,
-			DeployType:     existing.DeployType,
-			DeployEnv:      existing.DeployEnv,
-			GitRepo:        existing.GitRepo,
-			GitBranch:      existing.GitBranch,
-			Lang:           existing.Lang,
-			LogPath:        existing.LogPath,
-			CreateUserName: existing.CreateUserName,
-			EnableDelete: func() int {
-				if existing.EnableDelete == 1 {
-					return 1
-				}
-				return 2
-			}(),
-			LastBuildTime: func() *time.Time {
-				if lastBuildTime != nil {
-					return lastBuildTime
-				}
-				return existing.LastBuildTime
-			}(),
-		}
-		if existing.GitRepo != "" {
-			jobObj.GitRepo = existing.GitRepo
-		}
-		if existing.GitBranch != "" {
-			jobObj.GitBranch = existing.GitBranch
-		}
-		if existing.LogPath != "" {
-			jobObj.LogPath = existing.LogPath
-		}
-		if jobObj.Lang == "" {
-			jobObj.Lang = "Java"
-		}
-		if jobObj.GitBranch == "" {
-			jobObj.GitBranch = "main"
-		}
-		if existing.ProjectName != "" {
-			jobObj.ProjectName = existing.ProjectName
+			InstanceID:    instanceId,
+			Name:          shortJobName,
+			ProjectName:   folder, // Group名称 / 项目名称与文件夹呼应
+			Count:         count,
+			Status:        status,
+			URL:           j.Raw.URL,
+			Lang:          "Java",
+			GitBranch:     "main",
+			EnableDelete:  2,
+			LastBuildTime: lastBuildTime,
 		}
 		_ = models.SaveOrUpdateJenkinsJob(jobObj)
 	}
 
-	// 自动差量清理：如果在 Jenkins 远端已被删除（包括整个 Folder 或单个 Job 被删），则同步清除本地 DB 中的孤儿记录
+	// 自动差量清理（带熔断与关键资产防误删保护）：
+	// 1. 如果 Jenkins 返回为空或数量急剧跌落（如接口超时/异常返回），熔断不执行任何清理；
+	// 2. 凡是已配置了部署环境(deploy_env)、部署类型(deploy_type)或Git仓库(git_repo)的正式业务基线，
+	//    绝不在后台同步时静默物理删除，防止任何 Jenkins 超时/网络抖动导致资产被毁！
 	var currentDbJobs []models.JenkinsJob
-	if err := models.Db.Where("instance_id = ?", instanceId).Find(&currentDbJobs).Error; err == nil {
+	if err := models.Db.Where("instance_id = ?", instanceId).Find(&currentDbJobs).Error; err == nil && len(currentDbJobs) > 0 {
+		// 熔断检查：如果拉取到的远端任务为空，或者远端数量小于本地的 50% 且本地记录大于 5，判定为 Jenkins 异常中断，跳过清理
+		if len(allJobs) == 0 || (len(currentDbJobs) > 5 && len(allJobs) < len(currentDbJobs)/2) {
+			zap.L().Warn("Jenkins 远端同步任务数量异常或超时，自动跳过孤儿清理保护本地数据安全",
+				zap.Uint("instanceId", instanceId),
+				zap.Int("remoteJobs", len(allJobs)),
+				zap.Int("dbJobs", len(currentDbJobs)),
+			)
+			return nil
+		}
+
 		for _, dbJob := range currentDbJobs {
 			key := fmt.Sprintf("%s|%s", dbJob.ProjectName, dbJob.Name)
 			if !remoteKeys[key] {
+				// 核心防护：若该记录已配置了业务参数，绝不能物理删除！
+				if dbJob.DeployType != "" || dbJob.GitRepo != "" || dbJob.DeployEnv != "" {
+					zap.L().Warn("检测到已配置基线的 Job 在 Jenkins 远端暂时不可见，保留本地元数据免遭破坏",
+						zap.String("jobName", dbJob.Name),
+						zap.String("projectName", dbJob.ProjectName),
+					)
+					continue
+				}
+				// 仅对从未配置过任何业务参数的空白 Job 执行孤儿清理
 				_ = models.Db.Delete(&dbJob).Error
 			}
 		}
@@ -1819,6 +1826,8 @@ func parseJenkinsXmlParams(xmlContent string) []JobParameterDefItem {
 					curParam.Type = "boolean"
 				} else if strings.Contains(tagLower, "choice") {
 					curParam.Type = "choice"
+				} else if strings.Contains(tagLower, "gitparameter") {
+					curParam.Type = "branch"
 				}
 			}
 			if curTag == "choices" {
@@ -1854,7 +1863,7 @@ func parseJenkinsXmlParams(xmlContent string) []JobParameterDefItem {
 					curParam.Description = val
 				case "defaultValue":
 					curParam.DefaultValue = val
-					if curParam.Type == "choice" && len(curParam.Choices) == 0 {
+					if (curParam.Type == "choice" || curParam.Type == "branch") && len(curParam.Choices) == 0 {
 						curParam.Choices = append(curParam.Choices, val)
 					}
 				case "string":

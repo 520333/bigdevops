@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 // ParsedJenkinsParam 表示从 Pipeline parameters 块中解析出的单个参数
 type ParsedJenkinsParam struct {
-	Type                 string // string, booleanParam, choice, text, password, reactiveChoice, activeChoice, cascadeChoice
+	Type                 string // string, booleanParam, choice, text, password, reactiveChoice, activeChoice, cascadeChoice, gitParameter
 	Name                 string
 	Description          string
 	DefaultValue         string
@@ -22,6 +24,13 @@ type ParsedJenkinsParam struct {
 	Filterable           bool
 	GroovyScript         string
 	Sandbox              bool
+	BranchFilter         string
+	TagFilter            string
+	SortMode             string
+	SelectedValue        string
+	QuickFilterEnabled   bool
+	ListSize             string
+	UseRepository        string
 }
 
 // escapeXmlText 转义 XML 特殊字符
@@ -192,7 +201,7 @@ func parsePipelineParams(script string) []ParsedJenkinsParam {
 	}
 
 	// 匹配所有参数定义的起始位置（位于行首或缩进后的参数指令，排除属性键如 choiceType 等）
-	paramKwRegex := regexp.MustCompile(`(?m)^\s*(reactiveChoice|activeChoice|cascadeChoice|choice|booleanParam|string|text|password)\b`)
+	paramKwRegex := regexp.MustCompile(`(?m)^\s*(gitParameter|reactiveChoice|activeChoice|cascadeChoice|choice|booleanParam|string|text|password)\b`)
 	locs := paramKwRegex.FindAllStringIndex(paramsBlock, -1)
 	if len(locs) == 0 {
 		return params
@@ -231,6 +240,34 @@ func parsePipelineParams(script string) []ParsedJenkinsParam {
 		switch pType {
 		case "choice":
 			p.Choices = extractParamChoices(rawChunk)
+		case "gitParameter":
+			p.ChoiceType = extractParamFieldValue(rawChunk, "type")
+			if p.ChoiceType == "" {
+				p.ChoiceType = "PT_BRANCH"
+			}
+			p.BranchFilter = extractParamFieldValue(rawChunk, "branchFilter")
+			if p.BranchFilter == "" {
+				p.BranchFilter = "origin/(.*)"
+			}
+			p.TagFilter = extractParamFieldValue(rawChunk, "tagFilter")
+			if p.TagFilter == "" {
+				p.TagFilter = "*"
+			}
+			p.SortMode = extractParamFieldValue(rawChunk, "sortMode")
+			if p.SortMode == "" {
+				p.SortMode = "NONE"
+			}
+			p.SelectedValue = extractParamFieldValue(rawChunk, "selectedValue")
+			if p.SelectedValue == "" {
+				p.SelectedValue = "DEFAULT"
+			}
+			p.UseRepository = extractParamFieldValue(rawChunk, "useRepository")
+			quickFilterVal := extractParamFieldValue(rawChunk, "quickFilterEnabled")
+			p.QuickFilterEnabled = strings.EqualFold(quickFilterVal, "true")
+			p.ListSize = extractParamFieldValue(rawChunk, "listSize")
+			if p.ListSize == "" {
+				p.ListSize = "5"
+			}
 		case "reactiveChoice", "activeChoice", "cascadeChoice":
 			p.ChoiceType = extractParamFieldValue(rawChunk, "choiceType")
 			if p.ChoiceType == "" {
@@ -392,6 +429,68 @@ func GenerateJobPropertiesXml(script string) string {
 					escapeXmlText(p.ReferencedParameters),
 					escapeXmlText(p.ChoiceType),
 					filterableStr,
+				))
+
+			case "gitParameter":
+				paramUUID := uuid.New().String()
+				quickFilterStr := "false"
+				if p.QuickFilterEnabled {
+					quickFilterStr = "true"
+				}
+				branchFilterVal := p.BranchFilter
+				if branchFilterVal == "" {
+					branchFilterVal = "origin/(.*)"
+				}
+				tagFilterVal := p.TagFilter
+				if tagFilterVal == "" {
+					tagFilterVal = "*"
+				}
+				typeVal := p.ChoiceType
+				if typeVal == "" {
+					typeVal = "PT_BRANCH"
+				}
+				sortModeVal := p.SortMode
+				if sortModeVal == "" {
+					sortModeVal = "NONE"
+				}
+				selectedValueVal := p.SelectedValue
+				if selectedValueVal == "" {
+					selectedValueVal = "DEFAULT"
+				}
+				listSizeVal := p.ListSize
+				if listSizeVal == "" {
+					listSizeVal = "5"
+				}
+
+				sb.WriteString(fmt.Sprintf(`        <net.uaznia.lukanus.hudson.plugins.gitparameter.GitParameterDefinition plugin="git-parameter">
+          <name>%s</name>
+          <description>%s</description>
+          <uuid>%s</uuid>
+          <type>%s</type>
+          <branch>%s</branch>
+          <tagFilter>%s</tagFilter>
+          <branchFilter>%s</branchFilter>
+          <sortMode>%s</sortMode>
+          <defaultValue>%s</defaultValue>
+          <selectedValue>%s</selectedValue>
+          <quickFilterEnabled>%s</quickFilterEnabled>
+          <listSize>%s</listSize>
+          <requiredParameter>false</requiredParameter>
+          <useRepository>%s</useRepository>
+        </net.uaznia.lukanus.hudson.plugins.gitparameter.GitParameterDefinition>`+"\n",
+					escapeXmlText(p.Name),
+					escapeXmlText(p.Description),
+					paramUUID,
+					escapeXmlText(typeVal),
+					escapeXmlText(p.DefaultValue),
+					escapeXmlText(tagFilterVal),
+					escapeXmlText(branchFilterVal),
+					escapeXmlText(sortModeVal),
+					escapeXmlText(p.DefaultValue),
+					escapeXmlText(selectedValueVal),
+					quickFilterStr,
+					escapeXmlText(listSizeVal),
+					escapeXmlText(p.UseRepository),
 				))
 			}
 		}
