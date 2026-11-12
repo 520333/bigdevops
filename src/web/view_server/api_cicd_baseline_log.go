@@ -157,13 +157,44 @@ func wsBaselineRealtimeLogs(c *gin.Context) {
 			return
 		}
 
-		if containerName == "" {
-			tCtx, tCancel := common.GenTimeoutContext(dbCluster.ActionTimeoutSeconds)
-			p, pErr := kSetStream.CoreV1().Pods(namespace).Get(tCtx, podName, metav1.GetOptions{})
-			tCancel()
-			if pErr == nil && p != nil && len(p.Spec.Containers) > 0 {
-				containerName = p.Spec.Containers[0].Name
+		// 若传入的 podName 是服务/Deployment 名称，自动按前缀或常见 label 匹配真实 Pod
+		tCtx, tCancel := common.GenTimeoutContext(dbCluster.ActionTimeoutSeconds)
+		p, pErr := kSetStream.CoreV1().Pods(namespace).Get(tCtx, podName, metav1.GetOptions{})
+		tCancel()
+
+		if pErr != nil || p == nil {
+			lCtx, lCancel := common.GenTimeoutContext(dbCluster.ActionTimeoutSeconds)
+			podList, lErr := kSetStream.CoreV1().Pods(namespace).List(lCtx, metav1.ListOptions{})
+			lCancel()
+			if lErr == nil && podList != nil {
+				var fallbackPod *v1.Pod
+				for i := range podList.Items {
+					item := &podList.Items[i]
+					if item.Name != podName &&
+						!strings.HasPrefix(item.Name, podName+"-") &&
+						item.Labels["app"] != podName &&
+						item.Labels["app.kubernetes.io/name"] != podName {
+						continue
+					}
+					if item.Status.Phase == v1.PodRunning && item.DeletionTimestamp == nil {
+						p = item
+						break
+					}
+					if fallbackPod == nil {
+						fallbackPod = item
+					}
+				}
+				if p == nil {
+					p = fallbackPod
+				}
+				if p != nil {
+					podName = p.Name
+				}
 			}
+		}
+
+		if containerName == "" && p != nil && len(p.Spec.Containers) > 0 {
+			containerName = p.Spec.Containers[0].Name
 		}
 
 		tailLinesInt64 := int64(tailLines)

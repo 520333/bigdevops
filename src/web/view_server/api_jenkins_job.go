@@ -1868,6 +1868,9 @@ func parseJenkinsXmlParams(xmlContent string) []JobParameterDefItem {
 					}
 				case "string":
 					if inChoices {
+						if curParam.DefaultValue == "" {
+							curParam.DefaultValue = val
+						}
 						curParam.Choices = append(curParam.Choices, val)
 					}
 				}
